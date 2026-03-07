@@ -51,7 +51,12 @@ Node.js sub-processors invoking official tools (e.g., `@github/copilot`, `claude
 *   [x] Add continuous byte-stream updates via VS Code inter-process message passing (`postMessage`).
 *   [x] Translate OS-level model errors into user-friendly diagnostic UI elements. 
 
-### Phase 3: Conflict Synthesis (Upcoming)
+### Phase 3: Persistent Daemon Mode & Multi-turn Sessions (Upcoming)
+*   [ ] Refactor `AgentAdapter` to maintain long-lived child processes (`cp.spawn`) instead of single-shot batch executions.
+*   [ ] Implement stdin/stdout IPC streams and EOT (End of Transmission) token sniffing (e.g., matching `>` or `$` shell prompts).
+*   [ ] Keep the conversation state actively loaded in CLI memory allowing natural multi-turn context (no loss of memory between messages).
+
+### Phase 4: Conflict Synthesis
 *   [ ] Read `vscode.window.activeTextEditor` to inject live context automatically.
 *   [ ] Allow models to "Review" another model's specific markdown artifact output and point out flaws.
 *   [ ] Inject synthetic block replacements back into the workspace utilizing `WorkspaceEdit`.
