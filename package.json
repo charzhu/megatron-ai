@@ -83,14 +83,19 @@
               "enabled": true
             },
             {
-              "id": "claude-code-opus",
-              "name": "🦉 Claude Code (Opus 4.6 1M)",
+              "id": "claude-code-gpt5",
+              "name": "🦖 Claude Code (GPT-5.4)",
               "adapter": "claude-code",
-              "model": "claude-opus-4.6-1m",
+              "model": "gpt-5.4",
               "enabled": true
             }
           ],
           "description": "Configure the AI Agent combinations (Adapter + Model) summoned by Optimus Code."
+        },
+        "optimusCode.executorAgent": {
+          "type": "string",
+          "default": "claude-code-gpt5",
+          "description": "The specific Agent ID designated as the executing Dictator when running in 'Agent' mode."
         }
       }
     }

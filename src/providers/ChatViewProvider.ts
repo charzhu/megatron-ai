@@ -84,10 +84,19 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
         }
 
         // Prevent file conflicts in Agent Mode by allowing only ONE executing dictator
-        if (mode === 'agent' && activeAdapters.length > 1) {
-            const chosen = activeAdapters[0];
-            vscode.window.showWarningMessage(`[Optimus Code] To prevent file overwrite conflicts in Agent mode, execution is delegated exclusively to ${chosen.name}.`);
-            activeAdapters = [chosen];
+        if (mode === 'agent') {
+            const executorId = vscode.workspace.getConfiguration('optimusCode').get<string>('executorAgent', 'claude-code-gpt5');
+            const allAdapters = getActiveAdapters();
+            let chosen = allAdapters.find(a => a.id === executorId);
+            
+            if (!chosen) {
+                chosen = activeAdapters[0] || allAdapters[0];
+            }
+
+            if (activeAdapters.length > 1 || (activeAdapters.length === 1 && activeAdapters[0].id !== chosen?.id)) {
+                vscode.window.showInformationMessage(`[Optimus Code] Agent mode is active. Bypassing selection and delegating execution exclusively to the configured Dictator: ${chosen.name}.`);
+            }
+            activeAdapters = chosen ? [chosen] : [];
         }
 
         const sessionResponses: {agent: string, text: string, status: 'success' | 'error', raw: boolean}[] = [];
