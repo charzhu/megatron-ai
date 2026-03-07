@@ -174,6 +174,7 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
                     flex-direction: column;
                     height: 100vh;
                     box-sizing: border-box;
+                    overflow: hidden;
                 }
                 .chat-history {
                     flex-grow: 1;
