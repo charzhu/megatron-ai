@@ -238,17 +238,23 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
                     margin-top: 5px;
                 }
                 .agent-column {
-                    flex: 0 0 calc(100% - 20px);
-                    min-width: 280px;
-                    max-width: 450px;
-                    /* Give max height so overflow triggers sliding inside */
-                    max-height: 500px;
-                    display: flex;
-                    flex-direction: column;
-                    border: 1px solid var(--vscode-panel-border);
-                    border-radius: 6px;
-                    padding: 12px;
-                    background: var(--vscode-editor-inactiveSelectionBackground);
+                      flex: 0 0 auto;
+                      width: 320px;
+                      min-width: 250px;
+                      max-width: 90vw;
+                      /* Give max height so overflow triggers sliding inside */
+                      max-height: 500px;
+                      display: flex;
+                      flex-direction: column;
+                      border: 1px solid var(--vscode-panel-border);
+                      border-radius: 6px;
+                      padding: 12px;
+                      background: var(--vscode-editor-inactiveSelectionBackground);
+                      /* Self-adjustable width by user */
+                      resize: horizontal;
+                      /* overflow auto required for resize handle to show up */
+                      overflow-y: auto;
+                      overflow-x: hidden;
                 }
                 .task-item {
                     display: flex;
