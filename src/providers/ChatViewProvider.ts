@@ -31,7 +31,7 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
             switch (data.type) {
                 case 'askCouncil':
                     {
-                        await this._delegateToCouncil(data.value, data.agents);
+                        await this._delegateToCouncil(data.value, data.agents, data.mode);
                         break;
                     }
                 case 'requestSessions':
@@ -75,7 +75,7 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
         });
     }
 
-    private async _delegateToCouncil(prompt: string, selectedAgentIds: string[] = []) {
+    private async _delegateToCouncil(prompt: string, selectedAgentIds: string[] = [], mode: string = 'plan') {
         if (!this._view) { return; }
 
         let activeAdapters = getActiveAdapters();
@@ -86,15 +86,15 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
         const sessionResponses: {agent: string, text: string, status: 'success' | 'error', raw: boolean}[] = [];
         
         // 1. Tell UI which agents are starting
-        this._view.webview.postMessage({ 
-            type: 'startCouncil', 
-            agents: activeAdapters.map(a => a.name) 
+        this._view.webview.postMessage({
+            type: 'startCouncil',
+            agents: activeAdapters.map(a => a.name)
         });
-        
+
         try {
             // 2. Fire them concurrently and stream their individual successes/failures back
             const promises = activeAdapters.map(adapter => {
-                return adapter.invoke(prompt, async (incrementalText) => {
+                return adapter.invoke(prompt, mode, async (incrementalText) => {
                     // Streaming UI update
                     const htmlContent = await marked.parse(incrementalText);
                     this._view?.webview.postMessage({ type: 'agentUpdate', agent: adapter.name, text: htmlContent });
@@ -357,7 +357,7 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
 
                 <div class="chat-history" id="chat-history">
                     <div class="message agent">
-                        <div class="agent-name">🏛️ Optimus Council</div>
+                        <div class="agent-name">🏛�?Optimus Council</div>
                         <p>Welcome! Describe your architecture problem, and I will summon the agents concurrently.</p>
                     </div>
                 </div>
@@ -372,7 +372,14 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
                             <span class="codicon codicon-settings-gear"></span> ⚙️
                         </vscode-button>
                     </div>
-                    <vscode-button id="ask-btn">Ask the Council</vscode-button>
+                    <div style="display: flex; gap: 8px;">
+                        <vscode-dropdown id="mode-selector" style="width: 120px;" title="Operation Mode">
+                            <vscode-option value="plan" selected>📋 Plan</vscode-option>
+                            <vscode-option value="agent">🚀 Agent</vscode-option>
+                            <vscode-option value="ask">💬 Ask</vscode-option>
+                        </vscode-dropdown>
+                        <vscode-button id="ask-btn" style="flex-grow: 1;">Ask the Council</vscode-button>
+                    </div>
                 </div>
             </div>
 
@@ -450,7 +457,7 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
                     chatHistory.innerHTML += \`<div class="message user">\${text}</div>\`;
                     scrollChat();
                     
-                    vscode.postMessage({ type: 'askCouncil', value: text, agents: selectedAgents });
+                    const mode = (document.getElementById('mode-selector')).value || 'plan'; vscode.postMessage({ type: 'askCouncil', value: text, agents: selectedAgents, mode: mode });
                     promptInput.value = '';
                 });
 
@@ -483,14 +490,14 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
                         
                         const msgDiv = document.createElement('div');
                         msgDiv.className = 'message agent';
-                        let html = \`<div class="agent-name">🏛️ Council Verdict (Restored)</div><div class="council-container">\`;
+                        let html = \`<div class="agent-name">🏛�?Council Verdict (Restored)</div><div class="council-container">\`;
                         
                         message.session.responses.forEach(r => {
                             const safeId = r.agent.replace(/[^a-zA-Z0-9]/g, '');
                             html += \`
                                 <div class="agent-column">
                                     <div class="task-item">
-                                        <span class="task-icon">\${r.status === 'success' ? '✅' : '❌'}</span> 
+                                        <span class="task-icon">\${r.status === 'success' ? '�? : '�?}</span> 
                                         <span class="task-name">\${r.agent}</span>
                                     </div>
                                     <div style="flex-grow: 1; overflow-y: auto;">
@@ -509,7 +516,7 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
                         const msgDiv = document.createElement('div');
                         msgDiv.className = 'message agent';
                         
-                        let html = \`<div class="agent-name" id="council-status-\${Date.now()}">⏳ Council is deliberating...</div>\`;
+                        let html = \`<div class="agent-name" id="council-status-\${Date.now()}">�?Council is deliberating...</div>\`;
                         currentCouncilHeader = \`council-status-\${Date.now()}\`; // track it to update later
 
                         html += \`<div class="council-container">\`;
@@ -552,7 +559,7 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
                         // Update UI individually
                         if (taskEl && contentEl) {
                             taskEl.classList.remove('thinking');
-                            taskEl.querySelector('.task-icon').textContent = message.status === 'success' ? '✅' : '❌';
+                            taskEl.querySelector('.task-icon').textContent = message.status === 'success' ? '�? : '�?;
                             
                             if (message.raw) {
                                 contentEl.innerHTML = \`<pre class="\${message.status === 'error' ? 'error-text' : ''}">\${message.text}</pre>\`;
@@ -568,7 +575,7 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
                         if (currentCouncilHeader) {
                             const headerEl = document.getElementById(currentCouncilHeader);
                             if (headerEl) {
-                                headerEl.textContent = "🏛️ Council Verdict";
+                                headerEl.textContent = "🏛�?Council Verdict";
                             }
                         }
                     }

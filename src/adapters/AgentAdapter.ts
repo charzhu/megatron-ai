@@ -18,5 +18,5 @@ export interface AgentAdapter {
      * The core execution function that sends the prompt to the tool and returns the response.
      * Optionally accepts an onUpdate callback for streaming output progressively.
      */
-    invoke(prompt: string, onUpdate?: (chunk: string) => void): Promise<string>;
+    invoke(prompt: string, mode: string, onUpdate?: (chunk: string) => void): Promise<string>;
 }
