@@ -309,68 +309,104 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
                     border-bottom: 1px solid var(--vscode-panel-border);
                 }
                 .sessions-panel {
-                    display: none;
+                    flex-grow: 1;
                     flex-direction: column;
                     gap: 8px;
-                    max-height: 200px;
                     overflow-y: auto;
+                    min-height: 0;
                     margin-bottom: 10px;
                     padding: 10px;
-                    background: var(--vscode-editor-inactiveSelectionBackground);
-                    border: 1px solid var(--vscode-panel-border);
-                    border-radius: 6px;
                 }
                 .session-item {
                     cursor: pointer;
-                    padding: 6px;
+                    padding: 12px;
                     border-radius: 4px;
-                    font-size: 12px;
+                    font-size: 13px;
                     white-space: nowrap;
                     overflow: hidden;
                     text-overflow: ellipsis;
+                    border: 1px solid var(--vscode-panel-border);
+                    background: var(--vscode-editor-inactiveSelectionBackground);
+                    margin-bottom: 8px;
                 }
                 .session-item:hover {
                     background: var(--vscode-list-hoverBackground);
                 }
+                .view {
+                    display: none;
+                    flex-direction: column;
+                    height: 100%;
+                    width: 100%;
+                }
+                .view.active {
+                    display: flex;
+                }
             </style>
         </head>
         <body>
-            <div class="chat-header">
-                <div style="font-weight: bold; font-size: 14px;">Optimus Council</div>
-                <vscode-button appearance="secondary" id="toggle-sessions-btn">Sessions History</vscode-button>
-            </div>
-
-            <div class="sessions-panel" id="sessions-panel"></div>
-
-            <div class="chat-history" id="chat-history">
-                <div class="message agent">
-                    <div class="agent-name">🏛️ Optimus Council</div>
-                    <p>Welcome! Describe your architecture problem, and I will summon the agents concurrently.</p>
-                </div>
-            </div>
-            
-            <div class="input-area">
-                <vscode-text-area id="prompt-input" placeholder="E.g., How to implement RBAC in Next.js?" resize="vertical" rows="3"></vscode-text-area>
-                <div style="display: flex; justify-content: space-between; align-items: center; gap: 8px;">
-                    <div id="agent-selector" style="display: flex; flex-wrap: wrap; gap: 8px; flex-grow: 1;">
-                        <!-- Agent checkboxes will be injected here dynamically -->
-                    </div>
-                    <vscode-button appearance="icon" aria-label="Configure Agents" id="config-btn" title="Configure Agents & Roles">
-                        <span class="codicon codicon-settings-gear"></span> ⚙️
+            <!-- MAIN CHAT VIEW -->
+            <div id="chat-view" class="view active">
+                <div class="chat-header">
+                    <div style="font-weight: bold; font-size: 14px;">Optimus Council</div>
+                    <vscode-button appearance="icon" aria-label="Sessions History" id="toggle-sessions-btn" title="View Sessions History">
+                        <span class="codicon codicon-history"></span>
                     </vscode-button>
                 </div>
-                <vscode-button id="ask-btn">Ask the Council</vscode-button>
+
+                <div class="chat-history" id="chat-history">
+                    <div class="message agent">
+                        <div class="agent-name">🏛️ Optimus Council</div>
+                        <p>Welcome! Describe your architecture problem, and I will summon the agents concurrently.</p>
+                    </div>
+                </div>
+
+                <div class="input-area">
+                    <vscode-text-area id="prompt-input" placeholder="E.g., How to implement RBAC in Next.js?" resize="vertical" rows="3"></vscode-text-area>
+                    <div style="display: flex; justify-content: space-between; align-items: center; gap: 8px;">
+                        <div id="agent-selector" style="display: flex; flex-wrap: wrap; gap: 8px; flex-grow: 1;">
+                            <!-- Agent checkboxes will be injected here dynamically -->
+                        </div>
+                        <vscode-button appearance="icon" aria-label="Configure Agents" id="config-btn" title="Configure Agents & Roles">
+                            <span class="codicon codicon-settings-gear"></span> ⚙️
+                        </vscode-button>
+                    </div>
+                    <vscode-button id="ask-btn">Ask the Council</vscode-button>
+                </div>
+            </div>
+
+            <!-- SESSIONS HISTORY VIEW -->
+            <div id="sessions-view" class="view">
+                <div class="chat-header">
+                    <vscode-button appearance="icon" id="back-to-chat-btn" title="Back to Chat">
+                        <span class="codicon codicon-arrow-left"></span>
+                    </vscode-button>
+                    <div style="font-weight: bold; font-size: 14px;">Sessions History</div>
+                    <div style="width: 24px;"></div> <!-- Spacer to center the title -->
+                </div>
+                <div class="sessions-panel" id="sessions-panel"></div>
             </div>
 
             <script>
                 const vscode = acquireVsCodeApi();
+                
+                // Views
+                const chatView = document.getElementById('chat-view');
+                const sessionsView = document.getElementById('sessions-view');
+                
                 const askBtn = document.getElementById('ask-btn');
                 const promptInput = document.getElementById('prompt-input');
                 const chatHistory = document.getElementById('chat-history');
                 const sessionsPanel = document.getElementById('sessions-panel');
                 const toggleBtn = document.getElementById('toggle-sessions-btn');
+                const backToChatBtn = document.getElementById('back-to-chat-btn');
                 const configBtn = document.getElementById('config-btn');
                 const agentSelector = document.getElementById('agent-selector');
+
+                function showView(viewId) {
+                    chatView.classList.remove('active');
+                    sessionsView.classList.remove('active');
+                    document.getElementById(viewId).classList.add('active');
+                }
 
                 // Initialize agents on load
                 window.addEventListener('load', () => {
@@ -382,12 +418,12 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
                 });
 
                 toggleBtn.addEventListener('click', () => {
-                    if (sessionsPanel.style.display === 'none' || sessionsPanel.style.display === '') {
-                        sessionsPanel.style.display = 'flex';
-                        vscode.postMessage({ type: 'requestSessions' });
-                    } else {
-                        sessionsPanel.style.display = 'none';
-                    }
+                    showView('sessions-view');
+                    vscode.postMessage({ type: 'requestSessions' });
+                });
+
+                backToChatBtn.addEventListener('click', () => {
+                    showView('chat-view');
                 });
 
                 function scrollChat() {
@@ -435,7 +471,7 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
                             div.textContent = \`🕒 \${dateStr} - \${s.prompt}\`;
                             div.addEventListener('click', () => {
                                 vscode.postMessage({ type: 'loadSession', sessionId: s.id });
-                                sessionsPanel.style.display = 'none';
+                                showView('chat-view');
                             });
                             sessionsPanel.appendChild(div);
                         });
