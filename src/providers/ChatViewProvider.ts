@@ -335,7 +335,8 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
                 .view {
                     display: none;
                     flex-direction: column;
-                    height: 100%;
+                    flex: 1;
+                    min-height: 0;
                     width: 100%;
                 }
                 .view.active {
@@ -348,8 +349,8 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
             <div id="chat-view" class="view active">
                 <div class="chat-header">
                     <div style="font-weight: bold; font-size: 14px;">Optimus Council</div>
-                    <vscode-button appearance="icon" aria-label="Sessions History" id="toggle-sessions-btn" title="View Sessions History">
-                        <span class="codicon codicon-history"></span>
+                    <vscode-button appearance="secondary" aria-label="Sessions History" id="toggle-sessions-btn" title="View Sessions History">
+                        🕒 History
                     </vscode-button>
                 </div>
 
@@ -377,11 +378,11 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
             <!-- SESSIONS HISTORY VIEW -->
             <div id="sessions-view" class="view">
                 <div class="chat-header">
-                    <vscode-button appearance="icon" id="back-to-chat-btn" title="Back to Chat">
-                        <span class="codicon codicon-arrow-left"></span>
+                    <vscode-button appearance="secondary" id="back-to-chat-btn" title="Back to Chat">
+                        ⬅️ Back
                     </vscode-button>
                     <div style="font-weight: bold; font-size: 14px;">Sessions History</div>
-                    <div style="width: 24px;"></div> <!-- Spacer to center the title -->
+                    <div style="width: 70px;"></div> <!-- Spacer to center the title -->
                 </div>
                 <div class="sessions-panel" id="sessions-panel"></div>
             </div>
