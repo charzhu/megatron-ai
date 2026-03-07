@@ -31,7 +31,7 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
             switch (data.type) {
                 case 'askCouncil':
                     {
-                        await this._delegateToCouncil(data.value);
+                        await this._delegateToCouncil(data.value, data.agents);
                         break;
                     }
                 case 'requestSessions':
@@ -44,14 +44,45 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
                         await this._loadSessionToUI(data.sessionId);
                         break;
                     }
+                case 'requestAgents':
+                    {
+                        this._sendAgentsToUI();
+                        break;
+                    }
+                case 'openSettings':
+                    {
+                        vscode.commands.executeCommand('workbench.action.openSettings', 'optimusCode.agents');
+                        break;
+                    }
             }
+        });
+
+        // Listen for configuration changes to update the agent checkboxes
+        this._context.subscriptions.push(
+            vscode.workspace.onDidChangeConfiguration(e => {
+                if (e.affectsConfiguration('optimusCode.agents') && this._view) {
+                    this._sendAgentsToUI();
+                }
+            })
+        );
+    }
+
+    private _sendAgentsToUI() {
+        const adapters = getActiveAdapters();
+        this._view?.webview.postMessage({ 
+            type: 'updateAgentSelector', 
+            agents: adapters.map(a => ({ id: a.id, name: a.name }))
         });
     }
 
-    private async _delegateToCouncil(prompt: string) {
+    private async _delegateToCouncil(prompt: string, selectedAgentIds: string[] = []) {
         if (!this._view) { return; }
 
-        const activeAdapters = getActiveAdapters();
+        let activeAdapters = getActiveAdapters();
+        if (selectedAgentIds && selectedAgentIds.length > 0) {
+            activeAdapters = activeAdapters.filter(a => selectedAgentIds.includes(a.id));
+        }
+
         const sessionResponses: {agent: string, text: string, status: 'success' | 'error', raw: boolean}[] = [];
         
         // 1. Tell UI which agents are starting
@@ -312,6 +343,14 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
             
             <div class="input-area">
                 <vscode-text-area id="prompt-input" placeholder="E.g., How to implement RBAC in Next.js?" resize="vertical" rows="3"></vscode-text-area>
+                <div style="display: flex; justify-content: space-between; align-items: center; gap: 8px;">
+                    <div id="agent-selector" style="display: flex; flex-wrap: wrap; gap: 8px; flex-grow: 1;">
+                        <!-- Agent checkboxes will be injected here dynamically -->
+                    </div>
+                    <vscode-button appearance="icon" aria-label="Configure Agents" id="config-btn" title="Configure Agents & Roles">
+                        <span class="codicon codicon-settings-gear"></span> ⚙️
+                    </vscode-button>
+                </div>
                 <vscode-button id="ask-btn">Ask the Council</vscode-button>
             </div>
 
@@ -322,6 +361,17 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
                 const chatHistory = document.getElementById('chat-history');
                 const sessionsPanel = document.getElementById('sessions-panel');
                 const toggleBtn = document.getElementById('toggle-sessions-btn');
+                const configBtn = document.getElementById('config-btn');
+                const agentSelector = document.getElementById('agent-selector');
+
+                // Initialize agents on load
+                window.addEventListener('load', () => {
+                    vscode.postMessage({ type: 'requestAgents' });
+                });
+
+                configBtn.addEventListener('click', () => {
+                    vscode.postMessage({ type: 'openSettings' });
+                });
 
                 toggleBtn.addEventListener('click', () => {
                     if (sessionsPanel.style.display === 'none' || sessionsPanel.style.display === '') {
@@ -343,17 +393,31 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
                     const text = promptInput.value;
                     if (!text.trim()) return;
 
+                    // Gather selected agents
+                    const checkboxes = document.querySelectorAll('.agent-checkbox');
+                    const selectedAgents = Array.from(checkboxes).filter(cb => cb.checked).map(cb => cb.value);
+
+                    if (selectedAgents.length === 0) {
+                        return; // user didn't select any agents
+                    }
+
                     chatHistory.innerHTML += \`<div class="message user">\${text}</div>\`;
                     scrollChat();
                     
-                    vscode.postMessage({ type: 'askCouncil', value: text });
+                    vscode.postMessage({ type: 'askCouncil', value: text, agents: selectedAgents });
                     promptInput.value = '';
                 });
 
                 window.addEventListener('message', event => {
                     const message = event.data;
                     
-                    if (message.type === 'updateSessionsList') {
+                    if (message.type === 'updateAgentSelector') {
+                        agentSelector.innerHTML = '';
+                        message.agents.forEach(a => {
+                            agentSelector.innerHTML += \`<vscode-checkbox class="agent-checkbox" value="\${a.id}" checked>\${a.name}</vscode-checkbox>\`;
+                        });
+                    }
+                    else if (message.type === 'updateSessionsList') {
                         sessionsPanel.innerHTML = message.sessions.length ? '' : '<i>No history yet.</i>';
                         message.sessions.forEach(s => {
                             const div = document.createElement('div');

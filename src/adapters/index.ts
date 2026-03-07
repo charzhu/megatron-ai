@@ -8,6 +8,7 @@ interface AgentConfig {
     name: string;
     adapter: 'github-copilot' | 'claude-code' | string; // Keeps the architecture open for any future string
     model?: string;
+    role?: string;
     enabled: boolean;
 }
 
@@ -25,9 +26,9 @@ export function getActiveAdapters(): AgentAdapter[] {
 
         let adapterInstance: AgentAdapter | null = null;
         if (agent.adapter === 'github-copilot') {
-            adapterInstance = new GitHubCopilotAdapter(agent.id, agent.name, agent.model || '');
+            adapterInstance = new GitHubCopilotAdapter(agent.id, agent.name, agent.model || '', agent.role || '');
         } else if (agent.adapter === 'claude-code') {
-            adapterInstance = new ClaudeCodeAdapter(agent.id, agent.name, agent.model || '');
+            adapterInstance = new ClaudeCodeAdapter(agent.id, agent.name, agent.model || '', agent.role || '');
         }
         // Future adapters (e.g. 'doubao', 'kimi') can be effortlessly added here
         // else if (agent.adapter === 'your-new-adapter') { ... }

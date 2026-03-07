@@ -9,15 +9,20 @@ export class GitHubCopilotAdapter implements AgentAdapter {
     name: string;
     isEnabled = true;
     modelFlag: string;
+    role: string;
 
-    constructor(id: string = 'github-copilot', name: string = '🤖 GitHub Copilot', modelFlag: string = '') {
+    constructor(id: string = 'github-copilot', name: string = '👽 GitHub Copilot', modelFlag: string = '', role: string = '') {
         this.id = id;
         this.name = name;
         this.modelFlag = modelFlag;
+        this.role = role;
     }
 
     async invoke(prompt: string, onUpdate?: (chunk: string) => void): Promise<string> {
-        const cliPrompt = `Provide an architecture or implementation plan for the following: ${prompt} Do not write raw logic code, just provide the structural plan.`;
+        let cliPrompt = prompt;
+        if (this.role) {
+            cliPrompt = `<role>${this.role}</role> \n\n <task>${prompt}</task>`;
+        }
         const safePrompt = cliPrompt.replace(/\r?\n/g, ' ').replace(/"/g, '\\"');
         const modelArg = this.modelFlag ? ` --model ${this.modelFlag}` : '';
         
