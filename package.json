@@ -48,7 +48,6 @@
               "name": { "type": "string" },
               "adapter": { "type": "string" },
               "model": { "type": "string" },
-              "role": { "type": "string", "description": "The system prompt/role this agent should play (e.g. 'Senior Architect')" },
               "enabled": { "type": "boolean" }
             }
           },
@@ -58,7 +57,6 @@
               "name": "🤖 Copilot (Gemini 3.0 Pro)",
               "adapter": "github-copilot",
               "model": "gemini-3-pro-preview",
-              "role": "You are a code efficiency expert focused on extreme performance.",
               "enabled": true
             },
             {
@@ -66,7 +64,6 @@
               "name": "🤖 Copilot (GPT-5.4)",
               "adapter": "github-copilot",
               "model": "gpt-5.4",
-              "role": "You are a pragmatic Senior Software Engineer.",
               "enabled": true
             },
             {
@@ -74,11 +71,10 @@
               "name": "🦉 Claude Code (Opus 4.6 1M)",
               "adapter": "claude-code",
               "model": "claude-opus-4.6-1m",
-              "role": "You are a visionary System Architect. Focus on design patterns.",
               "enabled": true
             }
           ],
-          "description": "Configure the AI Agent combinations (Adapter + Model + Role) summoned by Optimus Code."
+          "description": "Configure the AI Agent combinations (Adapter + Model) summoned by Optimus Code."
         }
       }
     }
