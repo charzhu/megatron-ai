@@ -336,6 +336,7 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
                     display: none;
                     flex-direction: column;
                     flex: 1;
+                    height: 100%;
                     min-height: 0;
                     width: 100%;
                 }
