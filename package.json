@@ -2,7 +2,8 @@
   "name": "optimus-code",
   "displayName": "Optimus Code",
   "description": "The Ultimate Multi-Agent Orchestrator",
-  "version": "0.0.2",
+  "icon": "resources/logo.png",
+  "version": "0.0.3",
   "publisher": "Trinity-Alpha",
   "repository": {
     "type": "git",
