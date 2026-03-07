@@ -100,7 +100,8 @@
     "watch": "tsc -watch -p ./",
     "pretest": "npm run compile && npm run lint",
     "lint": "eslint src --ext ts",
-    "test": "node ./out/test/runTest.js"
+    "test": "node ./out/test/runTest.js",
+    "build:vsix": "node -e \"const fs=require('fs'); if(!fs.existsSync('releases')) fs.mkdirSync('releases');\" && vsce package --out releases/optimus-code.vsix"
   },
   "devDependencies": {
     "@types/marked": "^5.0.2",
