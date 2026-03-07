@@ -36,9 +36,30 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.activate = activate;
 exports.deactivate = deactivate;
 const vscode = __importStar(require("vscode"));
+const path = __importStar(require("path"));
+const PersistentAgentAdapter_1 = require("./adapters/PersistentAgentAdapter");
 const ChatViewProvider_1 = require("./providers/ChatViewProvider");
+const debugLogger_1 = require("./debugLogger");
+const configSync_1 = require("./utils/configSync");
 function activate(context) {
-    console.log('Optimus Code is now active!');
+    (0, debugLogger_1.registerDebugOutputChannel)(context);
+    (0, debugLogger_1.debugLog)('Extension', 'Optimus Code is now active!');
+    const workspacePathHint = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath
+        || (vscode.window.activeTextEditor?.document?.uri.scheme === 'file'
+            ? path.dirname(vscode.window.activeTextEditor.document.uri.fsPath)
+            : undefined)
+        || (context.extensionMode === vscode.ExtensionMode.Development
+            ? context.extensionUri.fsPath
+            : undefined);
+    if (workspacePathHint) {
+        PersistentAgentAdapter_1.PersistentAgentAdapter.setWorkspacePathHint(workspacePathHint);
+        (0, debugLogger_1.debugLog)('Extension', 'Registered workspace path hint', JSON.stringify({ workspacePathHint }));
+        // Auto-sync OPTIMUS.md to underlying adapters
+        (0, configSync_1.syncOptimusInstructions)(workspacePathHint);
+    }
+    else {
+        (0, debugLogger_1.debugLog)('Extension', 'No workspace path hint available during activation');
+    }
     // Register our new Sidebar Webview Provider
     const provider = new ChatViewProvider_1.ChatViewProvider(context.extensionUri, context);
     context.subscriptions.push(vscode.window.registerWebviewViewProvider(ChatViewProvider_1.ChatViewProvider.viewType, provider));

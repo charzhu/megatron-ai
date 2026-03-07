@@ -3,7 +3,7 @@
   "displayName": "Optimus Code",
   "description": "The Ultimate Multi-Agent Orchestrator",
   "icon": "resources/logo.png",
-  "version": "0.0.3",
+  "version": "0.0.4",
   "publisher": "Trinity-Alpha",
   "repository": {
     "type": "git",
@@ -38,7 +38,8 @@
         {
           "type": "webview",
           "id": "optimus-code.chatView",
-          "name": "Council Chat"
+          "name": "Council Chat",
+          "icon": "resources/icon.svg"
         }
       ]
     },
@@ -64,6 +65,13 @@
               },
               "enabled": {
                 "type": "boolean"
+              },
+              "modes": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                },
+                "description": "Supported capabilities: plan, agent"
               }
             }
           },
@@ -73,29 +81,71 @@
               "name": "🤖 Copilot (Gemini 3.0 Pro)",
               "adapter": "github-copilot",
               "model": "gemini-3-pro-preview",
-              "enabled": true
+              "enabled": true,
+              "modes": [
+                "plan"
+              ]
             },
             {
               "id": "github-copilot-gpt5",
               "name": "🤖 Copilot (GPT-5.4)",
               "adapter": "github-copilot",
               "model": "gpt-5.4",
-              "enabled": true
+              "enabled": true,
+              "modes": [
+                "plan"
+              ]
+            },
+            {
+              "id": "github-copilot-opus",
+              "name": "🤖 Copilot (Opus 4.6 1M)",
+              "adapter": "github-copilot",
+              "model": "claude-opus-4.6",
+              "enabled": true,
+              "modes": [
+                "plan"
+              ]
             },
             {
               "id": "claude-code-gpt5",
               "name": "🦖 Claude Code (GPT-5.4)",
               "adapter": "claude-code",
               "model": "gpt-5.4",
-              "enabled": true
+              "enabled": true,
+              "modes": [
+                "agent"
+              ]
+            },
+            {
+              "id": "claude-code-opus",
+              "name": "🦕 Claude Code (Opus 4.6 1M)",
+              "adapter": "claude-code",
+              "model": "claude-opus-4.6-1m",
+              "enabled": true,
+              "modes": [
+                "plan",
+                "agent"
+              ]
             }
           ],
           "description": "Configure the AI Agent combinations (Adapter + Model) summoned by Optimus Code."
         },
-        "optimusCode.executorAgent": {
-          "type": "string",
-          "default": "claude-code-gpt5",
-          "description": "The specific Agent ID designated as the executing Dictator when running in 'Agent' mode."
+        "optimusCode.debugMode": {
+          "type": "boolean",
+          "default": false,
+          "description": "Show Webview diagnostics and host/webview debug tracing inside the Optimus Code UI."
+        },
+        "optimusCode.compactThresholdTokens": {
+          "type": "integer",
+          "default": 800000,
+          "minimum": 1000,
+          "description": "Estimated token threshold for automatic context compaction. Default 800000 leaves about 20% buffer for a 1M-token context window."
+        },
+        "optimusCode.promptFileThresholdChars": {
+          "type": "integer",
+          "default": 12000,
+          "minimum": 1000,
+          "description": "Character threshold for switching oversized non-interactive prompts to workspace runtime briefing files instead of inline CLI arguments."
         }
       }
     }
@@ -119,8 +169,8 @@
   },
   "dependencies": {
     "@vscode/webview-ui-toolkit": "^1.4.0",
+    "iconv-lite": "^0.6.3",
     "marked": "^17.0.4",
-    "node-pty": "^1.1.0",
     "strip-ansi": "^7.2.0"
   }
 }

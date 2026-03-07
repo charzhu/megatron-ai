@@ -6,9 +6,10 @@ import * as vscode from 'vscode';
 interface AgentConfig {
     id: string;
     name: string;
-    adapter: 'github-copilot' | 'claude-code' | string; // Keeps the architecture open for any future string
+    adapter: 'github-copilot' | 'claude-code' | string;
     model?: string;
     enabled: boolean;
+    modes?: string[];
 }
 
 /**
@@ -24,10 +25,11 @@ export function getActiveAdapters(): AgentAdapter[] {
         if (!agent.enabled) continue;
 
         let adapterInstance: AgentAdapter | null = null;
+        const modes = agent.modes || ['plan', 'agent'];
         if (agent.adapter === 'github-copilot') {
-            adapterInstance = new GitHubCopilotAdapter(agent.id, agent.name, agent.model || '');
+            adapterInstance = new GitHubCopilotAdapter(agent.id, agent.name, agent.model || '', modes);
         } else if (agent.adapter === 'claude-code') {
-            adapterInstance = new ClaudeCodeAdapter(agent.id, agent.name, agent.model || '');
+            adapterInstance = new ClaudeCodeAdapter(agent.id, agent.name, agent.model || '', modes);
         }
         // Future adapters (e.g. 'doubao', 'kimi') can be effortlessly added here
         // else if (agent.adapter === 'your-new-adapter') { ... }

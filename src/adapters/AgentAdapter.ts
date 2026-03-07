@@ -15,8 +15,46 @@ export interface AgentAdapter {
     isEnabled: boolean;
 
     /**
+        * Supported capabilities (e.g. ['plan'] or ['plan', 'agent'])
+     */
+    modes: string[];
+
+    /**
      * The core execution function that sends the prompt to the tool and returns the response.
      * Optionally accepts an onUpdate callback for streaming output progressively.
      */
     invoke(prompt: string, mode: string, onUpdate?: (chunk: string) => void): Promise<string>;
+
+    /**
+     * Forces the agent to stop generating and clear its current queue.
+     */
+    stop?(): void;
+
+    /**
+     * Debug info from the last invoke call (command, cwd, pid, timing).
+     */
+    lastDebugInfo?: {
+        command: string;
+        cwd: string;
+        pid: number;
+        startTime: number;
+        endTime?: number;
+        promptTransport?: 'inline' | 'file';
+        promptFilePath?: string;
+        originalPromptLength?: number;
+        sentPromptLength?: number;
+        promptFileThreshold?: number;
+    };
+
+    /**
+     * Optional normalized usage log captured from the most recent invocation.
+     */
+    lastUsageLog?: string;
+
+    /**
+     * Optional per-adapter thinking/process extraction.
+     * If provided, ChatViewProvider will delegate to this instead of the generic parser.
+     * Returns thinking (tool trace / reasoning), output (final answer), and optional usageLog separately.
+     */
+    extractThinking?(rawText: string): { thinking: string; output: string; usageLog?: string };
 }
