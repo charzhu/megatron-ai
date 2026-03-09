@@ -307,6 +307,27 @@ export abstract class PersistentAgentAdapter implements AgentAdapter {
         return processBlock || outputBlock;
     }
 
+    protected buildStructuredStreamPayload(processText: string, reasoningText: string, assistantText: string): string {
+        const sections: string[] = [];
+        const processBlock = processText.trim();
+        const reasoningBlock = reasoningText.trim();
+        const outputBlock = assistantText.trim();
+
+        if (processBlock) {
+            sections.push(`<optimus-trace>\n${processBlock}\n</optimus-trace>`);
+        }
+
+        if (reasoningBlock) {
+            sections.push(`<optimus-reasoning>\n${reasoningBlock}\n</optimus-reasoning>`);
+        }
+
+        if (outputBlock) {
+            sections.push(`<optimus-output>\n${outputBlock}\n</optimus-output>`);
+        }
+
+        return sections.join('\n\n').trim();
+    }
+
     protected summarizeStructuredInput(input: StructuredInputSummary): string {
         if (input === null || input === undefined) {
             return '';
@@ -334,6 +355,11 @@ export abstract class PersistentAgentAdapter implements AgentAdapter {
         }
 
         const preferredKeys = [
+            'role_prompt',
+            'engine',
+            'model',
+            'instruction',
+            'workdir',
             'file_path',
             'path',
             'relative_workspace_path',
@@ -551,6 +577,20 @@ export abstract class PersistentAgentAdapter implements AgentAdapter {
         const lineRange = this.getStructuredResultLineRange(record);
         const preview = lines.length > 0 ? `preview=${this.sanitizeStructuredSummaryValue(lines[0], 80)}` : undefined;
 
+        if (/delegate_task/.test(normalizedName)) {
+            const cleanedLines = lines.filter(line => !/^Worker output:/i.test(line) && !/^\[Session:/i.test(line) && !/^\[In:/i.test(line));
+            if (cleanedLines.length === 0) {
+                return 'worker completed';
+            }
+
+            const firstLine = this.sanitizeStructuredSummaryValue(cleanedLines[0], 120);
+            if (cleanedLines.length === 1) {
+                return `worker=${firstLine}`;
+            }
+
+            return `worker=${firstLine}, lines=${cleanedLines.length}`;
+        }
+
         if (/bash|shell|run|exec|command/.test(normalizedName)) {
             const stdout = typeof record?.stdout === 'string' ? record.stdout : content;
             const stderr = typeof record?.stderr === 'string' ? record.stderr : '';
@@ -735,6 +775,7 @@ export abstract class PersistentAgentAdapter implements AgentAdapter {
             let output = '';
             let structuredBuffer = '';
             let structuredProcessText = '';
+            let structuredReasoningText = '';
             let structuredAssistantText = '';
             let structuredResultText = '';
             const structuredToolCalls = new Map<string, StructuredToolRecord>();
@@ -799,8 +840,14 @@ export abstract class PersistentAgentAdapter implements AgentAdapter {
                                 structuredAssistantText = nextStreamingText;
                             }
 
-                            if ((hasProcessUpdate || hasAssistantUpdate) && onUpdate) {
-                                onUpdate(this.combineStructuredDisplay(structuredProcessText, structuredAssistantText).trim());
+                            const nextReasoningText = this.applyStructuredReasoningEvent(structuredReasoningText, event);
+                            const hasReasoningUpdate = nextReasoningText !== structuredReasoningText;
+                            if (hasReasoningUpdate) {
+                                structuredReasoningText = nextReasoningText;
+                            }
+
+                            if ((hasProcessUpdate || hasReasoningUpdate || hasAssistantUpdate) && onUpdate) {
+                                onUpdate(this.buildStructuredStreamPayload(structuredProcessText, structuredReasoningText, structuredAssistantText));
                             }
 
                             if (event?.type === 'result') {
@@ -868,6 +915,7 @@ export abstract class PersistentAgentAdapter implements AgentAdapter {
                     try {
                         const event = JSON.parse(structuredBuffer.trim());
                         structuredProcessText = this.applyStructuredProcessEvent(structuredProcessText, event, structuredToolCalls);
+                        structuredReasoningText = this.applyStructuredReasoningEvent(structuredReasoningText, event);
                         structuredAssistantText = this.applyStructuredStreamingEvent(structuredAssistantText, event);
                         if (event?.type === 'result' && typeof event.result === 'string') {
                             structuredResultText = event.result;
@@ -1026,6 +1074,22 @@ export abstract class PersistentAgentAdapter implements AgentAdapter {
             if (innerEvent?.type === 'content_block_delta' && innerEvent.delta?.type === 'text_delta' && typeof innerEvent.delta.text === 'string') {
                 return currentText + innerEvent.delta.text;
             }
+        }
+
+        return currentText;
+    }
+
+    protected applyStructuredReasoningEvent(currentText: string, event: any): string {
+        if (event?.type === 'assistant.reasoning_delta' && typeof event?.data?.deltaContent === 'string') {
+            return currentText + event.data.deltaContent;
+        }
+
+        if (event?.type === 'assistant.reasoning' && typeof event?.data?.content === 'string') {
+            return this.mergeStreamingText(currentText, event.data.content);
+        }
+
+        if (event?.type === 'assistant.message' && typeof event?.data?.reasoningText === 'string') {
+            return this.mergeStreamingText(currentText, event.data.reasoningText);
         }
 
         return currentText;

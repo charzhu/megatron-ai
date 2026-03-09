@@ -3674,7 +3674,7 @@ __export(extension_exports, {
 });
 module.exports = __toCommonJS(extension_exports);
 var vscode5 = __toESM(require("vscode"));
-var path3 = __toESM(require("path"));
+var path4 = __toESM(require("path"));
 
 // src/adapters/PersistentAgentAdapter.ts
 var cp = __toESM(require("child_process"));
@@ -3958,6 +3958,28 @@ ${outputBlock}`;
     }
     return processBlock || outputBlock;
   }
+  buildStructuredStreamPayload(processText, reasoningText, assistantText) {
+    const sections = [];
+    const processBlock = processText.trim();
+    const reasoningBlock = reasoningText.trim();
+    const outputBlock = assistantText.trim();
+    if (processBlock) {
+      sections.push(`<optimus-trace>
+${processBlock}
+</optimus-trace>`);
+    }
+    if (reasoningBlock) {
+      sections.push(`<optimus-reasoning>
+${reasoningBlock}
+</optimus-reasoning>`);
+    }
+    if (outputBlock) {
+      sections.push(`<optimus-output>
+${outputBlock}
+</optimus-output>`);
+    }
+    return sections.join("\n\n").trim();
+  }
   summarizeStructuredInput(input) {
     if (input === null || input === void 0) {
       return "";
@@ -3981,6 +4003,11 @@ ${outputBlock}`;
       return `${input.length} items`;
     }
     const preferredKeys = [
+      "role_prompt",
+      "engine",
+      "model",
+      "instruction",
+      "workdir",
       "file_path",
       "path",
       "relative_workspace_path",
@@ -4147,9 +4174,20 @@ ${outputBlock}`;
     const record = typeof result === "object" && result !== null ? result : void 0;
     const content = this.getStructuredResultText(record, result);
     const lines = this.countMeaningfulLines(content);
-    const path4 = this.getStructuredResultPath(record);
+    const path5 = this.getStructuredResultPath(record);
     const lineRange = this.getStructuredResultLineRange(record);
     const preview = lines.length > 0 ? `preview=${this.sanitizeStructuredSummaryValue(lines[0], 80)}` : void 0;
+    if (/delegate_task/.test(normalizedName)) {
+      const cleanedLines = lines.filter((line) => !/^Worker output:/i.test(line) && !/^\[Session:/i.test(line) && !/^\[In:/i.test(line));
+      if (cleanedLines.length === 0) {
+        return "worker completed";
+      }
+      const firstLine = this.sanitizeStructuredSummaryValue(cleanedLines[0], 120);
+      if (cleanedLines.length === 1) {
+        return `worker=${firstLine}`;
+      }
+      return `worker=${firstLine}, lines=${cleanedLines.length}`;
+    }
     if (/bash|shell|run|exec|command/.test(normalizedName)) {
       const stdout = typeof record?.stdout === "string" ? record.stdout : content;
       const stderr = typeof record?.stderr === "string" ? record.stderr : "";
@@ -4170,30 +4208,30 @@ ${outputBlock}`;
     }
     if (/grep|search/.test(normalizedName)) {
       if (lines.length === 0) {
-        return this.buildStructuredSummary([path4, "matches=0"]);
+        return this.buildStructuredSummary([path5, "matches=0"]);
       }
-      return this.buildStructuredSummary([path4, `matches=${lines.length}`, preview]);
+      return this.buildStructuredSummary([path5, `matches=${lines.length}`, preview]);
     }
     if (/edit|write|create|update|patch|save|insert/.test(normalizedName)) {
       if (lines.length === 0) {
-        return this.buildStructuredSummary([path4, lineRange, "status=updated"]);
+        return this.buildStructuredSummary([path5, lineRange, "status=updated"]);
       }
-      return this.buildStructuredSummary([path4, lineRange, `lines=${lines.length}`, preview]);
+      return this.buildStructuredSummary([path5, lineRange, `lines=${lines.length}`, preview]);
     }
     if (/read|view/.test(normalizedName)) {
       if (lines.length === 0) {
-        return this.buildStructuredSummary([path4, lineRange, "lines=0"]);
+        return this.buildStructuredSummary([path5, lineRange, "lines=0"]);
       }
-      return this.buildStructuredSummary([path4, lineRange, `lines=${lines.length}`, preview]);
+      return this.buildStructuredSummary([path5, lineRange, `lines=${lines.length}`, preview]);
     }
     if (/glob|list|ls|dir/.test(normalizedName)) {
       if (lines.length === 0) {
-        return this.buildStructuredSummary([path4, "items=0"]);
+        return this.buildStructuredSummary([path5, "items=0"]);
       }
       if (this.looksLikePathList(lines)) {
-        return this.buildStructuredSummary([path4, `items=${lines.length}`, `first=${this.sanitizeStructuredSummaryValue(lines[0], 80)}`]);
+        return this.buildStructuredSummary([path5, `items=${lines.length}`, `first=${this.sanitizeStructuredSummaryValue(lines[0], 80)}`]);
       }
-      return this.buildStructuredSummary([path4, `lines=${lines.length}`, preview]);
+      return this.buildStructuredSummary([path5, `lines=${lines.length}`, preview]);
     }
     return this.summarizeStructuredToolResult(result);
   }
@@ -4283,7 +4321,7 @@ ${outputBlock}`;
    * One-shot execution using -p flag. Spawns a process, collects all output, resolves when done.
    */
   invokeNonInteractive(prompt, mode, onUpdate) {
-    return new Promise((resolve, reject) => {
+    return new Promise((resolve2, reject) => {
       const workspacePath = _PersistentAgentAdapter.resolveWorkspacePath();
       const currentCwd = workspacePath.path;
       const preparedPrompt = this.preparePromptForNonInteractive(mode, prompt, currentCwd);
@@ -4306,6 +4344,7 @@ ${outputBlock}`;
       let output = "";
       let structuredBuffer = "";
       let structuredProcessText = "";
+      let structuredReasoningText = "";
       let structuredAssistantText = "";
       let structuredResultText = "";
       const structuredToolCalls = /* @__PURE__ */ new Map();
@@ -4361,8 +4400,13 @@ ${outputBlock}`;
               if (hasAssistantUpdate) {
                 structuredAssistantText = nextStreamingText;
               }
-              if ((hasProcessUpdate || hasAssistantUpdate) && onUpdate) {
-                onUpdate(this.combineStructuredDisplay(structuredProcessText, structuredAssistantText).trim());
+              const nextReasoningText = this.applyStructuredReasoningEvent(structuredReasoningText, event);
+              const hasReasoningUpdate = nextReasoningText !== structuredReasoningText;
+              if (hasReasoningUpdate) {
+                structuredReasoningText = nextReasoningText;
+              }
+              if ((hasProcessUpdate || hasReasoningUpdate || hasAssistantUpdate) && onUpdate) {
+                onUpdate(this.buildStructuredStreamPayload(structuredProcessText, structuredReasoningText, structuredAssistantText));
               }
               if (event?.type === "result") {
                 const resultText = typeof event.result === "string" ? event.result : "";
@@ -4426,6 +4470,7 @@ ${outputBlock}`;
           try {
             const event = JSON.parse(structuredBuffer.trim());
             structuredProcessText = this.applyStructuredProcessEvent(structuredProcessText, event, structuredToolCalls);
+            structuredReasoningText = this.applyStructuredReasoningEvent(structuredReasoningText, event);
             structuredAssistantText = this.applyStructuredStreamingEvent(structuredAssistantText, event);
             if (event?.type === "result" && typeof event.result === "string") {
               structuredResultText = event.result;
@@ -4439,7 +4484,7 @@ ${outputBlock}`;
         if (code !== 0 && !finalOutput) {
           reject(new Error(`Process exited with code ${code}`));
         } else {
-          resolve(finalOutput);
+          resolve2(finalOutput);
         }
       });
       this.childProcess = child;
@@ -4553,6 +4598,18 @@ ${outputBlock}`;
       if (innerEvent?.type === "content_block_delta" && innerEvent.delta?.type === "text_delta" && typeof innerEvent.delta.text === "string") {
         return currentText + innerEvent.delta.text;
       }
+    }
+    return currentText;
+  }
+  applyStructuredReasoningEvent(currentText, event) {
+    if (event?.type === "assistant.reasoning_delta" && typeof event?.data?.deltaContent === "string") {
+      return currentText + event.data.deltaContent;
+    }
+    if (event?.type === "assistant.reasoning" && typeof event?.data?.content === "string") {
+      return this.mergeStreamingText(currentText, event.data.content);
+    }
+    if (event?.type === "assistant.message" && typeof event?.data?.reasoningText === "string") {
+      return this.mergeStreamingText(currentText, event.data.reasoningText);
     }
     return currentText;
   }
@@ -4673,12 +4730,12 @@ ${line}` : "";
     if (!this.childProcess || this.currentMode !== mode) {
       await this.initialize(mode);
     }
-    return new Promise((resolve, reject) => {
+    return new Promise((resolve2, reject) => {
       if (this.turnResolve) {
         debugLog(this.id, "Rejected invoke because agent is already busy", JSON.stringify({ mode }));
         return reject(new Error(`[${this.id}] Agent is already processing a request.`));
       }
-      this.turnResolve = resolve;
+      this.turnResolve = resolve2;
       this.turnReject = reject;
       this.turnOnUpdate = onUpdate || null;
       this.outputBuffer = "";
@@ -4764,6 +4821,8 @@ var ClaudeCodeAdapter = class extends PersistentAgentAdapter {
 };
 
 // src/adapters/GitHubCopilotAdapter.ts
+var fs2 = __toESM(require("fs"));
+var path2 = __toESM(require("path"));
 var COPILOT_PROCESS_LINE_RE = /^[●⏺•└│├▶→↳✓✗]/;
 var GitHubCopilotAdapter = class extends PersistentAgentAdapter {
   constructor(id = "github-copilot", name = "\u{1F6F8} GitHub Copilot", modelFlag = "", modes) {
@@ -4807,6 +4866,22 @@ var GitHubCopilotAdapter = class extends PersistentAgentAdapter {
     const args = [];
     const cwd = PersistentAgentAdapter.getWorkspacePath();
     args.push("--add-dir", cwd);
+    const mcpServerPath = path2.resolve(__dirname, "mcp", "optimus-agents.js");
+    if (fs2.existsSync(mcpServerPath)) {
+      args.push("--additional-mcp-config", JSON.stringify({
+        mcpServers: {
+          "optimus-agents": {
+            type: "stdio",
+            command: "node",
+            args: [mcpServerPath],
+            env: {
+              OPTIMUS_WORKSPACE: cwd,
+              PATH: process.env.PATH || ""
+            }
+          }
+        }
+      }));
+    }
     if (this.modelFlag) {
       args.push("--model", this.modelFlag);
     }
@@ -4820,8 +4895,8 @@ var GitHubCopilotAdapter = class extends PersistentAgentAdapter {
 };
 
 // src/managers/SharedTaskStateManager.ts
-var fs2 = __toESM(require("fs"));
-var path2 = __toESM(require("path"));
+var fs3 = __toESM(require("fs"));
+var path3 = __toESM(require("path"));
 var vscode3 = __toESM(require("vscode"));
 var SharedTaskStateManager = class _SharedTaskStateManager {
   constructor(globalState) {
@@ -5410,14 +5485,14 @@ Executor outcome: ${outcome}
         return null;
       }
       const rootPath = workspaceFolders[0].uri.fsPath;
-      const rulesPath = path2.join(rootPath, ".optimus", "rules.md");
+      const rulesPath = path3.join(rootPath, ".optimus", "rules.md");
       let rulesContent = "";
-      if (fs2.existsSync(rulesPath)) {
-        rulesContent += fs2.readFileSync(rulesPath, "utf8") + "\n\n";
+      if (fs3.existsSync(rulesPath)) {
+        rulesContent += fs3.readFileSync(rulesPath, "utf8") + "\n\n";
       }
-      const delegateSkillPath = path2.join(rootPath, "resources", "plugins", "skills", "delegate_task.md");
-      if (fs2.existsSync(delegateSkillPath)) {
-        rulesContent += "---\n[SYSTEM: INJECTED SKILL - delegate_task]\n" + fs2.readFileSync(delegateSkillPath, "utf8");
+      const delegateSkillPath = path3.join(rootPath, "resources", "plugins", "skills", "delegate_task.md");
+      if (fs3.existsSync(delegateSkillPath)) {
+        rulesContent += "---\n[SYSTEM: INJECTED SKILL - delegate_task]\n" + fs3.readFileSync(delegateSkillPath, "utf8");
       }
       const modelsConfig = vscode3.workspace.getConfiguration("optimusCode").get("models");
       if (modelsConfig) {
@@ -5447,11 +5522,11 @@ ${JSON.stringify(modelsConfig, null, 2)}
       if (!workspaceFolders || workspaceFolders.length === 0) {
         return null;
       }
-      const memPath = path2.join(workspaceFolders[0].uri.fsPath, ".optimus", "memory.md");
-      if (!fs2.existsSync(memPath)) {
+      const memPath = path3.join(workspaceFolders[0].uri.fsPath, ".optimus", "memory.md");
+      if (!fs3.existsSync(memPath)) {
         return null;
       }
-      return fs2.readFileSync(memPath, "utf8");
+      return fs3.readFileSync(memPath, "utf8");
     } catch {
       return null;
     }
@@ -5462,12 +5537,12 @@ ${JSON.stringify(modelsConfig, null, 2)}
       if (!workspaceFolders || workspaceFolders.length === 0) {
         return;
       }
-      const optimusDir = path2.join(workspaceFolders[0].uri.fsPath, ".optimus");
-      if (!fs2.existsSync(optimusDir)) {
-        fs2.mkdirSync(optimusDir, { recursive: true });
+      const optimusDir = path3.join(workspaceFolders[0].uri.fsPath, ".optimus");
+      if (!fs3.existsSync(optimusDir)) {
+        fs3.mkdirSync(optimusDir, { recursive: true });
       }
-      const memPath = path2.join(optimusDir, "memory.md");
-      fs2.writeFileSync(memPath, newContent, "utf8");
+      const memPath = path3.join(optimusDir, "memory.md");
+      fs3.writeFileSync(memPath, newContent, "utf8");
     } catch {
     }
   }
@@ -6713,8 +6788,57 @@ var ChatViewProvider = class {
           webviewView.webview.postMessage({ type: "setGenerating", value: false });
           webviewView.webview.postMessage({ type: "chatCleared" });
           return webviewView.webview.postMessage({ type: "status", content: "New session." });
+        case "uiDebug":
+          debugLog("ChatView", "Webview debug", JSON.stringify(data.payload || {}));
+          if (data.payload?.kind === "empty-models") {
+            return webviewView.webview.postMessage({
+              type: "status",
+              content: `No models available for ${data.payload.engine || "current engine"}`
+            });
+          }
+          return;
+        case "uiError":
+          debugLog("ChatView", "Webview error", JSON.stringify(data.payload || {}));
+          return webviewView.webview.postMessage({
+            type: "addMessage",
+            role: "system",
+            html: `UI error: ${(data.payload?.message || "unknown error").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")}`
+          });
       }
     });
+  }
+  getModelListsByEngine() {
+    const config = vscode4.workspace.getConfiguration("optimusCode");
+    const rawModelsCfg = config.get("models");
+    const fallback = {
+      claude_code: Array.isArray(rawModelsCfg?.claude_code) ? rawModelsCfg.claude_code : ["claude-opus-4.6-1m", "gpt-5.4"],
+      copilot_cli: Array.isArray(rawModelsCfg?.copilot_cli) ? rawModelsCfg.copilot_cli : ["gemini-3-pro-preview", "claude-opus-4.6-1m", "gpt-5.4"]
+    };
+    const rawAgents = config.get("agents");
+    if (!Array.isArray(rawAgents) || rawAgents.length === 0) {
+      return fallback;
+    }
+    const fromAgents = {
+      claude_code: [],
+      copilot_cli: []
+    };
+    for (const agent of rawAgents) {
+      if (!agent || agent.enabled === false || typeof agent.model !== "string") {
+        continue;
+      }
+      if (agent.adapter === "claude-code") {
+        fromAgents.claude_code.push(agent.model);
+      } else if (agent.adapter === "github-copilot") {
+        fromAgents.copilot_cli.push(agent.model);
+      }
+    }
+    const dedupe = (items) => [...new Set(items.filter((item) => typeof item === "string" && item.trim().length > 0))];
+    const claudeModels = dedupe(fromAgents.claude_code);
+    const copilotModels = dedupe(fromAgents.copilot_cli);
+    return {
+      claude_code: claudeModels.length > 0 ? claudeModels : fallback.claude_code,
+      copilot_cli: copilotModels.length > 0 ? copilotModels : fallback.copilot_cli
+    };
   }
   async handleAsk(wv, text, agentId, modelId) {
     if (this.isGenerating && Date.now() - this.genStart > 18e4) {
@@ -6770,7 +6894,7 @@ var ChatViewProvider = class {
         ].join("\n")
       );
       const sid = ++this.streamSeq;
-      wv.webview.postMessage({ type: "streamStart", id: sid, role: agentId });
+      wv.webview.postMessage({ type: "streamStart", id: sid, role: agentId, input: orchestratorPrompt });
       wv.webview.postMessage({ type: "status", content: `${entry.label} is working...` });
       const onUpdate = (chunk) => {
         wv.webview.postMessage({ type: "streamUpdate", id: sid, text: chunk });
@@ -6869,20 +6993,12 @@ var ChatViewProvider = class {
     }).join("\n").replace(/\n{3,}/g, "\n\n").trim();
   }
   getHtml() {
-    const config = vscode4.workspace.getConfiguration("optimusCode");
-    const rawModelsCfg = config.get("models");
-    let claudeModels = rawModelsCfg?.claude_code || [
-      "claude-opus-4.6-1m",
-      "gpt-5.4"
-    ];
-    let copilotModels = rawModelsCfg?.copilot_cli || [
-      "gemini-3-pro-preview",
-      "claude-opus-4.6-1m",
-      "gpt-5.4"
-    ];
-    return (
-      /*html*/
-      `<!DOCTYPE html>
+    const { claude_code: claudeModels, copilot_cli: copilotModels } = this.getModelListsByEngine();
+    const serializedModelsByEngine = JSON.stringify({
+      claude_code: claudeModels,
+      copilot_cli: copilotModels
+    });
+    return String.raw`<!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8">
@@ -6909,6 +7025,9 @@ body { font-family: var(--vscode-font-family); padding: 10px; color: var(--vscod
 
 .stream-header { display: flex; align-items: center; padding: 6px 10px; background: rgba(0,0,0,0.1); border-bottom: 1px solid var(--vscode-panel-border); }
 .stream-title { font-weight: bold; font-size: 0.9em; flex: 1; }
+.stream-meta { display: flex; align-items: center; gap: 8px; color: var(--vscode-descriptionForeground); font-size: 0.8em; }
+.stream-state { text-transform: uppercase; letter-spacing: 0.04em; }
+.stream-duration { font-variant-numeric: tabular-nums; }
 .stream-tabs { display: flex; gap: 2px; }
 .tab-btn { background: transparent; border: none; color: var(--vscode-descriptionForeground); cursor: pointer; padding: 2px 6px; font-size: 0.85em; border-radius: 3px; }
 .tab-btn:hover { background: var(--vscode-toolbar-hoverBackground); color: var(--vscode-foreground); }
@@ -6917,6 +7036,24 @@ body { font-family: var(--vscode-font-family); padding: 10px; color: var(--vscod
 .stream-content { padding: 10px; font-size: .9em; overflow-y: auto; max-height: 600px; }
 .tab-pane { display: none; }
 .tab-pane.active { display: block; }
+.stream-live { display: flex; flex-direction: column; gap: 10px; }
+.stream-section { padding: 10px; border-radius: 6px; background: rgba(255,255,255,0.02); border: 1px solid var(--vscode-panel-border); }
+.stream-section-title { font-size: 0.78em; text-transform: uppercase; letter-spacing: 0.06em; color: var(--vscode-descriptionForeground); margin-bottom: 8px; }
+.stream-empty { color: var(--vscode-descriptionForeground); }
+.phase-strip { display: flex; gap: 8px; flex-wrap: wrap; }
+.phase-pill { display: inline-flex; align-items: center; gap: 6px; padding: 6px 10px; border-radius: 999px; border: 1px solid var(--vscode-panel-border); color: var(--vscode-descriptionForeground); background: rgba(255,255,255,0.02); font-size: 0.82em; }
+.phase-pill.active { color: var(--vscode-foreground); border-color: var(--vscode-textLink-foreground); background: rgba(31, 111, 235, 0.12); }
+.phase-pill.done { color: var(--vscode-foreground); border-color: rgba(63, 185, 80, 0.5); background: rgba(63, 185, 80, 0.12); }
+.phase-dot { width: 8px; height: 8px; border-radius: 50%; background: currentColor; opacity: 0.7; }
+.final-answer { margin-top: 10px; }
+.final-answer[hidden] { display: none; }
+.final-answer-card { padding: 12px; border-radius: 8px; background: var(--vscode-editor-background); border: 1px solid var(--vscode-panel-border); }
+.reasoning-view { white-space: pre-wrap; font-family: var(--vscode-editor-font-family); font-size: 0.85em; line-height: 1.5; color: var(--vscode-descriptionForeground); }
+.debug-details { margin-top: 10px; border-top: 1px solid var(--vscode-panel-border); padding-top: 8px; }
+.debug-details summary { cursor: pointer; color: var(--vscode-descriptionForeground); font-size: 0.85em; user-select: none; }
+.debug-details summary:hover { color: var(--vscode-foreground); }
+.detail-block { margin-top: 8px; padding: 10px; border-radius: 6px; background: rgba(255,255,255,0.02); border: 1px solid var(--vscode-panel-border); }
+.detail-block + .detail-block { margin-top: 8px; }
 
 /* Trace View */
 .step-list { display: flex; flex-direction: column; gap: 1px; }
@@ -6928,11 +7065,26 @@ body { font-family: var(--vscode-font-family); padding: 10px; color: var(--vscod
 @keyframes pulse { 0%,100% { opacity:1; } 50% { opacity:.4; } }
 .step-text { flex: 1; min-width: 0; }
 .step-name { font-weight: 600; color: var(--vscode-foreground); }
+.step-name.delegate-step { color: #d29922; }
 .step-detail { color: var(--vscode-descriptionForeground); font-size: .85em; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; display: block; }
 .step-result-text { color: var(--vscode-descriptionForeground); font-size: .85em; font-style: italic; display: block; }
+.delegate-banner { margin-bottom: 8px; padding: 6px 8px; border-radius: 4px; background: rgba(210, 153, 34, 0.15); color: var(--vscode-foreground); font-size: 0.85em; font-weight: 600; }
+.delegate-stack { display: flex; flex-direction: column; gap: 8px; }
+.delegate-card { padding: 10px; border-radius: 8px; border: 1px solid rgba(210, 153, 34, 0.35); background: rgba(210, 153, 34, 0.08); }
+.delegate-header { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 8px; }
+.delegate-title { font-weight: 600; color: var(--vscode-foreground); }
+.delegate-badge { font-size: 0.78em; text-transform: uppercase; letter-spacing: 0.05em; color: #d29922; }
+.delegate-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 8px; }
+.delegate-field { padding: 8px; border-radius: 6px; background: rgba(255,255,255,0.04); border: 1px solid var(--vscode-panel-border); }
+.delegate-label { display: block; font-size: 0.76em; text-transform: uppercase; letter-spacing: 0.05em; color: var(--vscode-descriptionForeground); margin-bottom: 4px; }
+.delegate-value { display: block; font-size: 0.88em; color: var(--vscode-foreground); word-break: break-word; }
+.delegate-result { margin-top: 8px; padding: 8px; border-radius: 6px; background: rgba(255,255,255,0.04); border: 1px solid var(--vscode-panel-border); }
 
 /* Log View */
 .log-view { white-space: pre-wrap; font-family: var(--vscode-editor-font-family); font-size: 0.85em; color: var(--vscode-textPreformat-foreground); }
+
+/* Input View */
+.input-view { white-space: pre-wrap; font-family: var(--vscode-editor-font-family); font-size: 0.85em; color: var(--vscode-textPreformat-foreground); overflow-wrap: break-word; }
 
 /* Output View */
 .output-view { white-space: pre-wrap; font-family: var(--vscode-editor-font-family); font-size: .9em; line-height: 1.5; color: var(--vscode-foreground); }
@@ -6983,15 +7135,53 @@ var chat = document.getElementById("chat");
 var statusEls = document.getElementById("status");
 var engineSelect = document.getElementById("engine");
 var modelSelect = document.getElementById("model");
+function postUiDebug(kind, payload) {
+    vscode.postMessage({ type: "uiDebug", payload: Object.assign({ kind: kind }, payload || {}) });
+}
+
+window.addEventListener("error", function(event) {
+    vscode.postMessage({
+        type: "uiError",
+        payload: {
+            message: event.message,
+            filename: event.filename,
+            lineno: event.lineno,
+            colno: event.colno,
+            stack: event.error && event.error.stack ? String(event.error.stack) : ""
+        }
+    });
+});
+
+window.addEventListener("unhandledrejection", function(event) {
+    vscode.postMessage({
+        type: "uiError",
+        payload: {
+            message: event.reason && event.reason.message ? String(event.reason.message) : String(event.reason),
+            stack: event.reason && event.reason.stack ? String(event.reason.stack) : ""
+        }
+    });
+});
+
 const defaultEngine = "copilot_cli";
 const defaultModelByEngine = {
     "copilot_cli": "gemini-3-pro-preview",
     "claude_code": "claude-opus-4.6-1m"
 };
 
+const rawModelsByEngine = ${serializedModelsByEngine};
+
+function normalizeModelOptions(value) {
+    if (!Array.isArray(value)) {
+        return [];
+    }
+    return value
+        .filter(function(item) { return typeof item === 'string' && item.trim().length > 0; })
+        .map(function(item) { return { value: item, label: item }; });
+}
+
 const modelsByEngine = {
-    "claude_code": ${JSON.stringify(claudeModels)}.map(m => ({value: m, label: m})),
-    "copilot_cli": ${JSON.stringify(copilotModels)}.map(m => ({value: m, label: m}))
+    "claude_code": normalizeModelOptions(rawModelsByEngine.claude_code),
+    "copilot_cli": normalizeModelOptions(rawModelsByEngine.copilot_cli)
 };
 
 function updateModels() {
@@ -6999,6 +7189,7 @@ function updateModels() {
     const models = modelsByEngine[engine] || [];
     const preferredModel = defaultModelByEngine[engine];
     modelSelect.innerHTML = '';
+    modelSelect.disabled = models.length === 0;
     for (const m of models) {
         const opt = document.createElement('option');
         opt.value = m.value;
@@ -7007,7 +7198,18 @@ function updateModels() {
     }
     if (preferredModel && models.some(m => m.value === preferredModel)) {
         modelSelect.value = preferredModel;
+    } else if (models.length > 0) {
+        modelSelect.value = models[0].value;
     }
+    postUiDebug(models.length === 0 ? "empty-models" : "models-loaded", {
+        engine: engine,
+        selectedModel: modelSelect.value || "",
+        availableModels: models.map(function(m) { return m.value; }),
+        counts: {
+            copilot_cli: (modelsByEngine.copilot_cli || []).length,
+            claude_code: (modelsByEngine.claude_code || []).length,
+        }
+    });
 }
 engineSelect.value = defaultEngine;
 updateModels();
@@ -7029,6 +7231,8 @@ var root = document.getElementById("root");
 var labels = { "claude_code": "Claude Code", "copilot_cli": "GitHub Copilot" };
 var streamDivs = {};
 var streamTimers = {};
+var streamStates = {};
+var streamStartedAt = {};
 
 function clearStreamTimer(id) {
     var timer = streamTimers[id];
@@ -7038,15 +7242,89 @@ function clearStreamTimer(id) {
     }
 }
 
+function formatDuration(ms) {
+    if (!ms || ms < 1000) return '<1s';
+    return (ms / 1000).toFixed(1) + 's';
+}
+
+function inferPhaseState(traceHtml, reasoningRaw, out, isCompleted) {
+    var hasTrace = !!traceHtml && traceHtml.indexOf('Waiting for steps...') === -1;
+    var hasReasoning = !!reasoningRaw;
+    var hasOutput = !!out;
+
+    var activePhase = 'Preparing';
+    if (hasOutput) {
+        activePhase = isCompleted ? 'Completed' : 'Generating answer';
+    } else if (hasTrace) {
+        activePhase = 'Using tools';
+    } else if (hasReasoning) {
+        activePhase = 'Reasoning';
+    }
+
+    return {
+        activeLabel: activePhase,
+        phases: [
+            { label: 'Preparing', state: hasTrace || hasReasoning || hasOutput || isCompleted ? 'done' : 'active' },
+            { label: 'Using tools', state: hasTrace ? (hasOutput || isCompleted ? 'done' : 'active') : 'idle' },
+            { label: 'Generating answer', state: hasOutput ? (isCompleted ? 'done' : 'active') : 'idle' }
+        ]
+    };
+}
+
+function renderPhaseStrip(phaseState) {
+    return '<div class="phase-strip">' + phaseState.phases.map(function(phase) {
+        var cls = 'phase-pill';
+        if (phase.state === 'active') cls += ' active';
+        if (phase.state === 'done') cls += ' done';
+        return '<div class="' + cls + '"><span class="phase-dot"></span><span>' + escapeHtml(phase.label) + '</span></div>';
+    }).join('') + '</div>';
+}
+
+function extractDelegateValue(detail, key) {
+    if (!detail) return '';
+    var escapedKey = key.replace(/[.*+?^()|[\]\\]/g, '\\$&');
+    var pattern = new RegExp('(?:^|, )' + escapedKey + '=([^,]+)');
+    var match = pattern.exec(detail);
+    return match ? match[1].trim() : '';
+}
+
+function renderDelegateCards(steps) {
+    var delegateSteps = steps.filter(function(step) { return /\bdelegate_task\b/i.test(step.name); });
+    if (delegateSteps.length === 0) {
+        return '';
+    }
+
+    var cards = delegateSteps.map(function(step, index) {
+        var role = extractDelegateValue(step.detail, 'role_prompt');
+        var engine = extractDelegateValue(step.detail, 'engine');
+        var model = extractDelegateValue(step.detail, 'model');
+        var instruction = extractDelegateValue(step.detail, 'instruction') || step.detail || 'No delegation instruction captured.';
+        var result = step.result ? step.result.replace(/^result=/i, '').trim() : 'Worker still running...';
+        var status = step.done === "\u2713" ? 'Completed' : step.done === "\u2717" ? 'Failed' : 'Running';
+
+        return '<div class="delegate-card">'
+            + '<div class="delegate-header"><span class="delegate-title">Delegated task ' + String(index + 1) + '</span><span class="delegate-badge">' + escapeHtml(status) + '</span></div>'
+            + '<div class="delegate-grid">'
+            + '<div class="delegate-field"><span class="delegate-label">Role</span><span class="delegate-value">' + escapeHtml(role || 'Not specified') + '</span></div>'
+            + '<div class="delegate-field"><span class="delegate-label">Engine</span><span class="delegate-value">' + escapeHtml(engine || 'Default') + '</span></div>'
+            + '<div class="delegate-field"><span class="delegate-label">Model</span><span class="delegate-value">' + escapeHtml(model || 'Default') + '</span></div>'
+            + '</div>'
+            + '<div class="delegate-result"><span class="delegate-label">Instruction</span><span class="delegate-value">' + escapeHtml(instruction) + '</span></div>'
+            + '<div class="delegate-result"><span class="delegate-label">Worker Result</span><span class="delegate-value">' + escapeHtml(result) + '</span></div>'
+            + '</div>';
+    }).join('');
+
+    return '<div class="delegate-stack">' + cards + '</div>';
+}
+
 function scheduleSlowStartHint(id) {
     clearStreamTimer(id);
     streamTimers[id] = setTimeout(function() {
         var t = streamDivs[id];
         if (t) {
-             // Only show if trace is empty
-             var tracePane = t.querySelector('.tab-pane.trace');
-             if (tracePane && !tracePane.innerHTML.trim()) {
-                tracePane.innerHTML = '<span style="color:var(--vscode-descriptionForeground)">Still starting. The first response from the CLI can take 5-15 seconds.</span>';
+             var livePane = t.querySelector('.stream-live');
+             if (livePane) {
+                livePane.innerHTML = '<div class="stream-section stream-empty">Still starting. The first response from the CLI can take 5-15 seconds.</div>';
              }
         }
     }, 2500);
@@ -7096,11 +7374,18 @@ function switchTab(streamId, tabName) {
 }
 
 function renderStreamText(raw, container) {
+    var traceMatch = /<optimus-trace>\s*([\s\S]*?)\s*<\/optimus-trace>/i.exec(raw);
+    var reasoningMatch = /<optimus-reasoning>\s*([\s\S]*?)\s*<\/optimus-reasoning>/i.exec(raw);
+    var outputMatch = /<optimus-output>\s*([\s\S]*?)\s*<\/optimus-output>/i.exec(raw);
+    var traceRaw = traceMatch ? traceMatch[1].trim() : raw;
+    var reasoningRaw = reasoningMatch ? reasoningMatch[1].trim() : "";
+    var outputRaw = outputMatch ? outputMatch[1].trim() : "";
     var NL = String.fromCharCode(10);
-    var lines = raw.split(NL);
+    var lines = traceRaw.split(NL);
     var steps = [];
     var outputLines = [];
     var cur = null;
+    var sawDelegateTask = false;
 
     function shortPath(s) { var m = /[/\\\\]([^/\\\\]+)$/.exec(s); return m ? m[1] : s; }
     function summarize(d) {
@@ -7111,11 +7396,20 @@ function renderStreamText(raw, container) {
     for (var i = 0; i < lines.length; i++) {
         var line = lines[i];
         var tm = /^[\\u2022\\u25CF\\u23FA\\u25B6\\u2192]\\s*(.+)$/.exec(line);
-        if (tm) { flush(); cur = { name: tm[1].trim(), detail: "", done: null, result: "" }; continue; }
+        if (tm) {
+            flush();
+            cur = { name: tm[1].trim(), detail: "", done: null, result: "" };
+            if (/\bdelegate_task\b/i.test(cur.name)) { sawDelegateTask = true; }
+            continue;
+        }
         var dm = /^([\\u2713\\u2717])\\s*(.*)$/.exec(line);
         if (dm) {
             if (cur && (!dm[2] || cur.name === dm[2].trim())) { cur.done = dm[1]; }
-            else { flush(); cur = { name: dm[2].trim() || "tool", detail: "", done: dm[1], result: "" }; }
+            else {
+                flush();
+                cur = { name: dm[2].trim() || "tool", detail: "", done: dm[1], result: "" };
+                if (/\bdelegate_task\b/i.test(cur.name)) { sawDelegateTask = true; }
+            }
             continue;
         }
         var det = /^\\u21B3\\s*(.+)$/.exec(line);
@@ -7127,13 +7421,21 @@ function renderStreamText(raw, container) {
 
     // Render Trace
     var traceHtml = "";
+    var delegateCardsHtml = renderDelegateCards(steps);
     if (steps.length > 0) {
+        if (sawDelegateTask) {
+            traceHtml += '<div class="delegate-banner">Delegation detected: master agent called delegate_task.</div>';
+            if (delegateCardsHtml) {
+                traceHtml += delegateCardsHtml;
+            }
+        }
         traceHtml += '<div class="step-list">';
         for (var s = 0; s < steps.length; s++) {
             var st = steps[s];
             var dc = st.done === "\\u2713" ? "step-dot-done" : st.done === "\\u2717" ? "step-dot-err" : "step-dot-run";
+            var stepNameClass = /\bdelegate_task\b/i.test(st.name) ? 'step-name delegate-step' : 'step-name';
             traceHtml += '<div class="step"><div class="step-dot ' + dc + '"></div><div class="step-text">';
-            traceHtml += '<span class="step-name">' + escapeHtml(st.name) + '</span>';
+            traceHtml += '<span class="' + stepNameClass + '">' + escapeHtml(st.name) + '</span>';
             if (st.detail) traceHtml += '<span class="step-detail">' + escapeHtml(st.detail) + '</span>';
             if (st.result) traceHtml += '<span class="step-result-text">' + escapeHtml(st.result) + '</span>';
             traceHtml += '</div></div>';
@@ -7152,14 +7454,57 @@ function renderStreamText(raw, container) {
     if(logPane) {
          logPane.querySelector('div').textContent = raw;
     }
+
+        var reasoningPane = container.querySelector('.tab-pane.reasoning');
+        if (reasoningPane) {
+            reasoningPane.querySelector('div').textContent = reasoningRaw || "Waiting for reasoning...";
+        }
     
     // Update Output Pane (Preview)
-    var out = outputLines.join(NL).trim();
-    var outputPane = container.querySelector('.tab-pane.output');
-    if(outputPane) {
-         if (out) outputPane.querySelector('div').textContent = out;
-         else outputPane.querySelector('div').textContent = "Waiting for output...";
-    }
+        var out = outputRaw || outputLines.join(NL).trim();
+        var liveHtml = '';
+        var phaseState = inferPhaseState(traceHtml, reasoningRaw, out, false);
+
+        liveHtml += '<div class="stream-section"><div class="stream-section-title">Progress</div>' + renderPhaseStrip(phaseState) + '</div>';
+
+        if (traceHtml && traceHtml.indexOf('Waiting for steps...') === -1) {
+            liveHtml += '<div class="stream-section"><div class="stream-section-title">Working</div>' + traceHtml + '</div>';
+        }
+
+        if (reasoningRaw) {
+            liveHtml += '<div class="stream-section"><div class="stream-section-title">Reasoning</div><div class="reasoning-view">' + escapeHtml(reasoningRaw) + '</div></div>';
+        }
+
+        if (out) {
+            liveHtml += '<div class="stream-section"><div class="stream-section-title">Draft output</div><div class="output-view">' + escapeHtml(out) + '</div></div>';
+        }
+
+        if (!liveHtml) {
+            liveHtml = '<div class="stream-section stream-empty">Waiting for the first meaningful update...</div>';
+        }
+
+        var livePane = container.querySelector('.stream-live');
+        if (livePane) {
+            livePane.innerHTML = liveHtml;
+        }
+
+        var detailsPane = container.querySelector('.debug-details');
+        if (detailsPane) {
+            var traceDetail = detailsPane.querySelector('.detail-trace');
+            var reasoningDetail = detailsPane.querySelector('.detail-reasoning');
+            var logDetail = detailsPane.querySelector('.detail-log');
+            if (traceDetail) traceDetail.innerHTML = traceHtml;
+            if (reasoningDetail) reasoningDetail.textContent = reasoningRaw || 'No reasoning captured yet.';
+            if (logDetail) logDetail.textContent = raw;
+        }
+
+        streamStates[container.dataset.streamId] = {
+            raw: raw,
+            traceHtml: traceHtml,
+            reasoningRaw: reasoningRaw,
+            outputRaw: out,
+            phaseLabel: phaseState.activeLabel
+        };
     
     return traceHtml; // Return trace for summary if needed
 }
@@ -7176,6 +7521,7 @@ window.addEventListener("message", function(event) {
         var div = document.createElement("div");
         div.className = "stream-box " + msg.role;
         div.id = "stream-" + msg.id;
+        streamStartedAt[msg.id] = Date.now();
         
         // Header with Tabs
         var header = document.createElement("div");
@@ -7185,23 +7531,26 @@ window.addEventListener("message", function(event) {
         title.className = "stream-title";
         title.innerHTML = '<span class="spinner"></span>' + (labels[msg.role] || msg.role);
         header.appendChild(title);
-        
-        var tabs = document.createElement("div");
-        tabs.className = "stream-tabs";
-        tabs.innerHTML = \`
-            <button class="tab-btn active" data-tab="trace" onclick="switchTab(\${msg.id}, 'trace')">Trace</button>
-            <button class="tab-btn" data-tab="log" onclick="switchTab(\${msg.id}, 'log')">Log</button>
-            <button class="tab-btn" data-tab="output" onclick="switchTab(\${msg.id}, 'output')">Output</button>
-        \`;
-        header.appendChild(tabs);
+
+        var meta = document.createElement("div");
+        meta.className = "stream-meta";
+        meta.innerHTML = '<span class="stream-state">Working</span><span class="stream-duration">just now</span>';
+        header.appendChild(meta);
         div.appendChild(header);
         
         var ct = document.createElement("div"); 
         ct.className = "stream-content";
+        ct.dataset.streamId = String(msg.id);
         ct.innerHTML = \`
-            <div class="tab-pane trace active"><span style="color:var(--vscode-descriptionForeground)">Starting...</span></div>
-            <div class="tab-pane log"><div class="log-view"></div></div>
-            <div class="tab-pane output"><div class="output-view"></div></div>
+            <div class="stream-section"><div class="stream-section-title">Input</div><div class="input-view">\${escapeHtml(msg.input || "")}</div></div>
+            <div class="stream-live"><div class="stream-section stream-empty">Starting CLI session...</div></div>
+            <div class="final-answer" hidden></div>
+            <details class="debug-details">
+                <summary>Details</summary>
+                <div class="detail-block"><div class="stream-section-title">Trace</div><div class="detail-trace"></div></div>
+                <div class="detail-block"><div class="stream-section-title">Reasoning</div><div class="reasoning-view detail-reasoning">No reasoning captured yet.</div></div>
+                <div class="detail-block"><div class="stream-section-title">Raw stream</div><div class="log-view detail-log"></div></div>
+            </details>
         \`;
         div.appendChild(ct);
         
@@ -7215,6 +7564,15 @@ window.addEventListener("message", function(event) {
         var t = streamDivs[msg.id]; 
         if (t) { 
             renderStreamText(msg.text, t); 
+            var box = document.getElementById("stream-" + msg.id);
+            if (box) {
+                var meta = box.querySelector('.stream-meta');
+                if (meta) {
+                    var current = streamStates[msg.id];
+                    var label = current && current.phaseLabel ? current.phaseLabel : 'Working';
+                    meta.innerHTML = '<span class="stream-state">' + escapeHtml(label) + '</span><span class="stream-duration">' + formatDuration(Date.now() - streamStartedAt[msg.id]) + '</span>';
+                }
+            }
             // Auto-scroll logic if needed
         }
     } else if (msg.type === "streamEnd") {
@@ -7224,29 +7582,49 @@ window.addEventListener("message", function(event) {
             // Stop spinner
             var title = box.querySelector(".stream-title");
             if(title) title.innerHTML = (labels[msg.role] || msg.role) + " (Done)";
-            
-            // Finalize output tab with rendered HTML if available
-            if(msg.html) {
-                var outPane = box.querySelector(".tab-pane.output div");
-                if(outPane) outPane.innerHTML = msg.html;
-                
-                // Switch to output tab on finish? Maybe keep user preference.
-                // switchTab(msg.id, 'output'); 
+            var meta = box.querySelector('.stream-meta');
+            if (meta) {
+                meta.innerHTML = '<span class="stream-state">Completed</span><span class="stream-duration">' + formatDuration(Date.now() - streamStartedAt[msg.id]) + '</span>';
+            }
+
+            var content = box.querySelector('.stream-content');
+            var finalState = content && streamStates[msg.id]
+                ? inferPhaseState(streamStates[msg.id].traceHtml || '', streamStates[msg.id].reasoningRaw || '', streamStates[msg.id].outputRaw || '', true)
+                : null;
+            if (content && finalState) {
+                var livePane = content.querySelector('.stream-live');
+                if (livePane) {
+                    var currentLive = livePane.innerHTML;
+                    currentLive = currentLive.replace(/<div class="stream-section"><div class="stream-section-title">Progress<\/div>[\s\S]*?<\/div>/, '<div class="stream-section"><div class="stream-section-title">Progress</div>' + renderPhaseStrip(finalState) + '</div>');
+                    livePane.innerHTML = currentLive;
+                }
             }
             
-            delete streamDivs[msg.id]; 
+            if(msg.html) {
+                var finalPane = box.querySelector('.final-answer');
+                if (finalPane) {
+                    finalPane.hidden = false;
+                    finalPane.innerHTML = '<div class="final-answer-card"><div class="stream-section-title">Final answer</div>' + msg.html + '</div>';
+                }
+            }
+            
+            delete streamDivs[msg.id];
+            delete streamStartedAt[msg.id];
+            delete streamStates[msg.id];
         }
     } else if (msg.type === "status") { statusEls.textContent = msg.content; }
     else if (msg.type === "setGenerating") { root.classList.toggle("generating", msg.value); }
     else if (msg.type === "chatCleared") {
         Object.keys(streamTimers).forEach(function(id) { clearStreamTimer(id); });
+        streamDivs = {};
+        streamStates = {};
+        streamStartedAt = {};
         chat.innerHTML = "";
     }
 });
 </script>
 </body>
-</html>`
-    );
+</html>`;
   }
 };
 
@@ -7254,7 +7632,7 @@ window.addEventListener("message", function(event) {
 function activate(context) {
   registerDebugOutputChannel(context);
   debugLog("Extension", "Optimus Code is now active!");
-  const workspacePathHint = vscode5.workspace.workspaceFolders?.[0]?.uri.fsPath || (vscode5.window.activeTextEditor?.document?.uri.scheme === "file" ? path3.dirname(vscode5.window.activeTextEditor.document.uri.fsPath) : void 0) || (context.extensionMode === vscode5.ExtensionMode.Development ? context.extensionUri.fsPath : void 0);
+  const workspacePathHint = vscode5.workspace.workspaceFolders?.[0]?.uri.fsPath || (vscode5.window.activeTextEditor?.document?.uri.scheme === "file" ? path4.dirname(vscode5.window.activeTextEditor.document.uri.fsPath) : void 0) || (context.extensionMode === vscode5.ExtensionMode.Development ? context.extensionUri.fsPath : void 0);
   if (workspacePathHint) {
     PersistentAgentAdapter.setWorkspacePathHint(workspacePathHint);
     debugLog("Extension", "Registered workspace path hint", JSON.stringify({ workspacePathHint }));

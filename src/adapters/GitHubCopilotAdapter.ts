@@ -1,5 +1,7 @@
 import { PersistentAgentAdapter } from './PersistentAgentAdapter';
 import { AgentMode } from '../types/SharedTaskContext';
+import * as fs from 'fs';
+import * as path from 'path';
 // Copilot CLI uses ● (U+25CF filled circle) and tree-drawing chars for tool trace lines
 // Also handle ⏺ (U+23FA) and • (U+2022) for robustness
 const COPILOT_PROCESS_LINE_RE = /^[●⏺•└│├▶→↳✓✗]/;
@@ -54,6 +56,23 @@ export class GitHubCopilotAdapter extends PersistentAgentAdapter {
         const args: string[] = [];
         const cwd = PersistentAgentAdapter.getWorkspacePath();
         args.push('--add-dir', cwd);
+
+        const mcpServerPath = path.resolve(__dirname, 'mcp', 'optimus-agents.js');
+        if (fs.existsSync(mcpServerPath)) {
+            args.push('--additional-mcp-config', JSON.stringify({
+                mcpServers: {
+                    'optimus-agents': {
+                        type: 'stdio',
+                        command: 'node',
+                        args: [mcpServerPath],
+                        env: {
+                            OPTIMUS_WORKSPACE: cwd,
+                            PATH: process.env.PATH || ''
+                        }
+                    }
+                }
+            }));
+        }
 
         if (this.modelFlag) {
             args.push('--model', this.modelFlag);
