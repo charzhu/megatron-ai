@@ -33,8 +33,25 @@ const server = new Server(
 server.setRequestHandler(ListToolsRequestSchema, async () => {
   return {
     tools: [
-      {
-        name: "github_create_issue",
+        {
+          name: "github_update_issue",
+          description: "Updates an existing issue in a GitHub repository (e.g. to close it or add comments).",
+          inputSchema: {
+            type: "object",
+            properties: {
+              owner: { type: "string", description: "Repository owner" },
+              repo: { type: "string", description: "Repository name" },
+              issue_number: { type: "number", description: "The number of the issue to update" },
+              state: { type: "string", enum: ["open", "closed"], description: "State of the issue" },
+              body: { type: "string", description: "New body for the issue (overwrites existing)" },
+              agent_role: { type: "string", description: "The role of the agent making this update" },
+              session_id: { type: "string", description: "The session ID of the agent" }
+            },
+            required: ["owner", "repo", "issue_number"]
+          }
+        },
+        {
+          name: "github_create_issue",
         description: "Creates a new issue in a GitHub repository.",
         inputSchema: {
           type: "object",
@@ -201,6 +218,43 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
         },
       ],
     };
+    } else if (request.params.name === "github_update_issue") {
+      const { owner, repo, issue_number, state, body, agent_role, session_id } = request.params.arguments as any;
+      const token = process.env.GITHUB_TOKEN || process.env.GH_TOKEN;
+      if (!token) throw new McpError(ErrorCode.InvalidRequest, "GITHUB_TOKEN env is not set");
+      
+      try {
+        let finalBody = body;
+        // If state is being changed, or body provided, append metadata
+        if ((agent_role || session_id) && finalBody) {
+          finalBody += '\n\n---\n**🤖 Agent System Metadata [Update]:**\n';
+          if (agent_role) finalBody += `- **Agent Role:** \`${agent_role}\`\n`;
+          if (session_id) finalBody += `- **Agent Session ID:** \`${session_id}\`\n`;
+        }
+
+        const payload: any = {};
+        if (state) payload.state = state;
+        if (finalBody) payload.body = finalBody;
+
+        const resp = await fetch(`https://api.github.com/repos/${owner}/${repo}/issues/${issue_number}`, {
+          method: "PATCH",
+          headers: {
+            "Authorization": `Bearer ${token}`,
+            "Accept": "application/vnd.github.v3+json",
+            "Content-Type": "application/json",
+            "User-Agent": "Optimus-Agent"
+          },
+          body: JSON.stringify(payload)
+        });
+
+        if (!resp.ok) {
+          throw new Error('GitHub API Error: ' + await resp.text());
+        }
+        const data = (await resp.json()) as any;
+        return { content: [{ type: "text", text: `Issue #${issue_number} updated successfully. State is now: ${data.state}` }] };
+      } catch (err: any) {
+        return { content: [{ type: "text", text: `Failed to update Issue: ${err.message}` }], isError: true };
+      }
     } else if (request.params.name === "github_create_issue") {
     const { owner, repo, title, body, labels, local_path, session_id } = request.params.arguments as any;
     const token = process.env.GITHUB_TOKEN || process.env.GH_TOKEN;
