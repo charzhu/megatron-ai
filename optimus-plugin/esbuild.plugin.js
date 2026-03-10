@@ -22,9 +22,14 @@ async function build() {
     target: 'node18',
     outfile: path.resolve(__dirname, 'dist', 'mcp-server.js'),
     // CRITICAL: vscode must NEVER be bundled — it should not even be imported
-    // If it appears, the build should fail, not silently externalize it
+    // If it appears, the build should fail, not silently externalize it.
+    // Runtime deps are external — resolved from node_modules at runtime.
     external: [
-      ...Object.keys(require('./package.json').dependencies || {})
+      '@modelcontextprotocol/sdk',
+      '@modelcontextprotocol/sdk/*',
+      'dotenv',
+      'strip-ansi',
+      'iconv-lite',
     ],
     logLevel: 'info',
     metafile: true,

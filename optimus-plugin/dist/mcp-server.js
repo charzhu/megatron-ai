@@ -1,163 +1,2648 @@
-"use strict";var _t=Object.create;var pt=Object.defineProperty;var bt=Object.getOwnPropertyDescriptor;var Tt=Object.getOwnPropertyNames;var Pt=Object.getPrototypeOf,vt=Object.prototype.hasOwnProperty;var xt=(a,t,e,n)=>{if(t&&typeof t=="object"||typeof t=="function")for(let r of Tt(t))!vt.call(a,r)&&r!==e&&pt(a,r,{get:()=>t[r],enumerable:!(n=bt(t,r))||n.enumerable});return a};var R=(a,t,e)=>(e=a!=null?_t(Pt(a)):{},xt(t||!a||!a.__esModule?pt(e,"default",{value:a,enumerable:!0}):e,a));var yt=require("@modelcontextprotocol/sdk/server/index.js"),St=require("@modelcontextprotocol/sdk/server/stdio.js"),l=require("@modelcontextprotocol/sdk/types.js"),_=R(require("fs")),k=R(require("path")),wt=R(require("crypto"));var f=R(require("fs")),L=R(require("path"));var D=R(require("child_process")),C=R(require("fs")),T=R(require("path")),W=R(require("strip-ansi")),ht=R(require("iconv-lite"));var lt,$t=process.env.OPTIMUS_DEBUG==="1";function Rt(){return $t}function S(a,t,e){if(!Rt())return;let r=`[${new Date().toISOString()}] [${a}] ${t}`;e&&(r+=`
-${e}`),lt?lt(r):console.error(r)}function U(a,t=800){let e=a.replace(/\r/g,"\\r").replace(/\n/g,`\\n
-`);return e.length<=t?e:e.slice(0,t)+"... [truncated]"}var dt=/\x1B(?:[@-Z\\-_]|\[[0-?]*[ -/]*[@-~])/g;var B=new Map,Ot=12e3,mt=10*1024*1024;function K(a){if(process.platform==="win32"){let t=a.toString("utf8");return t.includes("\uFFFD")?ht.decode(a,"cp936"):t}return a.toString("utf8")}function It(a){let t=B.get(a);if(t!==void 0)return t;let e=D.spawnSync("where.exe",[a],{encoding:"utf8"});if(e.status!==0||!e.stdout)return B.set(a,null),null;let n=e.stdout.split(/\r?\n/).map(r=>r.trim()).filter(Boolean).filter(r=>C.existsSync(r)).sort((r,i)=>{let s=o=>{let u=T.extname(o).toLowerCase();return u===".exe"||u===".com"?0:u===".cmd"?1:u===".bat"?2:3};return s(r)-s(i)});for(let r of n){let i=T.extname(r).toLowerCase();if(i===".exe"||i===".com"){let s={cmd:r,argsPrefix:[]};return B.set(a,s),s}if(i===".cmd")try{let o=C.readFileSync(r,"utf8").match(/"%dp0%\\([^\"]+?\.js)"/i);if(!o)continue;let u=T.dirname(r),c=C.existsSync(T.join(u,"node.exe"))?T.join(u,"node.exe"):"node",p=T.join(u,o[1].replace(/\\/g,T.sep)),m={cmd:c,argsPrefix:[p]};return B.set(a,m),m}catch{continue}}return B.set(a,null),null}function gt(a,t,e){if(process.platform==="win32"){let n=It(a);return n?D.spawn(n.cmd,[...n.argsPrefix,...t],e):D.spawn("cmd",["/c",a,...t],e)}return D.spawn(a,t,e)}var N=class a{static workspacePathHint=null;static setWorkspacePathHint(t){a.workspacePathHint=t}static resolveWorkspacePath(){return process.env.OPTIMUS_WORKSPACE?{path:process.env.OPTIMUS_WORKSPACE,source:"process.env.OPTIMUS_WORKSPACE"}:a.workspacePathHint?{path:a.workspacePathHint,source:"workspacePathHint"}:(S("PersistentAgentAdapter","WARNING: workspace path resolved via process.cwd() fallback \u2014 .optimus/ artifacts may land outside the active project. Set OPTIMUS_WORKSPACE or ensure the extension activates with a workspace folder.",JSON.stringify({cwd:process.cwd()})),{path:process.cwd(),source:"process.cwd()"})}id;name;modelFlag;isEnabled=!0;modes=["plan","agent"];lastDebugInfo;lastUsageLog;lastSessionId;childProcess=null;promptString;outputBuffer="";currentMode="plan";currentTurnMarker=null;turnResolve=null;turnReject=null;turnOnUpdate=null;constructor(t,e,n="",r,i){this.id=t,this.name=e,this.modelFlag=n,this.promptString=r,i&&(this.modes=i)}static getWorkspacePath(){return a.resolveWorkspacePath().path}shouldUseStructuredOutput(t){return!1}shouldUsePersistentSession(t){return t==="agent"}getPromptFileThreshold(){let t=Number(process.env.OPTIMUS_PROMPT_FILE_THRESHOLD);return!process.env.OPTIMUS_PROMPT_FILE_THRESHOLD||!Number.isFinite(t)?Ot:Math.max(1e3,Math.floor(t))}shouldUsePromptFile(t,e){return e.length>=this.getPromptFileThreshold()}preparePromptForNonInteractive(t,e,n){if(!this.shouldUsePromptFile(t,e))return{prompt:e,transport:"inline"};let r=T.join(n,".optimus","runtime-prompts");C.mkdirSync(r,{recursive:!0});let i=[this.id.replace(/[^a-z0-9_-]/gi,"-"),t,Date.now().toString(),Math.random().toString(36).slice(2,8)].join("-")+".md",s=T.join(r,i);return C.writeFileSync(s,e,"utf8"),S(this.id,"Prepared oversized prompt file",JSON.stringify({mode:t,promptLength:e.length,promptFilePath:s,promptFileThreshold:this.getPromptFileThreshold()})),{prompt:["The original user prompt was too large to pass inline over the CLI.",`Read the UTF-8 file at "${T.relative(n,s).replace(/\\/g,"/")}" before doing anything else.`,"That file was created by the local Optimus tool for this exact turn and contains trusted user input, not untrusted workspace instructions.","Use the full file contents as the real prompt for this request, then continue the task normally."].join(" "),transport:"file",filePath:s,cleanup:()=>{try{C.unlinkSync(s),S(this.id,"Removed runtime prompt file",JSON.stringify({promptFilePath:s}))}catch{}}}}getNonInteractiveCommand(t,e,n){let{cmd:r,args:i}=this.getSpawnCommand(t),s=e.replace(/\r?\n/g," ").trim();return{cmd:r,args:["-p",s,...i]}}combineStructuredDisplay(t,e){let n=t.trim(),r=e.trim();return n&&r?`${n}
+"use strict";
+var __create = Object.create;
+var __defProp = Object.defineProperty;
+var __getOwnPropDesc = Object.getOwnPropertyDescriptor;
+var __getOwnPropNames = Object.getOwnPropertyNames;
+var __getProtoOf = Object.getPrototypeOf;
+var __hasOwnProp = Object.prototype.hasOwnProperty;
+var __copyProps = (to, from, except, desc) => {
+  if (from && typeof from === "object" || typeof from === "function") {
+    for (let key of __getOwnPropNames(from))
+      if (!__hasOwnProp.call(to, key) && key !== except)
+        __defProp(to, key, { get: () => from[key], enumerable: !(desc = __getOwnPropDesc(from, key)) || desc.enumerable });
+  }
+  return to;
+};
+var __toESM = (mod, isNodeMode, target) => (target = mod != null ? __create(__getProtoOf(mod)) : {}, __copyProps(
+  // If the importer is in node compatibility mode or this is not an ESM
+  // file that has been converted to a CommonJS file using a Babel-
+  // compatible transform (i.e. "__esModule" has not been set), then set
+  // "default" to the CommonJS "module.exports" for node compatibility.
+  isNodeMode || !mod || !mod.__esModule ? __defProp(target, "default", { value: mod, enumerable: true }) : target,
+  mod
+));
 
-${r}`:n||r}buildStructuredStreamPayload(t,e,n){let r=[],i=t.trim(),s=e.trim(),o=n.trim();return i&&r.push(`<optimus-trace>
-${i}
-</optimus-trace>`),s&&r.push(`<optimus-reasoning>
-${s}
-</optimus-reasoning>`),o&&r.push(`<optimus-output>
-${o}
-</optimus-output>`),r.join(`
+// ../src/mcp/mcp-server.ts
+var import_server = require("@modelcontextprotocol/sdk/server/index.js");
+var import_stdio = require("@modelcontextprotocol/sdk/server/stdio.js");
+var import_types = require("@modelcontextprotocol/sdk/types.js");
+var import_fs3 = __toESM(require("fs"));
+var import_path3 = __toESM(require("path"));
+var import_crypto = __toESM(require("crypto"));
 
-`).trim()}summarizeStructuredInput(t){if(t==null)return"";if(typeof t=="string"){let r=t.replace(/\s+/g," ").trim();return r.length>96?r.slice(0,93)+"...":r}if(typeof t=="number"||typeof t=="boolean")return String(t);if(Array.isArray(t)){if(t.length===0)return"[]";let r=t.filter(i=>["string","number","boolean"].includes(typeof i));if(r.length>0){let i=r.slice(0,3).map(s=>this.summarizeStructuredInput(s)).join(", ");return t.length>3?`${i}, ... (${t.length} items)`:i}return`${t.length} items`}let e=["role_prompt","engine","model","instruction","workdir","file_path","path","relative_workspace_path","start_line","end_line","startLine","endLine","line","insert_line","command","query","pattern","symbol","url","name","description","task","includePattern","filePath","input"],n=[];for(let r of e){if(!(r in t))continue;let i=t[r],s=this.summarizeStructuredInput(i);if(s&&n.push(`${r}=${s}`),n.length>=4)break}if(n.length===0){let r=Object.keys(t);return r.length===0?"{}":r.slice(0,3).join(", ")}return n.join(", ")}formatStructuredToolCall(t,e){let n=t.trim()||"tool",r=this.summarizeStructuredInput(e);return r?`\u2022 ${n}
-\u21B3 ${r}`:`\u2022 ${n}`}appendProcessLines(t,e){let n=t?t.split(`
-`).filter(Boolean):[];for(let r of e)for(let i of r.split(`
-`).map(s=>s.trim()).filter(Boolean))n[n.length-1]!==i&&n.push(i);return n.join(`
-`)}registerStructuredToolCall(t,e,n,r){e&&t.set(e,{name:n,input:r})}summarizeStructuredToolResult(t){if(t==null)return"";if(typeof t=="string"){let r=t.split(/\r?\n/).map(u=>u.trim()).filter(u=>u&&u!=="[LOG]");if(r.length===0)return"empty result";let i=r[0].replace(/\s+/g," ").trim();if(r.length===1)return i.length>96?i.slice(0,93)+"...":i;let s=`${r.length} lines`,o=i.length>72?i.slice(0,69)+"...":i;return`${s}, preview=${o}`}if(typeof t=="number"||typeof t=="boolean")return String(t);if(Array.isArray(t))return t.length===0?"0 items":`${t.length} items`;let e=t;if(typeof e.stdout=="string"&&e.stdout.trim())return this.summarizeStructuredToolResult(e.stdout);if(typeof e.content=="string"&&e.content.trim())return this.summarizeStructuredToolResult(e.content);if(typeof e.detailedContent=="string"&&e.detailedContent.trim())return this.summarizeStructuredToolResult(e.detailedContent);if(typeof e.stderr=="string"&&e.stderr.trim())return`stderr=${this.summarizeStructuredToolResult(e.stderr)}`;let n=Object.keys(e);return n.length>0?n.slice(0,4).join(", "):"object result"}countMeaningfulLines(t){return t.split(/\r?\n/).map(e=>e.trim()).filter(e=>e&&e!=="[LOG]")}looksLikePathList(t){return t.length===0?!1:t.slice(0,Math.min(t.length,6)).every(n=>!/\s{2,}/.test(n)&&!/[{}<>]/.test(n))}sanitizeStructuredSummaryValue(t,e=96){return t.replace(/\s+/g," ").replace(/,\s*/g,"; ").trim().slice(0,e)}getStructuredResultText(t,e){let n=["content","stdout","text","output","detailedContent","message"];for(let r of n){let i=t?.[r];if(typeof i=="string"&&i.trim())return i}return typeof e=="string"?e:""}getStructuredResultPath(t){let e=["file_path","filepath","path","relative_workspace_path","target_file","targetPath"];for(let n of e){let r=t?.[n];if(typeof r=="string"&&r.trim())return this.sanitizeStructuredSummaryValue(r,120)}}getStructuredResultLineRange(t){let e=typeof t?.start_line=="number"?t.start_line:typeof t?.startLine=="number"?t.startLine:void 0,n=typeof t?.end_line=="number"?t.end_line:typeof t?.endLine=="number"?t.endLine:void 0,r=typeof t?.insert_line=="number"?t.insert_line:typeof t?.insertLine=="number"?t.insertLine:void 0;if(typeof e=="number"&&typeof n=="number")return`lines=${e}-${n}`;if(typeof e=="number")return`line=${e}`;if(typeof r=="number")return`line=${r}`}buildStructuredSummary(t){return t.filter(e=>!!(e&&e.trim())).join(", ")}summarizeToolResultByName(t,e){let n=t.toLowerCase(),r=typeof e=="object"&&e!==null?e:void 0,i=this.getStructuredResultText(r,e),s=this.countMeaningfulLines(i),o=this.getStructuredResultPath(r),u=this.getStructuredResultLineRange(r),c=s.length>0?`preview=${this.sanitizeStructuredSummaryValue(s[0],80)}`:void 0;if(/delegate_task/.test(n)){let p=s.filter(g=>!/^Worker output:/i.test(g)&&!/^\[Session:/i.test(g)&&!/^\[In:/i.test(g));if(p.length===0)return"worker completed";let m=this.sanitizeStructuredSummaryValue(p[0],120);return p.length===1?`worker=${m}`:`worker=${m}, lines=${p.length}`}if(/bash|shell|run|exec|command/.test(n)){let p=typeof r?.stdout=="string"?r.stdout:i,m=typeof r?.stderr=="string"?r.stderr:"",g=this.countMeaningfulLines(p),x=this.countMeaningfulLines(m),h=typeof r?.exit_code=="number"?r.exit_code:typeof r?.exitCode=="number"?r.exitCode:void 0,y=[`stdout=${g.length>0?`${g.length} lines`:"empty"}`];return typeof h=="number"&&y.push(`exit=${h}`),x.length>0&&y.push(`stderr=${x.length} lines`),g.length>0&&y.push(`preview=${this.sanitizeStructuredSummaryValue(g[0],80)}`),y.join(", ")}return/grep|search/.test(n)?s.length===0?this.buildStructuredSummary([o,"matches=0"]):this.buildStructuredSummary([o,`matches=${s.length}`,c]):/edit|write|create|update|patch|save|insert/.test(n)?s.length===0?this.buildStructuredSummary([o,u,"status=updated"]):this.buildStructuredSummary([o,u,`lines=${s.length}`,c]):/read|view/.test(n)?s.length===0?this.buildStructuredSummary([o,u,"lines=0"]):this.buildStructuredSummary([o,u,`lines=${s.length}`,c]):/glob|list|ls|dir/.test(n)?s.length===0?this.buildStructuredSummary([o,"items=0"]):this.looksLikePathList(s)?this.buildStructuredSummary([o,`items=${s.length}`,`first=${this.sanitizeStructuredSummaryValue(s[0],80)}`]):this.buildStructuredSummary([o,`lines=${s.length}`,c]):this.summarizeStructuredToolResult(e)}formatStructuredToolCompletion(t,e,n=!0){let r=this.summarizeToolResultByName(t,e),i=[`${n?"\u2713":"\u2717"} ${t.trim()||"tool"}`];return r&&i.push(`\u21B3 result=${r}`),i}extractThinkingWithSharedParser(t,e){if(!t)return{thinking:"",output:""};let n=/<(think|thinking|thought)>([\s\S]*?)<\/\1>/gi,r=[],i=[],s=t,o;for(;(o=n.exec(t))!==null;)r.push(o[2].trim()),s=s.replace(o[0],"");let u=s.split(/\r?\n|\r/),c=[],p=[],m=!1,g=h=>!!(!h||e.processLineRe.test(h)||h.startsWith("> [")||e.captureBracketLines&&h.startsWith("["));for(let h of u){let y=h.replace(dt,"").trim();if(e.collectUsageLog&&/\[LOG\]/i.test(y)){i.push(y);continue}m?e.captureProcessLinesAfterOutputStarts&&g(y)&&y!==""?c.push(h):p.push(h):g(y)?c.push(h):(m=!0,p.push(h))}for(;c.length>0&&c[c.length-1].trim()==="";)p.unshift(c.pop());let x=c.join(`
-`).trim();return x&&r.push("```text\n"+x+"\n```"),{thinking:r.join(`
+// ../src/mcp/worker-spawner.ts
+var import_fs = __toESM(require("fs"));
+var import_path = __toESM(require("path"));
 
----
+// ../src/adapters/PersistentAgentAdapter.ts
+var cp = __toESM(require("child_process"));
+var fs = __toESM(require("fs"));
+var path = __toESM(require("path"));
+var import_strip_ansi = __toESM(require("strip-ansi"));
+var iconv = __toESM(require("iconv-lite"));
 
-`),output:p.join(`
-`).trim(),usageLog:i.length>0?i.join(`
-`):this.lastUsageLog}}buildTurnCompletionMarker(){return`[[OPTIMUS_DONE_${Date.now()}_${Math.random().toString(36).slice(2,8)}]]`}stripTurnCompletionArtifacts(t){let e=t;return this.currentTurnMarker&&(e=e.replace(this.currentTurnMarker,"")),e.trim()}invokeNonInteractive(t,e,n,r){return new Promise((i,s)=>{let o=a.resolveWorkspacePath(),u=o.path,c=this.preparePromptForNonInteractive(e,t,u),p=this.getPromptFileThreshold(),{cmd:m,args:g}=this.getNonInteractiveCommand(e,c.prompt,n),x=this.shouldUseStructuredOutput(e);this.lastUsageLog=void 0,S(this.id,"Starting non-interactive invoke",JSON.stringify({mode:e,cwd:u,cwdSource:o.source,cmd:m,args:g.map((d,w)=>w===0?d:`[${d.length} chars]`),promptLength:t.length,sentPromptLength:c.prompt.length,promptTransport:c.transport,promptFilePath:c.filePath,promptFileThreshold:p}));let h="",y="",E="",$="",I="",j="",q=new Map,F=Date.now(),b=null,A=gt(m,g,{cwd:u,env:{...process.env,TERM:"dumb",CI:"false",FORCE_COLOR:"0"}});this.lastDebugInfo={command:m+" "+g.join(" "),cwd:u,pid:A.pid||0,startTime:F,promptTransport:c.transport,promptFilePath:c.filePath,originalPromptLength:t.length,sentPromptLength:c.prompt.length,promptFileThreshold:p},A.stdin.end(),S(this.id,"Closed stdin for non-interactive invoke"),b=setTimeout(()=>{S(this.id,"Non-interactive invoke still running after threshold",JSON.stringify({mode:e,thresholdMs:15e3,pid:A.pid,cwd:u,outputLength:h.length}))},15e3),A.stdout.on("data",d=>{let w=(0,W.default)(K(d));if(S(this.id,"stdout chunk",U(w)),x){y+=w;let J=y.split(/\r?\n/);y=J.pop()||"";for(let kt of J){let rt=kt.trim();if(rt)try{let M=JSON.parse(rt),nt=this.applyStructuredProcessEvent(E,M,q),st=nt!==E;st&&(E=nt);let it=this.applyStructuredStreamingEvent(I,M),ot=it!==I;ot&&(I=it);let at=this.applyStructuredReasoningEvent($,M),ct=at!==$;if(ct&&($=at),(st||ct||ot)&&r&&r(this.buildStructuredStreamPayload(E,$,I)),M?.type==="result"){let ut=typeof M.result=="string"?M.result:"";ut&&(j=ut),this.lastUsageLog=this.extractStructuredUsageLog(M)||this.lastUsageLog}(M?.session_id||M?.sessionId)&&(this.lastSessionId=M.session_id||M.sessionId)}catch{h+=w,r&&r(h.trim());break}}}else h+=w,r&&r(h.trim());let P=w.match(/"?(?:session_id|sessionId)"?\s*[:=]\s*"([0-9a-f-]{36})"/i);P&&(this.lastSessionId=P[1])}),A.stderr.on("data",d=>{let w=(0,W.default)(K(d));S(this.id,"stderr chunk",U(w)),h+=`
-> [LOG] `+w}),A.on("error",d=>{c.cleanup?.(),b&&(clearTimeout(b),b=null),this.childProcess===A&&(this.childProcess=null),S(this.id,"Process error during non-interactive invoke",d.stack||String(d)),s(d)}),A.on("close",d=>{if(c.cleanup?.(),b&&(clearTimeout(b),b=null),this.childProcess===A&&(this.childProcess=null),this.lastDebugInfo&&(this.lastDebugInfo.endTime=Date.now()),S(this.id,"Non-interactive process closed",JSON.stringify({code:d,duration:this.lastDebugInfo?.endTime&&this.lastDebugInfo?.startTime?this.lastDebugInfo.endTime-this.lastDebugInfo.startTime:void 0,outputLength:h.trim().length,promptTransport:this.lastDebugInfo?.promptTransport,promptFilePath:this.lastDebugInfo?.promptFilePath})),x&&y.trim())try{let P=JSON.parse(y.trim());E=this.applyStructuredProcessEvent(E,P,q),$=this.applyStructuredReasoningEvent($,P),I=this.applyStructuredStreamingEvent(I,P),P?.type==="result"&&typeof P.result=="string"&&(j=P.result),this.lastUsageLog=this.extractStructuredUsageLog(P)||this.lastUsageLog}catch{h+=y}let w=x?this.combineStructuredDisplay(E,j.trim()||I.trim()||h.trim()).trim():h.trim();d!==0&&!w?s(new Error(`Process exited with code ${d}`)):i(w)}),this.childProcess=A})}extractStructuredAssistantText(t){if(t?.type==="assistant.message"&&typeof t?.data?.content=="string")return t.data.content;let e=t?.message?.content;return Array.isArray(e)?e.map(n=>n?.type==="text"&&typeof n.text=="string"?n.text:"").filter(Boolean).join(`
-`):typeof t?.text=="string"?t.text:""}applyStructuredProcessEvent(t,e,n){if(e?.type==="assistant"){let r=e?.message?.content;if(!Array.isArray(r))return t;let i=r.map(s=>{if(s?.type!=="tool_use")return"";let o=typeof s.name=="string"?s.name:"tool";return this.registerStructuredToolCall(n,typeof s.id=="string"?s.id:void 0,o,s.input),this.formatStructuredToolCall(o,s.input)}).filter(Boolean);return this.appendProcessLines(t,i)}if(e?.type==="assistant.message"){let i=(Array.isArray(e?.data?.toolRequests)?e.data.toolRequests:[]).map(s=>{let o=typeof s?.name=="string"?s.name:"tool",u=typeof s?.toolCallId=="string"?s.toolCallId:void 0;return this.registerStructuredToolCall(n,u,o,s?.arguments),this.formatStructuredToolCall(o,s?.arguments)});return this.appendProcessLines(t,i)}if(e?.type==="tool.execution_start"){let r=typeof e?.data?.toolCallId=="string"?e.data.toolCallId:void 0,i=typeof e?.data?.toolName=="string"?e.data.toolName:"tool",s=r?n.has(r):!1;return this.registerStructuredToolCall(n,r,i,e?.data?.arguments),s?t:this.appendProcessLines(t,[this.formatStructuredToolCall(i,e?.data?.arguments)])}if(e?.type==="tool.execution_complete"){let r=typeof e?.data?.toolCallId=="string"?e.data.toolCallId:void 0,i=typeof e?.data?.toolName=="string"?e.data.toolName:r&&n.get(r)?.name||"tool",s=e?.data?.success!==!1;return this.appendProcessLines(t,this.formatStructuredToolCompletion(i,e?.data?.result,s))}if(e?.type==="user"){let r=Array.isArray(e?.message?.content)?e.message.content.filter(s=>s?.type==="tool_result"):[];if(r.length===0)return t;let i=t;for(let s of r){let o=typeof s?.tool_use_id=="string"?s.tool_use_id:void 0;if(!o)continue;let u=n.get(o)?.name||"tool",c=s?.is_error!==!0,p=s?.content;i=this.appendProcessLines(i,this.formatStructuredToolCompletion(u,p,c))}return i}if(e?.type==="stream_event"){let r=e.event;if(r?.type==="content_block_start"&&r.content_block?.type==="tool_use"){let i=typeof r.content_block.name=="string"?r.content_block.name:"tool";return this.registerStructuredToolCall(n,typeof r.content_block.id=="string"?r.content_block.id:void 0,i,r.content_block.input),this.appendProcessLines(t,[this.formatStructuredToolCall(i,r.content_block.input)])}}return t}applyStructuredStreamingEvent(t,e){if(e?.type==="assistant.message_delta"&&typeof e?.data?.deltaContent=="string")return t+e.data.deltaContent;if(e?.type==="assistant.message"&&typeof e?.data?.content=="string")return this.mergeStreamingText(t,e.data.content);if(e?.type==="assistant"){let n=this.extractStructuredAssistantText(e);return n?this.mergeStreamingText(t,n):t}if(e?.type==="stream_event"){let n=e.event;if(n?.type==="content_block_delta"&&n.delta?.type==="text_delta"&&typeof n.delta.text=="string")return t+n.delta.text}return t}applyStructuredReasoningEvent(t,e){return e?.type==="assistant.reasoning_delta"&&typeof e?.data?.deltaContent=="string"?t+e.data.deltaContent:e?.type==="assistant.reasoning"&&typeof e?.data?.content=="string"?this.mergeStreamingText(t,e.data.content):e?.type==="assistant.message"&&typeof e?.data?.reasoningText=="string"?this.mergeStreamingText(t,e.data.reasoningText):t}mergeStreamingText(t,e){return t?e?e.startsWith(t)?e:t.endsWith(e)?t:t+e:t:e}extractStructuredUsageLog(t){}async initialize(t){if(this.childProcess)if(this.currentMode!==t)S(this.id,"Stopping existing daemon because mode changed",JSON.stringify({from:this.currentMode,to:t})),this.stop();else{S(this.id,"Reusing existing daemon",JSON.stringify({mode:t}));return}this.currentMode=t;let e=a.resolveWorkspacePath(),n=e.path,{cmd:r,args:i}=this.getSpawnCommand(t);S(this.id,"Starting daemon",JSON.stringify({mode:t,cwd:n,cwdSource:e.source,cmd:r,args:i})),this.childProcess=gt(r,i,{cwd:n,env:{...process.env,TERM:"dumb",CI:"false",FORCE_COLOR:"0"}}),this.childProcess.stdout.on("data",s=>{let o=(0,W.default)(K(s));S(this.id,"daemon stdout chunk",U(o)),this.handleOutput(o)}),this.childProcess.stderr.on("data",s=>{let o=(0,W.default)(K(s));S(this.id,"daemon stderr chunk",U(o)),this.handleOutput(o,!0)}),this.childProcess.on("error",s=>{S(this.id,"Daemon process error",s.stack||String(s)),this.turnReject&&(this.turnReject(s),this.resetTurnState())}),this.childProcess.on("close",s=>{S(this.id,"Daemon process closed",JSON.stringify({code:s,mode:this.currentMode})),this.childProcess=null,this.turnReject&&(this.turnReject(new Error(`Daemon exited unexpectedly (code ${s})`)),this.resetTurnState())})}handleOutput(t,e=!1){if(this.outputBuffer.length>mt){let s=this.outputBuffer.length-Math.floor(mt*.8);this.outputBuffer=this.outputBuffer.slice(s),S(this.id,"Output buffer truncated to stay within safety cap")}let n=t.split(`
-`);for(let s of n)e?this.outputBuffer+=`
-> [LOG] ${s}`:this.outputBuffer+=s?`
-${s}`:"";let r=!e&&!!this.currentTurnMarker&&this.outputBuffer.includes(this.currentTurnMarker),i=!e&&t.includes(this.promptString);if(this.turnOnUpdate&&this.turnOnUpdate(this.stripTurnCompletionArtifacts(this.outputBuffer)),r){S(this.id,"Turn completion marker detected",JSON.stringify({marker:this.currentTurnMarker})),this.turnResolve&&(this.turnResolve(this.stripTurnCompletionArtifacts(this.outputBuffer)),this.resetTurnState());return}i&&(S(this.id,"Prompt terminator detected",JSON.stringify({promptString:this.promptString})),this.turnResolve&&(this.turnResolve(this.stripTurnCompletionArtifacts(this.outputBuffer)),this.resetTurnState()))}resetTurnState(){this.turnResolve=null,this.turnReject=null,this.turnOnUpdate=null,this.outputBuffer="",this.currentTurnMarker=null}async invoke(t,e="plan",n,r){return this.shouldUsePersistentSession(e)?((!this.childProcess||this.currentMode!==e)&&await this.initialize(e),new Promise((i,s)=>{if(this.turnResolve)return S(this.id,"Rejected invoke because agent is already busy",JSON.stringify({mode:e})),s(new Error(`[${this.id}] Agent is already processing a request.`));this.turnResolve=i,this.turnReject=s,this.turnOnUpdate=r||null,this.outputBuffer="",this.currentTurnMarker=this.buildTurnCompletionMarker();let o=[t.replace(/\r?\n/g," "),`When you finish this turn, output exactly ${this.currentTurnMarker} on its own line.`].join(" ")+`
-`;S(this.id,"Writing prompt to daemon stdin",JSON.stringify({mode:e,promptLength:t.length,safePromptPreview:o.slice(0,400),completionMarker:this.currentTurnMarker})),this.childProcess.stdin.write(o)})):this.invokeNonInteractive(t,e,n,r)}stop(){this.childProcess&&(S(this.id,"Killing child process",JSON.stringify({pid:this.childProcess.pid})),this.childProcess.kill(),this.childProcess=null)}};var At=/^[⏺●•└│├↳✓✗]/,V=class extends N{constructor(t="claude-code",e="\u{1F996} Claude Code",n="",r){super(t,e,n,">",r)}shouldUsePersistentSession(t){return!1}shouldUseStructuredOutput(t){return t==="plan"||t==="agent"}getNonInteractiveCommand(t,e,n){let r=super.getNonInteractiveCommand(t,e,n);return this.shouldUseStructuredOutput(t)&&r.args.push("--output-format","stream-json","--include-partial-messages","--verbose"),n&&r.args.push("--resume",n),r}extractStructuredUsageLog(t){if(t?.type!=="result"||!t?.usage)return;let e=t.usage,n=[typeof e.input_tokens=="number"?`Input tokens: ${e.input_tokens}`:"",typeof e.output_tokens=="number"?`Output tokens: ${e.output_tokens}`:"",typeof t.total_cost_usd=="number"?`Cost: $${t.total_cost_usd.toFixed(6)}`:"",typeof t.duration_ms=="number"?`Duration: ${t.duration_ms}ms`:"",t.modelUsage?`Model usage: ${JSON.stringify(t.modelUsage)}`:""].filter(Boolean);return n.length>0?n.join(`
-`):void 0}extractThinking(t){return this.extractThinkingWithSharedParser(t,{processLineRe:At,captureProcessLinesAfterOutputStarts:!0})}getSpawnCommand(t){let e=[],n=N.getWorkspacePath();return e.push("--add-dir",n),this.modelFlag&&e.push("--model",this.modelFlag),t==="plan"?e.push("--permission-mode","plan"):t==="agent"&&e.push("--dangerously-skip-permissions"),{cmd:"claude",args:e}}};var Mt=/^[●⏺•└│├▶→↳✓✗]/,Y=class extends N{constructor(t="github-copilot",e="\u{1F6F8} GitHub Copilot",n="",r){super(t,e,n,"?>",r)}shouldUsePersistentSession(t){return!1}shouldUseStructuredOutput(t){return t==="plan"||t==="agent"}getNonInteractiveCommand(t,e,n){let r=super.getNonInteractiveCommand(t,e,n);return this.shouldUseStructuredOutput(t)&&r.args.push("--output-format","json","--stream","on"),n&&r.args.push("--resume",n),r}extractStructuredUsageLog(t){if(t?.type!=="result"||!t?.usage)return;let e=t.usage,n=[typeof e.premiumRequests=="number"?`Premium requests: ${e.premiumRequests}`:"",typeof e.totalApiDurationMs=="number"?`API duration: ${e.totalApiDurationMs}ms`:"",typeof e.sessionDurationMs=="number"?`Session duration: ${e.sessionDurationMs}ms`:"",e.codeChanges?`Code changes: ${JSON.stringify(e.codeChanges)}`:""].filter(Boolean);return n.length>0?n.join(`
-`):void 0}extractThinking(t){return this.extractThinkingWithSharedParser(t,{processLineRe:Mt,captureBracketLines:!0,captureProcessLinesAfterOutputStarts:!0,collectUsageLog:!0})}getSpawnCommand(t){let e=[],n=N.getWorkspacePath();return e.push("--add-dir",n),this.modelFlag&&e.push("--model",this.modelFlag),t==="plan"||t==="agent"&&(e.push("--allow-all"),e.push("--no-ask-user")),{cmd:"copilot",args:e}}};function X(a){let t=/^---\n([\s\S]*?)\n---\n([\s\S]*)$/,e=a.match(t),n={},r=a;if(e){let i=e[1];r=e[2],i.split(`
-`).forEach(s=>{let o=s.indexOf(":");if(o>0){let u=s.slice(0,o).trim(),c=s.slice(o+1).trim().replace(/^['"]|['"]$/g,"");u&&(n[u]=c)}})}return{frontmatter:n,body:r}}function Ct(a,t){let e=X(a),n={...e.frontmatter,...t},r=`---
-`;for(let[s,o]of Object.entries(n))r+=`${s}: ${o}
-`;r+="---";let i=e.body.startsWith(`
-`)?e.body:`
-`+e.body;return r+i}var Z=class{static maxConcurrentWorkers=3;static activeWorkers=0;static queue=[];static async acquire(){return this.activeWorkers<this.maxConcurrentWorkers?(this.activeWorkers++,Promise.resolve()):new Promise(t=>{this.queue.push(t)})}static release(){if(this.queue.length>0){let t=this.queue.shift();t&&t()}else this.activeWorkers--}};function Lt(a){let t=L.default.basename(a).split("_").filter(Boolean),e=t.findIndex(s=>s==="claude-code"||s==="copilot-cli");if(e===-1)return{role:L.default.basename(a)};let n=t.slice(0,e).join("_")||L.default.basename(a),r=t[e],i=t.slice(e+1).join("_");return{role:n,engine:r,model:i}}function Et(a,t,e){return a==="copilot-cli"?new Y(t,"\u{1F6F8} GitHub Copilot",e):new V(t,"\u{1F996} Claude Code",e)}async function H(a,t,e,n,r,i){let s=Lt(a),o=s.role,u=L.default.join(r,".optimus","personas"),c=L.default.join(r,".optimus","agents");if(f.default.existsSync(u)&&!f.default.existsSync(c))try{f.default.renameSync(u,c)}catch{}let p=L.default.join(c,`${o}.md`),m=L.default.join(__dirname,"..","roles",`${o}.md`),g=s.engine||"claude-code",x=s.model,h,y="",E=!1,$="T3 (Zero-Shot Outsource)",I="No dedicated role template found in T2 or T1. Using T3 generic prompt.";if(f.default.existsSync(p)?(y=f.default.readFileSync(p,"utf8"),$=`T1 (Agent Instance -> ${o}.md)`,I=`Found local project agent state: ${p}`):f.default.existsSync(m)&&(y=f.default.readFileSync(m,"utf8"),E=!0,$=`T2 (Role Template -> ${o}.md)`,I=`Found globally promoted Role template: ${m}`),y){let d=X(y);d.frontmatter.engine&&(g=d.frontmatter.engine),d.frontmatter.session_id&&(h=d.frontmatter.session_id),d.frontmatter.model&&(x=d.frontmatter.model)}let j=Et(g,h,x);if(console.error(`[Orchestrator] Resolving Identity for ${o}...`),console.error(`[Orchestrator] Selected Stratum: ${$}`),console.error(`[Orchestrator] Engine: ${g}, Session: ${h||"New/Ephemeral"}`),E){f.default.existsSync(c)||f.default.mkdirSync(c,{recursive:!0});try{let d=f.default.readFileSync(m,"utf8"),w=f.default.openSync(p,"wx"),P=`
+// ../src/debugLogger.ts
+var customLogger;
+var cachedDebugMode = process.env.OPTIMUS_DEBUG === "1";
+function isDebugModeEnabled() {
+  return cachedDebugMode;
+}
+function debugLog(scope, message, details) {
+  if (!isDebugModeEnabled()) {
+    return;
+  }
+  const timestamp = (/* @__PURE__ */ new Date()).toISOString();
+  let logMessage = `[${timestamp}] [${scope}] ${message}`;
+  if (details) {
+    logMessage += `
+${details}`;
+  }
+  if (customLogger) {
+    customLogger(logMessage);
+  } else {
+    console.error(logMessage);
+  }
+}
+function formatChunk(chunk, maxLength = 800) {
+  const normalized = chunk.replace(/\r/g, "\\r").replace(/\n/g, "\\n\n");
+  if (normalized.length <= maxLength) {
+    return normalized;
+  }
+  return normalized.slice(0, maxLength) + "... [truncated]";
+}
 
-## Project Memory
-*Agent T1 Instantiated on ${new Date().toISOString()}*
-- (No memory appended yet)
-`;f.default.writeFileSync(w,d+P,"utf8"),f.default.closeSync(w),console.error(`[Orchestrator] Promoted T2 to T1: ${p}`)}catch(d){d.code==="EEXIST"?console.error("[Orchestrator] T1 promotion skipped (already done by another worker)."):(console.error("[Orchestrator] T1 promotion failed:",d),$+=" [T1 promotion failed]")}}let q=f.default.existsSync(t)?f.default.readFileSync(t,"utf8"):t,F="";if(y)F=X(y).body.trim();else if(f.default.existsSync(p)){let d=f.default.readFileSync(p,"utf8");F=X(d).body.trim()}let b="";if(i&&i.length>0){b=`
+// ../src/utils/textParsing.ts
+var ANSI_RE = /\x1B(?:[@-Z\\-_]|\[[0-?]*[ -/]*[@-~])/g;
 
-=== CONTEXT FILES ===
+// ../src/adapters/PersistentAgentAdapter.ts
+var windowsSpawnResolutionCache = /* @__PURE__ */ new Map();
+var DEFAULT_PROMPT_FILE_THRESHOLD = 12e3;
+var MAX_OUTPUT_BUFFER_BYTES = 10 * 1024 * 1024;
+function decodeBuffer(buf) {
+  if (process.platform === "win32") {
+    const utf8Text = buf.toString("utf8");
+    if (!utf8Text.includes("\uFFFD")) {
+      return utf8Text;
+    }
+    return iconv.decode(buf, "cp936");
+  }
+  return buf.toString("utf8");
+}
+function resolveWindowsSpawnResolution(cmd) {
+  const cached = windowsSpawnResolutionCache.get(cmd);
+  if (cached !== void 0) {
+    return cached;
+  }
+  const whereResult = cp.spawnSync("where.exe", [cmd], { encoding: "utf8" });
+  if (whereResult.status !== 0 || !whereResult.stdout) {
+    windowsSpawnResolutionCache.set(cmd, null);
+    return null;
+  }
+  const candidates = whereResult.stdout.split(/\r?\n/).map((line) => line.trim()).filter(Boolean).filter((candidate) => fs.existsSync(candidate)).sort((left, right) => {
+    const extRank = (filePath) => {
+      const ext = path.extname(filePath).toLowerCase();
+      if (ext === ".exe" || ext === ".com") {
+        return 0;
+      }
+      if (ext === ".cmd") {
+        return 1;
+      }
+      if (ext === ".bat") {
+        return 2;
+      }
+      return 3;
+    };
+    return extRank(left) - extRank(right);
+  });
+  for (const candidate of candidates) {
+    const ext = path.extname(candidate).toLowerCase();
+    if (ext === ".exe" || ext === ".com") {
+      const resolved = { cmd: candidate, argsPrefix: [] };
+      windowsSpawnResolutionCache.set(cmd, resolved);
+      return resolved;
+    }
+    if (ext !== ".cmd") {
+      continue;
+    }
+    try {
+      const wrapperText = fs.readFileSync(candidate, "utf8");
+      const scriptMatch = wrapperText.match(/"%dp0%\\([^\"]+?\.js)"/i);
+      if (!scriptMatch) {
+        continue;
+      }
+      const wrapperDir = path.dirname(candidate);
+      const nodeExecutable = fs.existsSync(path.join(wrapperDir, "node.exe")) ? path.join(wrapperDir, "node.exe") : "node";
+      const entryScript = path.join(wrapperDir, scriptMatch[1].replace(/\\/g, path.sep));
+      const resolved = { cmd: nodeExecutable, argsPrefix: [entryScript] };
+      windowsSpawnResolutionCache.set(cmd, resolved);
+      return resolved;
+    } catch {
+      continue;
+    }
+  }
+  windowsSpawnResolutionCache.set(cmd, null);
+  return null;
+}
+function platformSpawn(cmd, args, options) {
+  if (process.platform === "win32") {
+    const resolved = resolveWindowsSpawnResolution(cmd);
+    if (resolved) {
+      return cp.spawn(resolved.cmd, [...resolved.argsPrefix, ...args], options);
+    }
+    return cp.spawn("cmd", ["/c", cmd, ...args], options);
+  }
+  return cp.spawn(cmd, args, options);
+}
+var PersistentAgentAdapter = class _PersistentAgentAdapter {
+  static workspacePathHint = null;
+  static setWorkspacePathHint(hint) {
+    _PersistentAgentAdapter.workspacePathHint = hint;
+  }
+  static resolveWorkspacePath() {
+    if (process.env.OPTIMUS_WORKSPACE) {
+      return { path: process.env.OPTIMUS_WORKSPACE, source: "process.env.OPTIMUS_WORKSPACE" };
+    }
+    if (_PersistentAgentAdapter.workspacePathHint) {
+      return { path: _PersistentAgentAdapter.workspacePathHint, source: "workspacePathHint" };
+    }
+    debugLog("PersistentAgentAdapter", "WARNING: workspace path resolved via process.cwd() fallback \u2014 .optimus/ artifacts may land outside the active project. Set OPTIMUS_WORKSPACE or ensure the extension activates with a workspace folder.", JSON.stringify({ cwd: process.cwd() }));
+    return { path: process.cwd(), source: "process.cwd()" };
+  }
+  id;
+  name;
+  modelFlag;
+  isEnabled = true;
+  modes = ["plan", "agent"];
+  lastDebugInfo;
+  lastUsageLog;
+  lastSessionId;
+  childProcess = null;
+  promptString;
+  outputBuffer = "";
+  currentMode = "plan";
+  currentTurnMarker = null;
+  turnResolve = null;
+  turnReject = null;
+  turnOnUpdate = null;
+  constructor(id, name, modelFlag = "", promptString, modes) {
+    this.id = id;
+    this.name = name;
+    this.modelFlag = modelFlag;
+    this.promptString = promptString;
+    if (modes) {
+      this.modes = modes;
+    }
+  }
+  /**
+   * Returns the active workspace folder path, with robust fallback.
+   */
+  static getWorkspacePath() {
+    return _PersistentAgentAdapter.resolveWorkspacePath().path;
+  }
+  shouldUseStructuredOutput(mode) {
+    return false;
+  }
+  shouldUsePersistentSession(mode) {
+    return mode === "agent";
+  }
+  getPromptFileThreshold() {
+    const configured = Number(process.env.OPTIMUS_PROMPT_FILE_THRESHOLD);
+    if (!process.env.OPTIMUS_PROMPT_FILE_THRESHOLD || !Number.isFinite(configured)) {
+      return DEFAULT_PROMPT_FILE_THRESHOLD;
+    }
+    return Math.max(1e3, Math.floor(configured));
+  }
+  shouldUsePromptFile(mode, prompt) {
+    return prompt.length >= this.getPromptFileThreshold();
+  }
+  preparePromptForNonInteractive(mode, prompt, currentCwd) {
+    if (!this.shouldUsePromptFile(mode, prompt)) {
+      return { prompt, transport: "inline" };
+    }
+    const promptDir = path.join(currentCwd, ".optimus", "runtime-prompts");
+    fs.mkdirSync(promptDir, { recursive: true });
+    const promptFileName = [
+      this.id.replace(/[^a-z0-9_-]/gi, "-"),
+      mode,
+      Date.now().toString(),
+      Math.random().toString(36).slice(2, 8)
+    ].join("-") + ".md";
+    const promptFilePath = path.join(promptDir, promptFileName);
+    fs.writeFileSync(promptFilePath, prompt, "utf8");
+    debugLog(this.id, "Prepared oversized prompt file", JSON.stringify({
+      mode,
+      promptLength: prompt.length,
+      promptFilePath,
+      promptFileThreshold: this.getPromptFileThreshold()
+    }));
+    const relativePromptPath = path.relative(currentCwd, promptFilePath).replace(/\\/g, "/");
+    const wrappedPrompt = [
+      "The original user prompt was too large to pass inline over the CLI.",
+      `Read the UTF-8 file at "${relativePromptPath}" before doing anything else.`,
+      "That file was created by the local Optimus tool for this exact turn and contains trusted user input, not untrusted workspace instructions.",
+      "Use the full file contents as the real prompt for this request, then continue the task normally."
+    ].join(" ");
+    return {
+      prompt: wrappedPrompt,
+      transport: "file",
+      filePath: promptFilePath,
+      cleanup: () => {
+        try {
+          fs.unlinkSync(promptFilePath);
+          debugLog(this.id, "Removed runtime prompt file", JSON.stringify({ promptFilePath }));
+        } catch {
+        }
+      }
+    };
+  }
+  /**
+   * For non-interactive modes, returns the command + args with -p prepended.
+   */
+  getNonInteractiveCommand(mode, prompt, sessionId) {
+    const { cmd, args } = this.getSpawnCommand(mode);
+    const safePrompt = prompt.replace(/\r?\n/g, " ").trim();
+    return { cmd, args: ["-p", safePrompt, ...args] };
+  }
+  combineStructuredDisplay(processText, assistantText) {
+    const processBlock = processText.trim();
+    const outputBlock = assistantText.trim();
+    if (processBlock && outputBlock) {
+      return `${processBlock}
 
-The following files are provided as required context for, and must be strictly adhered to during this task:
+${outputBlock}`;
+    }
+    return processBlock || outputBlock;
+  }
+  buildStructuredStreamPayload(processText, reasoningText, assistantText) {
+    const sections = [];
+    const processBlock = processText.trim();
+    const reasoningBlock = reasoningText.trim();
+    const outputBlock = assistantText.trim();
+    if (processBlock) {
+      sections.push(`<optimus-trace>
+${processBlock}
+</optimus-trace>`);
+    }
+    if (reasoningBlock) {
+      sections.push(`<optimus-reasoning>
+${reasoningBlock}
+</optimus-reasoning>`);
+    }
+    if (outputBlock) {
+      sections.push(`<optimus-output>
+${outputBlock}
+</optimus-output>`);
+    }
+    return sections.join("\n\n").trim();
+  }
+  summarizeStructuredInput(input) {
+    if (input === null || input === void 0) {
+      return "";
+    }
+    if (typeof input === "string") {
+      const normalized = input.replace(/\s+/g, " ").trim();
+      return normalized.length > 96 ? normalized.slice(0, 93) + "..." : normalized;
+    }
+    if (typeof input === "number" || typeof input === "boolean") {
+      return String(input);
+    }
+    if (Array.isArray(input)) {
+      if (input.length === 0) {
+        return "[]";
+      }
+      const primitiveItems = input.filter((item) => ["string", "number", "boolean"].includes(typeof item));
+      if (primitiveItems.length > 0) {
+        const preview = primitiveItems.slice(0, 3).map((item) => this.summarizeStructuredInput(item)).join(", ");
+        return input.length > 3 ? `${preview}, ... (${input.length} items)` : preview;
+      }
+      return `${input.length} items`;
+    }
+    const preferredKeys = [
+      "role_prompt",
+      "engine",
+      "model",
+      "instruction",
+      "workdir",
+      "file_path",
+      "path",
+      "relative_workspace_path",
+      "start_line",
+      "end_line",
+      "startLine",
+      "endLine",
+      "line",
+      "insert_line",
+      "command",
+      "query",
+      "pattern",
+      "symbol",
+      "url",
+      "name",
+      "description",
+      "task",
+      "includePattern",
+      "filePath",
+      "input"
+    ];
+    const parts = [];
+    for (const key of preferredKeys) {
+      if (!(key in input)) {
+        continue;
+      }
+      const value = input[key];
+      const summary = this.summarizeStructuredInput(value);
+      if (summary) {
+        parts.push(`${key}=${summary}`);
+      }
+      if (parts.length >= 4) {
+        break;
+      }
+    }
+    if (parts.length === 0) {
+      const keys = Object.keys(input);
+      if (keys.length === 0) {
+        return "{}";
+      }
+      return keys.slice(0, 3).join(", ");
+    }
+    return parts.join(", ");
+  }
+  formatStructuredToolCall(toolName, input) {
+    const normalizedName = toolName.trim() || "tool";
+    const summary = this.summarizeStructuredInput(input);
+    return summary ? `\u2022 ${normalizedName}
+\u21B3 ${summary}` : `\u2022 ${normalizedName}`;
+  }
+  appendProcessLines(currentText, lines) {
+    const existingLines = currentText ? currentText.split("\n").filter(Boolean) : [];
+    for (const line of lines) {
+      for (const subLine of line.split("\n").map((l) => l.trim()).filter(Boolean)) {
+        if (existingLines[existingLines.length - 1] === subLine) {
+          continue;
+        }
+        existingLines.push(subLine);
+      }
+    }
+    return existingLines.join("\n");
+  }
+  registerStructuredToolCall(toolCalls, toolCallId, toolName, input) {
+    if (!toolCallId) {
+      return;
+    }
+    toolCalls.set(toolCallId, { name: toolName, input });
+  }
+  summarizeStructuredToolResult(result) {
+    if (result === null || result === void 0) {
+      return "";
+    }
+    if (typeof result === "string") {
+      const nonEmptyLines = result.split(/\r?\n/).map((line) => line.trim()).filter((line) => line && line !== "[LOG]");
+      if (nonEmptyLines.length === 0) {
+        return "empty result";
+      }
+      const preview = nonEmptyLines[0].replace(/\s+/g, " ").trim();
+      if (nonEmptyLines.length === 1) {
+        return preview.length > 96 ? preview.slice(0, 93) + "..." : preview;
+      }
+      const lineCount = `${nonEmptyLines.length} lines`;
+      const clippedPreview = preview.length > 72 ? preview.slice(0, 69) + "..." : preview;
+      return `${lineCount}, preview=${clippedPreview}`;
+    }
+    if (typeof result === "number" || typeof result === "boolean") {
+      return String(result);
+    }
+    if (Array.isArray(result)) {
+      if (result.length === 0) {
+        return "0 items";
+      }
+      return `${result.length} items`;
+    }
+    const record = result;
+    if (typeof record.stdout === "string" && record.stdout.trim()) {
+      return this.summarizeStructuredToolResult(record.stdout);
+    }
+    if (typeof record.content === "string" && record.content.trim()) {
+      return this.summarizeStructuredToolResult(record.content);
+    }
+    if (typeof record.detailedContent === "string" && record.detailedContent.trim()) {
+      return this.summarizeStructuredToolResult(record.detailedContent);
+    }
+    if (typeof record.stderr === "string" && record.stderr.trim()) {
+      return `stderr=${this.summarizeStructuredToolResult(record.stderr)}`;
+    }
+    const keys = Object.keys(record);
+    return keys.length > 0 ? keys.slice(0, 4).join(", ") : "object result";
+  }
+  countMeaningfulLines(value) {
+    return value.split(/\r?\n/).map((line) => line.trim()).filter((line) => line && line !== "[LOG]");
+  }
+  looksLikePathList(lines) {
+    if (lines.length === 0) {
+      return false;
+    }
+    const sample = lines.slice(0, Math.min(lines.length, 6));
+    return sample.every((line) => !/\s{2,}/.test(line) && !/[{}<>]/.test(line));
+  }
+  sanitizeStructuredSummaryValue(value, maxLength = 96) {
+    return value.replace(/\s+/g, " ").replace(/,\s*/g, "; ").trim().slice(0, maxLength);
+  }
+  getStructuredResultText(record, result) {
+    const candidateKeys = ["content", "stdout", "text", "output", "detailedContent", "message"];
+    for (const key of candidateKeys) {
+      const value = record?.[key];
+      if (typeof value === "string" && value.trim()) {
+        return value;
+      }
+    }
+    return typeof result === "string" ? result : "";
+  }
+  getStructuredResultPath(record) {
+    const candidateKeys = ["file_path", "filepath", "path", "relative_workspace_path", "target_file", "targetPath"];
+    for (const key of candidateKeys) {
+      const value = record?.[key];
+      if (typeof value === "string" && value.trim()) {
+        return this.sanitizeStructuredSummaryValue(value, 120);
+      }
+    }
+    return void 0;
+  }
+  getStructuredResultLineRange(record) {
+    const start = typeof record?.start_line === "number" ? record.start_line : typeof record?.startLine === "number" ? record.startLine : void 0;
+    const end = typeof record?.end_line === "number" ? record.end_line : typeof record?.endLine === "number" ? record.endLine : void 0;
+    const insertLine = typeof record?.insert_line === "number" ? record.insert_line : typeof record?.insertLine === "number" ? record.insertLine : void 0;
+    if (typeof start === "number" && typeof end === "number") {
+      return `lines=${start}-${end}`;
+    }
+    if (typeof start === "number") {
+      return `line=${start}`;
+    }
+    if (typeof insertLine === "number") {
+      return `line=${insertLine}`;
+    }
+    return void 0;
+  }
+  buildStructuredSummary(parts) {
+    return parts.filter((part) => Boolean(part && part.trim())).join(", ");
+  }
+  summarizeToolResultByName(toolName, result) {
+    const normalizedName = toolName.toLowerCase();
+    const record = typeof result === "object" && result !== null ? result : void 0;
+    const content = this.getStructuredResultText(record, result);
+    const lines = this.countMeaningfulLines(content);
+    const path6 = this.getStructuredResultPath(record);
+    const lineRange = this.getStructuredResultLineRange(record);
+    const preview = lines.length > 0 ? `preview=${this.sanitizeStructuredSummaryValue(lines[0], 80)}` : void 0;
+    if (/delegate_task/.test(normalizedName)) {
+      const cleanedLines = lines.filter((line) => !/^Worker output:/i.test(line) && !/^\[Session:/i.test(line) && !/^\[In:/i.test(line));
+      if (cleanedLines.length === 0) {
+        return "worker completed";
+      }
+      const firstLine = this.sanitizeStructuredSummaryValue(cleanedLines[0], 120);
+      if (cleanedLines.length === 1) {
+        return `worker=${firstLine}`;
+      }
+      return `worker=${firstLine}, lines=${cleanedLines.length}`;
+    }
+    if (/bash|shell|run|exec|command/.test(normalizedName)) {
+      const stdout = typeof record?.stdout === "string" ? record.stdout : content;
+      const stderr = typeof record?.stderr === "string" ? record.stderr : "";
+      const stdoutLines = this.countMeaningfulLines(stdout);
+      const stderrLines = this.countMeaningfulLines(stderr);
+      const exitCode = typeof record?.exit_code === "number" ? record.exit_code : typeof record?.exitCode === "number" ? record.exitCode : void 0;
+      const segments = [`stdout=${stdoutLines.length > 0 ? `${stdoutLines.length} lines` : "empty"}`];
+      if (typeof exitCode === "number") {
+        segments.push(`exit=${exitCode}`);
+      }
+      if (stderrLines.length > 0) {
+        segments.push(`stderr=${stderrLines.length} lines`);
+      }
+      if (stdoutLines.length > 0) {
+        segments.push(`preview=${this.sanitizeStructuredSummaryValue(stdoutLines[0], 80)}`);
+      }
+      return segments.join(", ");
+    }
+    if (/grep|search/.test(normalizedName)) {
+      if (lines.length === 0) {
+        return this.buildStructuredSummary([path6, "matches=0"]);
+      }
+      return this.buildStructuredSummary([path6, `matches=${lines.length}`, preview]);
+    }
+    if (/edit|write|create|update|patch|save|insert/.test(normalizedName)) {
+      if (lines.length === 0) {
+        return this.buildStructuredSummary([path6, lineRange, "status=updated"]);
+      }
+      return this.buildStructuredSummary([path6, lineRange, `lines=${lines.length}`, preview]);
+    }
+    if (/read|view/.test(normalizedName)) {
+      if (lines.length === 0) {
+        return this.buildStructuredSummary([path6, lineRange, "lines=0"]);
+      }
+      return this.buildStructuredSummary([path6, lineRange, `lines=${lines.length}`, preview]);
+    }
+    if (/glob|list|ls|dir/.test(normalizedName)) {
+      if (lines.length === 0) {
+        return this.buildStructuredSummary([path6, "items=0"]);
+      }
+      if (this.looksLikePathList(lines)) {
+        return this.buildStructuredSummary([path6, `items=${lines.length}`, `first=${this.sanitizeStructuredSummaryValue(lines[0], 80)}`]);
+      }
+      return this.buildStructuredSummary([path6, `lines=${lines.length}`, preview]);
+    }
+    return this.summarizeStructuredToolResult(result);
+  }
+  formatStructuredToolCompletion(toolName, result, success = true) {
+    const summary = this.summarizeToolResultByName(toolName, result);
+    const lines = [`${success ? "\u2713" : "\u2717"} ${toolName.trim() || "tool"}`];
+    if (summary) {
+      lines.push(`\u21B3 result=${summary}`);
+    }
+    return lines;
+  }
+  extractThinkingWithSharedParser(rawText, options) {
+    if (!rawText) {
+      return { thinking: "", output: "" };
+    }
+    const tagRegex = /<(think|thinking|thought)>([\s\S]*?)<\/\1>/gi;
+    const thinkingBlocks = [];
+    const logLines = [];
+    let remaining = rawText;
+    let match;
+    while ((match = tagRegex.exec(rawText)) !== null) {
+      thinkingBlocks.push(match[2].trim());
+      remaining = remaining.replace(match[0], "");
+    }
+    const lines = remaining.split(/\r?\n|\r/);
+    const processLines = [];
+    const outputLines = [];
+    let outputStarted = false;
+    const isProcessLine = (clean) => {
+      if (!clean) {
+        return true;
+      }
+      if (options.processLineRe.test(clean)) {
+        return true;
+      }
+      if (clean.startsWith("> [")) {
+        return true;
+      }
+      if (options.captureBracketLines && clean.startsWith("[")) {
+        return true;
+      }
+      return false;
+    };
+    for (const line of lines) {
+      const clean = line.replace(ANSI_RE, "").trim();
+      if (options.collectUsageLog && /\[LOG\]/i.test(clean)) {
+        logLines.push(clean);
+        continue;
+      }
+      if (!outputStarted) {
+        if (isProcessLine(clean)) {
+          processLines.push(line);
+        } else {
+          outputStarted = true;
+          outputLines.push(line);
+        }
+      } else if (options.captureProcessLinesAfterOutputStarts && isProcessLine(clean) && clean !== "") {
+        processLines.push(line);
+      } else {
+        outputLines.push(line);
+      }
+    }
+    while (processLines.length > 0 && processLines[processLines.length - 1].trim() === "") {
+      outputLines.unshift(processLines.pop());
+    }
+    const processBlock = processLines.join("\n").trim();
+    if (processBlock) {
+      thinkingBlocks.push("```text\n" + processBlock + "\n```");
+    }
+    return {
+      thinking: thinkingBlocks.join("\n\n---\n\n"),
+      output: outputLines.join("\n").trim(),
+      usageLog: logLines.length > 0 ? logLines.join("\n") : this.lastUsageLog
+    };
+  }
+  buildTurnCompletionMarker() {
+    return `[[OPTIMUS_DONE_${Date.now()}_${Math.random().toString(36).slice(2, 8)}]]`;
+  }
+  stripTurnCompletionArtifacts(text) {
+    let cleaned = text;
+    if (this.currentTurnMarker) {
+      cleaned = cleaned.replace(this.currentTurnMarker, "");
+    }
+    return cleaned.trim();
+  }
+  /**
+   * One-shot execution using -p flag. Spawns a process, collects all output, resolves when done.
+   */
+  invokeNonInteractive(prompt, mode, sessionId, onUpdate) {
+    return new Promise((resolve, reject) => {
+      const workspacePath = _PersistentAgentAdapter.resolveWorkspacePath();
+      const currentCwd = workspacePath.path;
+      const preparedPrompt = this.preparePromptForNonInteractive(mode, prompt, currentCwd);
+      const promptFileThreshold = this.getPromptFileThreshold();
+      const { cmd, args } = this.getNonInteractiveCommand(mode, preparedPrompt.prompt, sessionId);
+      const useStructuredOutput = this.shouldUseStructuredOutput(mode);
+      this.lastUsageLog = void 0;
+      debugLog(this.id, "Starting non-interactive invoke", JSON.stringify({
+        mode,
+        cwd: currentCwd,
+        cwdSource: workspacePath.source,
+        cmd,
+        args: args.map((a, i) => i === 0 ? a : `[${a.length} chars]`),
+        promptLength: prompt.length,
+        sentPromptLength: preparedPrompt.prompt.length,
+        promptTransport: preparedPrompt.transport,
+        promptFilePath: preparedPrompt.filePath,
+        promptFileThreshold
+      }));
+      let output = "";
+      let structuredBuffer = "";
+      let structuredProcessText = "";
+      let structuredReasoningText = "";
+      let structuredAssistantText = "";
+      let structuredResultText = "";
+      const structuredToolCalls = /* @__PURE__ */ new Map();
+      const startTime = Date.now();
+      let stallWarningTimer = null;
+      const child = platformSpawn(cmd, args, {
+        cwd: currentCwd,
+        env: { ...process.env, TERM: "dumb", CI: "false", FORCE_COLOR: "0" }
+      });
+      this.lastDebugInfo = {
+        command: cmd + " " + args.join(" "),
+        cwd: currentCwd,
+        pid: child.pid || 0,
+        startTime,
+        promptTransport: preparedPrompt.transport,
+        promptFilePath: preparedPrompt.filePath,
+        originalPromptLength: prompt.length,
+        sentPromptLength: preparedPrompt.prompt.length,
+        promptFileThreshold
+      };
+      child.stdin.end();
+      debugLog(this.id, "Closed stdin for non-interactive invoke");
+      stallWarningTimer = setTimeout(() => {
+        debugLog(this.id, "Non-interactive invoke still running after threshold", JSON.stringify({
+          mode,
+          thresholdMs: 15e3,
+          pid: child.pid,
+          cwd: currentCwd,
+          outputLength: output.length
+        }));
+      }, 15e3);
+      child.stdout.on("data", (data) => {
+        const chunk = (0, import_strip_ansi.default)(decodeBuffer(data));
+        debugLog(this.id, "stdout chunk", formatChunk(chunk));
+        if (useStructuredOutput) {
+          structuredBuffer += chunk;
+          const lines = structuredBuffer.split(/\r?\n/);
+          structuredBuffer = lines.pop() || "";
+          for (const line of lines) {
+            const trimmed = line.trim();
+            if (!trimmed) {
+              continue;
+            }
+            try {
+              const event = JSON.parse(trimmed);
+              const nextProcessText = this.applyStructuredProcessEvent(structuredProcessText, event, structuredToolCalls);
+              const hasProcessUpdate = nextProcessText !== structuredProcessText;
+              if (hasProcessUpdate) {
+                structuredProcessText = nextProcessText;
+              }
+              const nextStreamingText = this.applyStructuredStreamingEvent(structuredAssistantText, event);
+              const hasAssistantUpdate = nextStreamingText !== structuredAssistantText;
+              if (hasAssistantUpdate) {
+                structuredAssistantText = nextStreamingText;
+              }
+              const nextReasoningText = this.applyStructuredReasoningEvent(structuredReasoningText, event);
+              const hasReasoningUpdate = nextReasoningText !== structuredReasoningText;
+              if (hasReasoningUpdate) {
+                structuredReasoningText = nextReasoningText;
+              }
+              if ((hasProcessUpdate || hasReasoningUpdate || hasAssistantUpdate) && onUpdate) {
+                onUpdate(this.buildStructuredStreamPayload(structuredProcessText, structuredReasoningText, structuredAssistantText));
+              }
+              if (event?.type === "result") {
+                const resultText = typeof event.result === "string" ? event.result : "";
+                if (resultText) {
+                  structuredResultText = resultText;
+                }
+                this.lastUsageLog = this.extractStructuredUsageLog(event) || this.lastUsageLog;
+              }
+              if (event?.session_id || event?.sessionId) {
+                this.lastSessionId = event.session_id || event.sessionId;
+              }
+            } catch {
+              output += chunk;
+              if (onUpdate) {
+                onUpdate(output.trim());
+              }
+              break;
+            }
+          }
+        } else {
+          output += chunk;
+          if (onUpdate) {
+            onUpdate(output.trim());
+          }
+        }
+        const sessionMatch = chunk.match(/"?(?:session_id|sessionId)"?\s*[:=]\s*"([0-9a-f-]{36})"/i);
+        if (sessionMatch) {
+          this.lastSessionId = sessionMatch[1];
+        }
+      });
+      child.stderr.on("data", (data) => {
+        const chunk = (0, import_strip_ansi.default)(decodeBuffer(data));
+        debugLog(this.id, "stderr chunk", formatChunk(chunk));
+        output += "\n> [LOG] " + chunk;
+      });
+      child.on("error", (err) => {
+        preparedPrompt.cleanup?.();
+        if (stallWarningTimer) {
+          clearTimeout(stallWarningTimer);
+          stallWarningTimer = null;
+        }
+        if (this.childProcess === child) {
+          this.childProcess = null;
+        }
+        debugLog(this.id, "Process error during non-interactive invoke", err.stack || String(err));
+        reject(err);
+      });
+      child.on("close", (code) => {
+        preparedPrompt.cleanup?.();
+        if (stallWarningTimer) {
+          clearTimeout(stallWarningTimer);
+          stallWarningTimer = null;
+        }
+        if (this.childProcess === child) {
+          this.childProcess = null;
+        }
+        if (this.lastDebugInfo) {
+          this.lastDebugInfo.endTime = Date.now();
+        }
+        debugLog(this.id, "Non-interactive process closed", JSON.stringify({
+          code,
+          duration: this.lastDebugInfo?.endTime && this.lastDebugInfo?.startTime ? this.lastDebugInfo.endTime - this.lastDebugInfo.startTime : void 0,
+          outputLength: output.trim().length,
+          promptTransport: this.lastDebugInfo?.promptTransport,
+          promptFilePath: this.lastDebugInfo?.promptFilePath
+        }));
+        if (useStructuredOutput && structuredBuffer.trim()) {
+          try {
+            const event = JSON.parse(structuredBuffer.trim());
+            structuredProcessText = this.applyStructuredProcessEvent(structuredProcessText, event, structuredToolCalls);
+            structuredReasoningText = this.applyStructuredReasoningEvent(structuredReasoningText, event);
+            structuredAssistantText = this.applyStructuredStreamingEvent(structuredAssistantText, event);
+            if (event?.type === "result" && typeof event.result === "string") {
+              structuredResultText = event.result;
+            }
+            this.lastUsageLog = this.extractStructuredUsageLog(event) || this.lastUsageLog;
+          } catch {
+            output += structuredBuffer;
+          }
+        }
+        const finalOutput = useStructuredOutput ? this.combineStructuredDisplay(structuredProcessText, structuredResultText.trim() || structuredAssistantText.trim() || output.trim()).trim() : output.trim();
+        if (code !== 0 && !finalOutput) {
+          reject(new Error(`Process exited with code ${code}`));
+        } else {
+          resolve(finalOutput);
+        }
+      });
+      this.childProcess = child;
+    });
+  }
+  extractStructuredAssistantText(event) {
+    if (event?.type === "assistant.message" && typeof event?.data?.content === "string") {
+      return event.data.content;
+    }
+    const content = event?.message?.content;
+    if (!Array.isArray(content)) {
+      return typeof event?.text === "string" ? event.text : "";
+    }
+    return content.map((block) => {
+      if (block?.type === "text" && typeof block.text === "string") {
+        return block.text;
+      }
+      return "";
+    }).filter(Boolean).join("\n");
+  }
+  applyStructuredProcessEvent(currentText, event, toolCalls) {
+    if (event?.type === "assistant") {
+      const content = event?.message?.content;
+      if (!Array.isArray(content)) {
+        return currentText;
+      }
+      const lines = content.map((block) => {
+        if (block?.type !== "tool_use") {
+          return "";
+        }
+        const toolName = typeof block.name === "string" ? block.name : "tool";
+        this.registerStructuredToolCall(toolCalls, typeof block.id === "string" ? block.id : void 0, toolName, block.input);
+        return this.formatStructuredToolCall(toolName, block.input);
+      }).filter(Boolean);
+      return this.appendProcessLines(currentText, lines);
+    }
+    if (event?.type === "assistant.message") {
+      const toolRequests = Array.isArray(event?.data?.toolRequests) ? event.data.toolRequests : [];
+      const lines = toolRequests.map((request) => {
+        const toolName = typeof request?.name === "string" ? request.name : "tool";
+        const toolCallId = typeof request?.toolCallId === "string" ? request.toolCallId : void 0;
+        this.registerStructuredToolCall(toolCalls, toolCallId, toolName, request?.arguments);
+        return this.formatStructuredToolCall(toolName, request?.arguments);
+      });
+      return this.appendProcessLines(currentText, lines);
+    }
+    if (event?.type === "tool.execution_start") {
+      const toolCallId = typeof event?.data?.toolCallId === "string" ? event.data.toolCallId : void 0;
+      const toolName = typeof event?.data?.toolName === "string" ? event.data.toolName : "tool";
+      const alreadyRegistered = toolCallId ? toolCalls.has(toolCallId) : false;
+      this.registerStructuredToolCall(toolCalls, toolCallId, toolName, event?.data?.arguments);
+      if (alreadyRegistered) {
+        return currentText;
+      }
+      return this.appendProcessLines(currentText, [this.formatStructuredToolCall(toolName, event?.data?.arguments)]);
+    }
+    if (event?.type === "tool.execution_complete") {
+      const toolCallId = typeof event?.data?.toolCallId === "string" ? event.data.toolCallId : void 0;
+      const toolName = typeof event?.data?.toolName === "string" ? event.data.toolName : toolCallId && toolCalls.get(toolCallId)?.name || "tool";
+      const success = event?.data?.success !== false;
+      return this.appendProcessLines(currentText, this.formatStructuredToolCompletion(toolName, event?.data?.result, success));
+    }
+    if (event?.type === "user") {
+      const toolResultBlocks = Array.isArray(event?.message?.content) ? event.message.content.filter((block) => block?.type === "tool_result") : [];
+      if (toolResultBlocks.length === 0) {
+        return currentText;
+      }
+      let updatedText = currentText;
+      for (const block of toolResultBlocks) {
+        const toolCallId = typeof block?.tool_use_id === "string" ? block.tool_use_id : void 0;
+        if (!toolCallId) {
+          continue;
+        }
+        const toolName = toolCalls.get(toolCallId)?.name || "tool";
+        const success = block?.is_error !== true;
+        const result = block?.content;
+        updatedText = this.appendProcessLines(updatedText, this.formatStructuredToolCompletion(toolName, result, success));
+      }
+      return updatedText;
+    }
+    if (event?.type === "stream_event") {
+      const innerEvent = event.event;
+      if (innerEvent?.type === "content_block_start" && innerEvent.content_block?.type === "tool_use") {
+        const toolName = typeof innerEvent.content_block.name === "string" ? innerEvent.content_block.name : "tool";
+        this.registerStructuredToolCall(
+          toolCalls,
+          typeof innerEvent.content_block.id === "string" ? innerEvent.content_block.id : void 0,
+          toolName,
+          innerEvent.content_block.input
+        );
+        return this.appendProcessLines(currentText, [
+          this.formatStructuredToolCall(toolName, innerEvent.content_block.input)
+        ]);
+      }
+    }
+    return currentText;
+  }
+  applyStructuredStreamingEvent(currentText, event) {
+    if (event?.type === "assistant.message_delta" && typeof event?.data?.deltaContent === "string") {
+      return currentText + event.data.deltaContent;
+    }
+    if (event?.type === "assistant.message" && typeof event?.data?.content === "string") {
+      return this.mergeStreamingText(currentText, event.data.content);
+    }
+    if (event?.type === "assistant") {
+      const nextAssistantText = this.extractStructuredAssistantText(event);
+      return nextAssistantText ? this.mergeStreamingText(currentText, nextAssistantText) : currentText;
+    }
+    if (event?.type === "stream_event") {
+      const innerEvent = event.event;
+      if (innerEvent?.type === "content_block_delta" && innerEvent.delta?.type === "text_delta" && typeof innerEvent.delta.text === "string") {
+        return currentText + innerEvent.delta.text;
+      }
+    }
+    return currentText;
+  }
+  applyStructuredReasoningEvent(currentText, event) {
+    if (event?.type === "assistant.reasoning_delta" && typeof event?.data?.deltaContent === "string") {
+      return currentText + event.data.deltaContent;
+    }
+    if (event?.type === "assistant.reasoning" && typeof event?.data?.content === "string") {
+      return this.mergeStreamingText(currentText, event.data.content);
+    }
+    if (event?.type === "assistant.message" && typeof event?.data?.reasoningText === "string") {
+      return this.mergeStreamingText(currentText, event.data.reasoningText);
+    }
+    return currentText;
+  }
+  mergeStreamingText(currentText, nextText) {
+    if (!currentText) {
+      return nextText;
+    }
+    if (!nextText) {
+      return currentText;
+    }
+    if (nextText.startsWith(currentText)) {
+      return nextText;
+    }
+    if (currentText.endsWith(nextText)) {
+      return currentText;
+    }
+    return currentText + nextText;
+  }
+  extractStructuredUsageLog(event) {
+    return void 0;
+  }
+  /**
+   * Interactive daemon initialization for agent mode.
+   */
+  async initialize(mode) {
+    if (this.childProcess) {
+      if (this.currentMode !== mode) {
+        debugLog(this.id, "Stopping existing daemon because mode changed", JSON.stringify({ from: this.currentMode, to: mode }));
+        this.stop();
+      } else {
+        debugLog(this.id, "Reusing existing daemon", JSON.stringify({ mode }));
+        return;
+      }
+    }
+    this.currentMode = mode;
+    const workspacePath = _PersistentAgentAdapter.resolveWorkspacePath();
+    const currentCwd = workspacePath.path;
+    const { cmd, args } = this.getSpawnCommand(mode);
+    debugLog(this.id, "Starting daemon", JSON.stringify({ mode, cwd: currentCwd, cwdSource: workspacePath.source, cmd, args }));
+    this.childProcess = platformSpawn(cmd, args, {
+      cwd: currentCwd,
+      env: { ...process.env, TERM: "dumb", CI: "false", FORCE_COLOR: "0" }
+    });
+    this.childProcess.stdout.on("data", (data) => {
+      const chunk = (0, import_strip_ansi.default)(decodeBuffer(data));
+      debugLog(this.id, "daemon stdout chunk", formatChunk(chunk));
+      this.handleOutput(chunk);
+    });
+    this.childProcess.stderr.on("data", (data) => {
+      const chunk = (0, import_strip_ansi.default)(decodeBuffer(data));
+      debugLog(this.id, "daemon stderr chunk", formatChunk(chunk));
+      this.handleOutput(chunk, true);
+    });
+    this.childProcess.on("error", (err) => {
+      debugLog(this.id, "Daemon process error", err.stack || String(err));
+      if (this.turnReject) {
+        this.turnReject(err);
+        this.resetTurnState();
+      }
+    });
+    this.childProcess.on("close", (code) => {
+      debugLog(this.id, "Daemon process closed", JSON.stringify({ code, mode: this.currentMode }));
+      this.childProcess = null;
+      if (this.turnReject) {
+        this.turnReject(new Error(`Daemon exited unexpectedly (code ${code})`));
+        this.resetTurnState();
+      }
+    });
+  }
+  handleOutput(chunk, isError = false) {
+    if (this.outputBuffer.length > MAX_OUTPUT_BUFFER_BYTES) {
+      const keepFrom = this.outputBuffer.length - Math.floor(MAX_OUTPUT_BUFFER_BYTES * 0.8);
+      this.outputBuffer = this.outputBuffer.slice(keepFrom);
+      debugLog(this.id, "Output buffer truncated to stay within safety cap");
+    }
+    const lines = chunk.split("\n");
+    for (const line of lines) {
+      if (isError) {
+        this.outputBuffer += `
+> [LOG] ${line}`;
+      } else {
+        this.outputBuffer += !!line ? `
+${line}` : "";
+      }
+    }
+    const hasCompletionMarker = !isError && !!this.currentTurnMarker && this.outputBuffer.includes(this.currentTurnMarker);
+    const hasPromptTerminator = !isError && chunk.includes(this.promptString);
+    if (this.turnOnUpdate) {
+      this.turnOnUpdate(this.stripTurnCompletionArtifacts(this.outputBuffer));
+    }
+    if (hasCompletionMarker) {
+      debugLog(this.id, "Turn completion marker detected", JSON.stringify({ marker: this.currentTurnMarker }));
+      if (this.turnResolve) {
+        this.turnResolve(this.stripTurnCompletionArtifacts(this.outputBuffer));
+        this.resetTurnState();
+      }
+      return;
+    }
+    if (hasPromptTerminator) {
+      debugLog(this.id, "Prompt terminator detected", JSON.stringify({ promptString: this.promptString }));
+      if (this.turnResolve) {
+        this.turnResolve(this.stripTurnCompletionArtifacts(this.outputBuffer));
+        this.resetTurnState();
+      }
+    }
+  }
+  resetTurnState() {
+    this.turnResolve = null;
+    this.turnReject = null;
+    this.turnOnUpdate = null;
+    this.outputBuffer = "";
+    this.currentTurnMarker = null;
+  }
+  async invoke(prompt, mode = "plan", sessionId, onUpdate) {
+    if (!this.shouldUsePersistentSession(mode)) {
+      return this.invokeNonInteractive(prompt, mode, sessionId, onUpdate);
+    }
+    if (!this.childProcess || this.currentMode !== mode) {
+      await this.initialize(mode);
+    }
+    return new Promise((resolve, reject) => {
+      if (this.turnResolve) {
+        debugLog(this.id, "Rejected invoke because agent is already busy", JSON.stringify({ mode }));
+        return reject(new Error(`[${this.id}] Agent is already processing a request.`));
+      }
+      this.turnResolve = resolve;
+      this.turnReject = reject;
+      this.turnOnUpdate = onUpdate || null;
+      this.outputBuffer = "";
+      this.currentTurnMarker = this.buildTurnCompletionMarker();
+      const safePrompt = [
+        prompt.replace(/\r?\n/g, " "),
+        `When you finish this turn, output exactly ${this.currentTurnMarker} on its own line.`
+      ].join(" ") + "\n";
+      debugLog(this.id, "Writing prompt to daemon stdin", JSON.stringify({
+        mode,
+        promptLength: prompt.length,
+        safePromptPreview: safePrompt.slice(0, 400),
+        completionMarker: this.currentTurnMarker
+      }));
+      this.childProcess.stdin.write(safePrompt);
+    });
+  }
+  stop() {
+    if (this.childProcess) {
+      debugLog(this.id, "Killing child process", JSON.stringify({ pid: this.childProcess.pid }));
+      this.childProcess.kill();
+      this.childProcess = null;
+    }
+  }
+};
 
-`;for(let d of i){let w=L.default.resolve(r,d);f.default.existsSync(w)?(b+=`--- START OF ${d} ---
-`,b+=f.default.readFileSync(w,"utf8"),b+=`
---- END OF ${d} ---
+// ../src/adapters/ClaudeCodeAdapter.ts
+var CLAUDE_PROCESS_LINE_RE = /^[⏺●•└│├↳✓✗]/;
+var ClaudeCodeAdapter = class extends PersistentAgentAdapter {
+  constructor(id = "claude-code", name = "\u{1F996} Claude Code", modelFlag = "", modes) {
+    super(id, name, modelFlag, ">", modes);
+  }
+  shouldUsePersistentSession(mode) {
+    return false;
+  }
+  shouldUseStructuredOutput(mode) {
+    return mode === "plan" || mode === "agent";
+  }
+  getNonInteractiveCommand(mode, prompt, sessionId) {
+    const command = super.getNonInteractiveCommand(mode, prompt, sessionId);
+    if (this.shouldUseStructuredOutput(mode)) {
+      command.args.push("--output-format", "stream-json", "--include-partial-messages", "--verbose");
+    }
+    if (sessionId) {
+      command.args.push("--resume", sessionId);
+    }
+    return command;
+  }
+  extractStructuredUsageLog(event) {
+    if (event?.type !== "result" || !event?.usage) {
+      return void 0;
+    }
+    const usage = event.usage;
+    const lines = [
+      typeof usage.input_tokens === "number" ? `Input tokens: ${usage.input_tokens}` : "",
+      typeof usage.output_tokens === "number" ? `Output tokens: ${usage.output_tokens}` : "",
+      typeof event.total_cost_usd === "number" ? `Cost: $${event.total_cost_usd.toFixed(6)}` : "",
+      typeof event.duration_ms === "number" ? `Duration: ${event.duration_ms}ms` : "",
+      event.modelUsage ? `Model usage: ${JSON.stringify(event.modelUsage)}` : ""
+    ].filter(Boolean);
+    return lines.length > 0 ? lines.join("\n") : void 0;
+  }
+  extractThinking(rawText) {
+    return this.extractThinkingWithSharedParser(rawText, {
+      processLineRe: CLAUDE_PROCESS_LINE_RE,
+      captureProcessLinesAfterOutputStarts: true
+    });
+  }
+  getSpawnCommand(mode) {
+    const args = [];
+    const cwd = PersistentAgentAdapter.getWorkspacePath();
+    args.push("--add-dir", cwd);
+    if (this.modelFlag) {
+      args.push("--model", this.modelFlag);
+    }
+    if (mode === "plan") {
+      args.push("--permission-mode", "plan");
+    } else if (mode === "agent") {
+      args.push("--dangerously-skip-permissions");
+    }
+    return { cmd: "claude", args };
+  }
+};
 
-`):(b+=`--- START OF ${d} ---
-`,b+=`(File not found at ${w})
-`,b+=`--- END OF ${d} ---
+// ../src/adapters/GitHubCopilotAdapter.ts
+var COPILOT_PROCESS_LINE_RE = /^[●⏺•└│├▶→↳✓✗]/;
+var GitHubCopilotAdapter = class extends PersistentAgentAdapter {
+  constructor(id = "github-copilot", name = "\u{1F6F8} GitHub Copilot", modelFlag = "", modes) {
+    super(id, name, modelFlag, "?>", modes);
+  }
+  shouldUsePersistentSession(mode) {
+    return false;
+  }
+  shouldUseStructuredOutput(mode) {
+    return mode === "plan" || mode === "agent";
+  }
+  getNonInteractiveCommand(mode, prompt, sessionId) {
+    const command = super.getNonInteractiveCommand(mode, prompt, sessionId);
+    if (this.shouldUseStructuredOutput(mode)) {
+      command.args.push("--output-format", "json", "--stream", "on");
+    }
+    if (sessionId) {
+      command.args.push("--resume", sessionId);
+    }
+    return command;
+  }
+  extractStructuredUsageLog(event) {
+    if (event?.type !== "result" || !event?.usage) {
+      return void 0;
+    }
+    const usage = event.usage;
+    const lines = [
+      typeof usage.premiumRequests === "number" ? `Premium requests: ${usage.premiumRequests}` : "",
+      typeof usage.totalApiDurationMs === "number" ? `API duration: ${usage.totalApiDurationMs}ms` : "",
+      typeof usage.sessionDurationMs === "number" ? `Session duration: ${usage.sessionDurationMs}ms` : "",
+      usage.codeChanges ? `Code changes: ${JSON.stringify(usage.codeChanges)}` : ""
+    ].filter(Boolean);
+    return lines.length > 0 ? lines.join("\n") : void 0;
+  }
+  extractThinking(rawText) {
+    return this.extractThinkingWithSharedParser(rawText, {
+      processLineRe: COPILOT_PROCESS_LINE_RE,
+      captureBracketLines: true,
+      captureProcessLinesAfterOutputStarts: true,
+      collectUsageLog: true
+    });
+  }
+  getSpawnCommand(mode) {
+    const args = [];
+    const cwd = PersistentAgentAdapter.getWorkspacePath();
+    args.push("--add-dir", cwd);
+    if (this.modelFlag) {
+      args.push("--model", this.modelFlag);
+    }
+    if (mode === "plan") {
+    } else if (mode === "agent") {
+      args.push("--allow-all");
+      args.push("--no-ask-user");
+    }
+    return { cmd: "copilot", args };
+  }
+};
 
-`)}}let A=`You are a delegated AI Worker operating under the Spartan Swarm Protocol.
-Your Role: ${o}
-Identity: ${$}
+// ../src/mcp/worker-spawner.ts
+function parseFrontmatter(content) {
+  const yamlRegex = /^---\n([\s\S]*?)\n---\n([\s\S]*)$/;
+  const match = content.match(yamlRegex);
+  let frontmatter = {};
+  let body = content;
+  if (match) {
+    const yamlBlock = match[1];
+    body = match[2];
+    yamlBlock.split("\n").forEach((line) => {
+      const colonIdx = line.indexOf(":");
+      if (colonIdx > 0) {
+        const key = line.slice(0, colonIdx).trim();
+        const value = line.slice(colonIdx + 1).trim().replace(/^['"]|['"]$/g, "");
+        if (key) frontmatter[key] = value;
+      }
+    });
+  }
+  return { frontmatter, body };
+}
+function updateFrontmatter(content, updates) {
+  const parsed = parseFrontmatter(content);
+  const newFm = { ...parsed.frontmatter, ...updates };
+  let yamlStr = "---\n";
+  for (const [k, v] of Object.entries(newFm)) {
+    yamlStr += `${k}: ${v}
+`;
+  }
+  yamlStr += "---";
+  const bodyStr = parsed.body.startsWith("\n") ? parsed.body : "\n" + parsed.body;
+  return yamlStr + bodyStr;
+}
+var AgentLockManager = class {
+  locks = /* @__PURE__ */ new Map();
+  resolvers = /* @__PURE__ */ new Map();
+  workspacePath;
+  constructor(workspacePath) {
+    this.workspacePath = workspacePath;
+  }
+  get lockDir() {
+    return import_path.default.join(this.workspacePath, ".optimus", "agents");
+  }
+  lockFilePath(role) {
+    return import_path.default.join(this.lockDir, `${role}.lock`);
+  }
+  async acquireLock(role) {
+    while (this.locks.has(role)) {
+      await this.locks.get(role);
+    }
+    let resolve;
+    const promise = new Promise((r) => {
+      resolve = r;
+    });
+    this.locks.set(role, promise);
+    this.resolvers.set(role, resolve);
+    this.writeLockFile(role);
+  }
+  releaseLock(role) {
+    const resolve = this.resolvers.get(role);
+    this.locks.delete(role);
+    this.resolvers.delete(role);
+    this.deleteLockFile(role);
+    if (resolve) resolve();
+  }
+  writeLockFile(role) {
+    try {
+      if (!import_fs.default.existsSync(this.lockDir)) {
+        import_fs.default.mkdirSync(this.lockDir, { recursive: true });
+      }
+      import_fs.default.writeFileSync(this.lockFilePath(role), JSON.stringify({ pid: process.pid, timestamp: Date.now() }), "utf8");
+    } catch {
+    }
+  }
+  deleteLockFile(role) {
+    try {
+      import_fs.default.unlinkSync(this.lockFilePath(role));
+    } catch {
+    }
+  }
+  cleanStaleLocks() {
+    try {
+      if (!import_fs.default.existsSync(this.lockDir)) return;
+      const files = import_fs.default.readdirSync(this.lockDir);
+      for (const file of files) {
+        if (!file.endsWith(".lock")) continue;
+        const filePath = import_path.default.join(this.lockDir, file);
+        try {
+          const content = JSON.parse(import_fs.default.readFileSync(filePath, "utf8"));
+          if (content.pid && !isProcessRunning(content.pid)) {
+            import_fs.default.unlinkSync(filePath);
+            console.error(`[AgentLockManager] Cleaned stale lock for ${file} (PID ${content.pid} no longer running)`);
+          }
+        } catch {
+          try {
+            import_fs.default.unlinkSync(filePath);
+          } catch {
+          }
+        }
+      }
+    } catch {
+    }
+  }
+};
+function isProcessRunning(pid) {
+  try {
+    process.kill(pid, 0);
+    return true;
+  } catch {
+    return false;
+  }
+}
+var lockManagerInstance = null;
+function getLockManager(workspacePath) {
+  if (!lockManagerInstance) {
+    lockManagerInstance = new AgentLockManager(workspacePath);
+    lockManagerInstance.cleanStaleLocks();
+  }
+  return lockManagerInstance;
+}
+var ConcurrencyGovernor = class {
+  static maxConcurrentWorkers = 3;
+  static activeWorkers = 0;
+  static queue = [];
+  static async acquire() {
+    if (this.activeWorkers < this.maxConcurrentWorkers) {
+      this.activeWorkers++;
+      return Promise.resolve();
+    }
+    return new Promise((resolve) => {
+      this.queue.push(resolve);
+    });
+  }
+  static release() {
+    if (this.queue.length > 0) {
+      const next = this.queue.shift();
+      if (next) next();
+    } else {
+      this.activeWorkers--;
+    }
+  }
+};
+function parseRoleSpec(roleArg) {
+  const segments = import_path.default.basename(roleArg).split("_").filter(Boolean);
+  const engineIndex = segments.findIndex((segment) => segment === "claude-code" || segment === "copilot-cli");
+  if (engineIndex === -1) {
+    return { role: import_path.default.basename(roleArg) };
+  }
+  const role = segments.slice(0, engineIndex).join("_") || import_path.default.basename(roleArg);
+  const engine = segments[engineIndex];
+  const model = segments.slice(engineIndex + 1).join("_");
+  return { role, engine, model };
+}
+function getAdapterForEngine(engine, sessionId, model) {
+  if (engine === "copilot-cli") {
+    return new GitHubCopilotAdapter(sessionId, "\u{1F6F8} GitHub Copilot", model);
+  }
+  return new ClaudeCodeAdapter(sessionId, "\u{1F996} Claude Code", model);
+}
+async function delegateTaskSingle(roleArg, taskPath, outputPath, _fallbackSessionId, workspacePath, contextFiles) {
+  const parsedRole = parseRoleSpec(roleArg);
+  const role = parsedRole.role;
+  const legacyT1Dir = import_path.default.join(workspacePath, ".optimus", "personas");
+  const t1Dir = import_path.default.join(workspacePath, ".optimus", "agents");
+  if (import_fs.default.existsSync(legacyT1Dir) && !import_fs.default.existsSync(t1Dir)) {
+    try {
+      import_fs.default.renameSync(legacyT1Dir, t1Dir);
+    } catch (e) {
+    }
+  }
+  const t2Dir = import_path.default.join(workspacePath, ".optimus", "roles");
+  if (!import_fs.default.existsSync(t2Dir)) {
+    import_fs.default.mkdirSync(t2Dir, { recursive: true });
+  }
+  const builtInRolesDir = import_path.default.join(__dirname, "..", "..", "optimus-plugin", "roles");
+  if (import_fs.default.existsSync(builtInRolesDir)) {
+    const builtinFiles = import_fs.default.readdirSync(builtInRolesDir);
+    for (const file of builtinFiles) {
+      if (file.endsWith(".md")) {
+        const projectFilePath = import_path.default.join(t2Dir, file);
+        if (!import_fs.default.existsSync(projectFilePath)) {
+          try {
+            import_fs.default.copyFileSync(import_path.default.join(builtInRolesDir, file), projectFilePath);
+          } catch (e) {
+          }
+        }
+      }
+    }
+  }
+  const t1Path = import_path.default.join(t1Dir, `${role}.md`);
+  const t2Path = import_path.default.join(t2Dir, `${role}.md`);
+  let activeEngine = parsedRole.engine || "claude-code";
+  let activeModel = parsedRole.model;
+  let activeSessionId = void 0;
+  let t1Content = "";
+  let shouldLocalize = false;
+  let resolvedTier = "T3 (Zero-Shot Outsource)";
+  let personaProof = "No dedicated role template found in T2 or T1. Using T3 generic prompt.";
+  if (import_fs.default.existsSync(t1Path)) {
+    t1Content = import_fs.default.readFileSync(t1Path, "utf8");
+    resolvedTier = `T1 (Agent Instance -> ${role}.md)`;
+    personaProof = `Found local project agent state: ${t1Path}`;
+  } else if (import_fs.default.existsSync(t2Path)) {
+    t1Content = import_fs.default.readFileSync(t2Path, "utf8");
+    shouldLocalize = true;
+    resolvedTier = `T2 (Role Template -> ${role}.md)`;
+    personaProof = `Found globally promoted Role template: ${t2Path}`;
+  }
+  if (t1Content) {
+    const fm = parseFrontmatter(t1Content);
+    if (fm.frontmatter.engine) activeEngine = fm.frontmatter.engine;
+    if (fm.frontmatter.session_id) activeSessionId = fm.frontmatter.session_id;
+    if (fm.frontmatter.model) activeModel = fm.frontmatter.model;
+  }
+  const adapter = getAdapterForEngine(activeEngine, activeSessionId, activeModel);
+  console.error(`[Orchestrator] Resolving Identity for ${role}...`);
+  console.error(`[Orchestrator] Selected Stratum: ${resolvedTier}`);
+  console.error(`[Orchestrator] Engine: ${activeEngine}, Session: ${activeSessionId || "New/Ephemeral"}`);
+  const taskText = import_fs.default.existsSync(taskPath) ? import_fs.default.readFileSync(taskPath, "utf8") : taskPath;
+  let personaContext = "";
+  if (t1Content) {
+    personaContext = parseFrontmatter(t1Content).body.trim();
+  } else {
+    personaContext = "No persona found.";
+  }
+  let contextContent = "";
+  if (contextFiles && contextFiles.length > 0) {
+    contextContent = "\n\n=== CONTEXT FILES ===\n\nThe following files are provided as required context for, and must be strictly adhered to during this task:\n\n";
+    for (const cf of contextFiles) {
+      const absolutePath = import_path.default.resolve(workspacePath, cf);
+      if (import_fs.default.existsSync(absolutePath)) {
+        contextContent += `--- START OF ${cf} ---
+`;
+        contextContent += import_fs.default.readFileSync(absolutePath, "utf8");
+        contextContent += `
+--- END OF ${cf} ---
 
-${F?`--- START PERSONA INSTRUCTIONS ---
-${F}
---- END PERSONA INSTRUCTIONS ---`:""}
+`;
+      } else {
+        contextContent += `--- START OF ${cf} ---
+`;
+        contextContent += `(File not found at ${absolutePath})
+`;
+        contextContent += `--- END OF ${cf} ---
+
+`;
+      }
+    }
+  }
+  const basePrompt = `You are a delegated AI Worker operating under the Spartan Swarm Protocol.
+Your Role: ${role}
+Identity: ${resolvedTier}
+
+${personaContext ? `--- START PERSONA INSTRUCTIONS ---
+${personaContext}
+--- END PERSONA INSTRUCTIONS ---` : ""}
 
 Goal: Execute the following task.
-System Note: ${I}
+System Note: ${personaProof}
 
 Task Description:
-${q}${b}
+${taskText}${contextContent}
 
-Please provide your complete execution result below.`;try{await Z.acquire();let d=await j.invoke(A,"agent");if(j.lastSessionId&&f.default.existsSync(p)){let P=f.default.readFileSync(p,"utf8"),J=Ct(P,{engine:g,session_id:j.lastSessionId});f.default.writeFileSync(p,J,"utf8"),console.error(`[Orchestrator] Captured native session ID '${j.lastSessionId}' to ${p}`)}let w=L.default.dirname(e);return f.default.existsSync(w)||f.default.mkdirSync(w,{recursive:!0}),f.default.writeFileSync(e,d,"utf8"),`\u2705 **Task Delegation Successful**
+Please provide your complete execution result below.`;
+  const lockManager = getLockManager(workspacePath);
+  await lockManager.acquireLock(role);
+  try {
+    await ConcurrencyGovernor.acquire();
+    const response = await adapter.invoke(basePrompt, "agent");
+    if (adapter.lastSessionId && import_fs.default.existsSync(t1Path)) {
+      const currentStr = import_fs.default.readFileSync(t1Path, "utf8");
+      const updated = updateFrontmatter(currentStr, {
+        engine: activeEngine,
+        session_id: adapter.lastSessionId
+      });
+      import_fs.default.writeFileSync(t1Path, updated, "utf8");
+      console.error(`[Orchestrator] Captured native session ID '${adapter.lastSessionId}' to ${t1Path}`);
+    }
+    const dir = import_path.default.dirname(outputPath);
+    if (!import_fs.default.existsSync(dir)) import_fs.default.mkdirSync(dir, { recursive: true });
+    import_fs.default.writeFileSync(outputPath, response, "utf8");
+    return `\u2705 **Task Delegation Successful**
 
-**Agent Identity Resolved**: ${$}
-**Engine**: ${g}
-**Session ID**: ${j.lastSessionId||"Ephemeral"}
+**Agent Identity Resolved**: ${resolvedTier}
+**Engine**: ${activeEngine}
+**Session ID**: ${adapter.lastSessionId || "Ephemeral"}
 
-**System Note**: ${I}
+**System Note**: ${personaProof}
 
-Agent has finished execution. Check standard output at \`${e}\`.`}catch(d){throw new Error(`Worker execution failed: ${d.message}`)}finally{Z.release()}}async function jt(a,t,e,n,r){try{return console.error(`[Spawner] Launching Real Worker ${a} for council review`),await H(a,`Please read the architectural PROPOSAL located at: ${t}. 
-Provide your expert critique from the perspective of your role (${a}). Identify architectural bottlenecks, DX friction, security risks, or asynchronous race conditions. Conclude with a recommendation: Reject, Accept, or Hybrid.`,e,n,r)}catch(i){return console.error(`[Spawner] Worker ${a} failed to start:`,i),`\u274C ${a}: exited with errors (${i.message}).`}}async function Q(a,t,e,n,r){let i=a.map(s=>{let o=L.default.join(e,`${s}_review.md`);return jt(s,t,o,`${n}_${Math.random().toString(36).slice(2,8)}`,r)});return Promise.all(i)}var v=R(require("fs")),G=R(require("path")),O=class{static getManifestPath(t){return G.join(t,".optimus","state","task-manifest.json")}static loadManifest(t){let e=this.getManifestPath(t);if(!v.existsSync(e))return{};try{return JSON.parse(v.readFileSync(e,"utf8"))}catch{return{}}}static saveManifest(t,e){let n=this.getManifestPath(t),r=`${n}.tmp`,i=G.dirname(n);v.existsSync(i)||v.mkdirSync(i,{recursive:!0}),v.writeFileSync(r,JSON.stringify(e,null,2),"utf8"),v.renameSync(r,n)}static createTask(t,e){let n=this.loadManifest(t),r={...e,status:"pending",startTime:Date.now(),heartbeatTime:Date.now()};return n[e.taskId]=r,this.saveManifest(t,n),r}static updateTask(t,e,n){let r=this.loadManifest(t);r[e]&&(r[e]={...r[e],...n},this.saveManifest(t,r))}static heartbeat(t,e){this.updateTask(t,e,{heartbeatTime:Date.now()})}static reapStaleTasks(t){let e=this.loadManifest(t),n=Date.now(),r=1e3*60*10,i=!1;for(let s in e){let o=e[s];if(o.status==="running"&&n-o.heartbeatTime>r){o.status="failed",o.error_message="Task timed out or runner process died (reaped by Watchdog).",i=!0;try{if(o.output_path){let u=G.dirname(o.output_path);v.existsSync(u)||v.mkdirSync(u,{recursive:!0}),v.writeFileSync(o.output_path,`\u274C **Fatal Error**: ${o.error_message}
-`,"utf8")}}catch{}}}i&&this.saveManifest(t,e)}};async function ft(a,t){console.error(`[Runner] Starting async execution for task: ${a}`);let n=O.loadManifest(t)[a];n||(console.error(`[Runner] Task not found: ${a}`),process.exit(1)),n.status!=="pending"&&(console.error(`[Runner] Task already running or completed: ${a}`),process.exit(0)),O.updateTask(t,a,{status:"running",pid:process.pid});let r=setInterval(()=>{O.heartbeat(t,a)},6e4);try{if(n.type==="delegate_task")await H(n.role,n.task_description,n.output_path,`async_${a}`,n.workspacePath,n.context_files);else if(n.type==="dispatch_council"){await Q(n.roles,n.proposal_path,n.output_path,`async_council_${a}`,n.workspacePath);let i=require("fs"),s=require("path"),o=n.output_path,u=s.join(o,"COUNCIL_SYNTHESIS.md"),c=`# Council Synthesis Report
+Agent has finished execution. Check standard output at \`${outputPath}\`.`;
+  } catch (e) {
+    throw new Error(`Worker execution failed: ${e.message}`);
+  } finally {
+    ConcurrencyGovernor.release();
+    lockManager.releaseLock(role);
+  }
+}
+async function spawnWorker(role, proposalPath, outputPath, sessionId, workspacePath) {
+  try {
+    console.error(`[Spawner] Launching Real Worker ${role} for council review`);
+    return await delegateTaskSingle(role, `Please read the architectural PROPOSAL located at: ${proposalPath}. 
+Provide your expert critique from the perspective of your role (${role}). Identify architectural bottlenecks, DX friction, security risks, or asynchronous race conditions. Conclude with a recommendation: Reject, Accept, or Hybrid.`, outputPath, sessionId, workspacePath);
+  } catch (err) {
+    console.error(`[Spawner] Worker ${role} failed to start:`, err);
+    return `\u274C ${role}: exited with errors (${err.message}).`;
+  }
+}
+async function dispatchCouncilConcurrent(roles, proposalPath, reviewsPath, timestampId, workspacePath) {
+  const promises = roles.map((role) => {
+    const outputPath = import_path.default.join(reviewsPath, `${role}_review.md`);
+    return spawnWorker(role, proposalPath, outputPath, `${timestampId}_${Math.random().toString(36).slice(2, 8)}`, workspacePath);
+  });
+  return Promise.all(promises);
+}
 
-`;c+=`**Proposal:** \`${n.proposal_path}\`
-`,c+=`**Council:** ${n.roles.map(p=>`\`${p}\``).join(", ")}
+// ../src/managers/TaskManifestManager.ts
+var fs3 = __toESM(require("fs"));
+var path3 = __toESM(require("path"));
+var TaskManifestManager = class {
+  static getManifestPath(workspacePath) {
+    return path3.join(workspacePath, ".optimus", "state", "task-manifest.json");
+  }
+  static loadManifest(workspacePath) {
+    const manifestPath = this.getManifestPath(workspacePath);
+    if (!fs3.existsSync(manifestPath)) {
+      return {};
+    }
+    try {
+      return JSON.parse(fs3.readFileSync(manifestPath, "utf8"));
+    } catch {
+      return {};
+    }
+  }
+  static saveManifest(workspacePath, manifest) {
+    const manifestPath = this.getManifestPath(workspacePath);
+    const tempPath = `${manifestPath}.tmp`;
+    const dir = path3.dirname(manifestPath);
+    if (!fs3.existsSync(dir)) fs3.mkdirSync(dir, { recursive: true });
+    fs3.writeFileSync(tempPath, JSON.stringify(manifest, null, 2), "utf8");
+    fs3.renameSync(tempPath, manifestPath);
+  }
+  static createTask(workspacePath, record) {
+    const manifest = this.loadManifest(workspacePath);
+    const fullRecord = {
+      ...record,
+      status: "pending",
+      startTime: Date.now(),
+      heartbeatTime: Date.now()
+    };
+    manifest[record.taskId] = fullRecord;
+    this.saveManifest(workspacePath, manifest);
+    return fullRecord;
+  }
+  static updateTask(workspacePath, taskId, updates) {
+    const manifest = this.loadManifest(workspacePath);
+    if (manifest[taskId]) {
+      manifest[taskId] = { ...manifest[taskId], ...updates };
+      this.saveManifest(workspacePath, manifest);
+    }
+  }
+  static heartbeat(workspacePath, taskId) {
+    this.updateTask(workspacePath, taskId, { heartbeatTime: Date.now() });
+  }
+  static reapStaleTasks(workspacePath) {
+    const manifest = this.loadManifest(workspacePath);
+    const now = Date.now();
+    const TIMEOUT_MS = 1e3 * 60 * 10;
+    let changed = false;
+    for (const taskId in manifest) {
+      const task = manifest[taskId];
+      if (task.status === "running") {
+        if (now - task.heartbeatTime > TIMEOUT_MS) {
+          task.status = "failed";
+          task.error_message = "Task timed out or runner process died (reaped by Watchdog).";
+          changed = true;
+          try {
+            if (task.output_path) {
+              const dir = path3.dirname(task.output_path);
+              if (!fs3.existsSync(dir)) fs3.mkdirSync(dir, { recursive: true });
+              fs3.writeFileSync(task.output_path, `\u274C **Fatal Error**: ${task.error_message}
+`, "utf8");
+            }
+          } catch (e) {
+          }
+        }
+      }
+    }
+    if (changed) {
+      this.saveManifest(workspacePath, manifest);
+    }
+  }
+};
 
-`;for(let p=0;p<n.roles.length;p++){let m=n.roles[p],g=s.join(o,`${m}_review.md`);i.existsSync(g)?(c+=`## ${p+1}. Review from ${m}
+// ../src/utils/githubApi.ts
+var import_child_process = require("child_process");
+function getToken() {
+  return process.env.GITHUB_TOKEN || process.env.GH_TOKEN;
+}
+function parseGitRemote(workspacePath) {
+  try {
+    const url = (0, import_child_process.execSync)("git remote get-url origin", { cwd: workspacePath, encoding: "utf8" }).trim();
+    const httpsMatch = url.match(/github\.com\/([^/]+)\/([^/.]+)/);
+    if (httpsMatch) return { owner: httpsMatch[1], repo: httpsMatch[2] };
+    const sshMatch = url.match(/github\.com:([^/]+)\/([^/.]+)/);
+    if (sshMatch) return { owner: sshMatch[1], repo: sshMatch[2] };
+    return null;
+  } catch {
+    return null;
+  }
+}
+async function createGitHubIssue(owner, repo, title, body, labels) {
+  const token = getToken();
+  if (!token) return null;
+  try {
+    const resp = await fetch(`https://api.github.com/repos/${owner}/${repo}/issues`, {
+      method: "POST",
+      headers: {
+        "Authorization": `Bearer ${token}`,
+        "Accept": "application/vnd.github.v3+json",
+        "Content-Type": "application/json",
+        "User-Agent": "Optimus-Agent"
+      },
+      body: JSON.stringify({ title, body, labels })
+    });
+    if (!resp.ok) return null;
+    const data = await resp.json();
+    return { number: data.number, html_url: data.html_url };
+  } catch {
+    return null;
+  }
+}
+async function commentOnGitHubIssue(owner, repo, issueNumber, body) {
+  const token = getToken();
+  if (!token) return false;
+  try {
+    const resp = await fetch(`https://api.github.com/repos/${owner}/${repo}/issues/${issueNumber}/comments`, {
+      method: "POST",
+      headers: {
+        "Authorization": `Bearer ${token}`,
+        "Accept": "application/vnd.github.v3+json",
+        "Content-Type": "application/json",
+        "User-Agent": "Optimus-Agent"
+      },
+      body: JSON.stringify({ body })
+    });
+    return resp.ok;
+  } catch {
+    return false;
+  }
+}
+async function closeGitHubIssue(owner, repo, issueNumber) {
+  const token = getToken();
+  if (!token) return false;
+  try {
+    const resp = await fetch(`https://api.github.com/repos/${owner}/${repo}/issues/${issueNumber}`, {
+      method: "PATCH",
+      headers: {
+        "Authorization": `Bearer ${token}`,
+        "Accept": "application/vnd.github.v3+json",
+        "Content-Type": "application/json",
+        "User-Agent": "Optimus-Agent"
+      },
+      body: JSON.stringify({ state: "closed" })
+    });
+    return resp.ok;
+  } catch {
+    return false;
+  }
+}
 
-`,c+=i.readFileSync(g,"utf8"),c+=`
+// ../src/mcp/council-runner.ts
+var import_fs2 = __toESM(require("fs"));
+var import_path2 = __toESM(require("path"));
+function verifyOutputPath(outputPath) {
+  if (!outputPath) return "partial";
+  try {
+    const stat = import_fs2.default.statSync(outputPath);
+    if (stat.isFile() && stat.size > 0) return "verified";
+    if (stat.isDirectory()) {
+      const files = import_fs2.default.readdirSync(outputPath);
+      return files.length > 0 ? "verified" : "partial";
+    }
+    return "partial";
+  } catch {
+    return "partial";
+  }
+}
+async function runAsyncWorker(taskId, workspacePath) {
+  console.error(`[Runner] Starting async execution for task: ${taskId}`);
+  const manifest = TaskManifestManager.loadManifest(workspacePath);
+  const task = manifest[taskId];
+  if (!task) {
+    console.error(`[Runner] Task not found: ${taskId}`);
+    process.exit(1);
+  }
+  if (task.status !== "pending") {
+    console.error(`[Runner] Task already running or completed: ${taskId}`);
+    process.exit(0);
+  }
+  TaskManifestManager.updateTask(workspacePath, taskId, { status: "running", pid: process.pid });
+  const heartbeatInterval = setInterval(() => {
+    TaskManifestManager.heartbeat(workspacePath, taskId);
+  }, 6e4);
+  try {
+    if (task.type === "delegate_task") {
+      await delegateTaskSingle(
+        task.role,
+        task.task_description,
+        task.output_path,
+        `async_${taskId}`,
+        task.workspacePath,
+        task.context_files
+      );
+    } else if (task.type === "dispatch_council") {
+      await dispatchCouncilConcurrent(
+        task.roles,
+        task.proposal_path,
+        task.output_path,
+        // Actually reviews path
+        `async_council_${taskId}`,
+        task.workspacePath
+      );
+      const reviewsPath = task.output_path;
+      const synthesisPath = import_path2.default.join(reviewsPath, "COUNCIL_SYNTHESIS.md");
+      let synthesisContent = `# Council Synthesis Report
+
+`;
+      synthesisContent += `**Proposal:** \`${task.proposal_path}\`
+`;
+      synthesisContent += `**Council:** ${task.roles.map((r) => `\`${r}\``).join(", ")}
+
+`;
+      for (let i = 0; i < task.roles.length; i++) {
+        const role = task.roles[i];
+        const reviewFile = import_path2.default.join(reviewsPath, `${role}_review.md`);
+        if (import_fs2.default.existsSync(reviewFile)) {
+          synthesisContent += `## ${i + 1}. Review from ${role}
+
+`;
+          synthesisContent += import_fs2.default.readFileSync(reviewFile, "utf8");
+          synthesisContent += `
 
 ---
 
-`):(c+=`## ${p+1}. Review from ${m}
+`;
+        } else {
+          synthesisContent += `## ${i + 1}. Review from ${role}
 
-`,c+=`*Worker failed to produce a review artifact.*
+`;
+          synthesisContent += `*Worker failed to produce a review artifact.*
 
 ---
 
-`)}i.writeFileSync(u,c,"utf8"),console.error(`[Runner] Generated COUNCIL_SYNTHESIS.md at ${u}`)}O.updateTask(t,a,{status:"completed"}),console.error(`[Runner] Task ${a} completed successfully.`)}catch(i){console.error(`[Runner] Task ${a} failed:`,i),O.updateTask(t,a,{status:"failed",error_message:i.message})}finally{clearInterval(r),process.exit(0)}}var tt=require("child_process"),et=R(require("dotenv"));et.default.config({path:k.default.resolve(__dirname,"../../.env")});et.default.config();var z=new yt.Server({name:"optimus-facade",version:"1.0.0"},{capabilities:{resources:{},tools:{}}});z.setRequestHandler(l.ListResourcesRequestSchema,async()=>({resources:[{uri:"optimus://system/instructions",name:"Optimus System Instructions",description:"Master workflow protocols and agnostic system instructions for Optimus agents.",mimeType:"text/markdown"}]}));z.setRequestHandler(l.ReadResourceRequestSchema,async a=>{if(a.params.uri==="optimus://system/instructions"){let t=process.env.OPTIMUS_WORKSPACE_ROOT||process.cwd(),e=k.default.resolve(t,".optimus","config","system-instructions.md");if(!e.startsWith(k.default.resolve(t)))throw new l.McpError(l.ErrorCode.InvalidRequest,"Path traversal detected");try{if(_.default.existsSync(e)){let n=_.default.readFileSync(e,"utf8");return{contents:[{uri:a.params.uri,mimeType:"text/markdown",text:n}]}}else throw new l.McpError(l.ErrorCode.InvalidRequest,`The system-instructions.md file does not exist at ${e}`)}catch(n){throw new l.McpError(l.ErrorCode.InternalError,`Failed to read instructions: ${n.message}`)}}throw new l.McpError(l.ErrorCode.InvalidRequest,`Resource not found: ${a.params.uri}`)});z.setRequestHandler(l.ListToolsRequestSchema,async()=>({tools:[{name:"append_memory",description:"Write experience, architectural decisions, and important project facts into the continuous memory system to evolve the project context.",inputSchema:{type:"object",properties:{category:{type:"string",description:"The category of the memory (e.g. 'architecture-decision', 'bug-fix', 'workflow')"},tags:{type:"array",items:{type:"string"},description:"A list of tags for selective loading"},content:{type:"string",description:"The actual memory content to solidify"}},required:["category","tags","content"]}},{name:"github_update_issue",description:"Updates an existing issue in a GitHub repository (e.g. to close it or add comments).",inputSchema:{type:"object",properties:{owner:{type:"string",description:"Repository owner"},repo:{type:"string",description:"Repository name"},issue_number:{type:"number",description:"The number of the issue to update"},state:{type:"string",enum:["open","closed"],description:"State of the issue"},body:{type:"string",description:"New body for the issue (overwrites existing)"},agent_role:{type:"string",description:"The role of the agent making this update"},session_id:{type:"string",description:"The session ID of the agent"}},required:["owner","repo","issue_number"]}},{name:"github_create_issue",description:"Creates a new issue in a GitHub repository.",inputSchema:{type:"object",properties:{owner:{type:"string",description:"Repository owner (e.g. cloga)"},repo:{type:"string",description:"Repository name (e.g. optimus-code)"},title:{type:"string",description:"Issue title"},body:{type:"string",description:"Issue body/contents"},local_path:{type:"string",description:"The local blackboard file path (e.g. .optimus/proposals/PROPOSAL_XY.md) for A2A cross-reference"},session_id:{type:"string",description:"The Session ID or Agent ID creating this issue for traceability"},labels:{type:"array",items:{type:"string"},description:"Labels to apply"}},required:["owner","repo","title","body","local_path"]}},{name:"github_create_pr",description:"Creates a new pull request in a GitHub repository.",inputSchema:{type:"object",properties:{owner:{type:"string"},repo:{type:"string"},title:{type:"string"},head:{type:"string",description:"The name of the branch where your changes are implemented."},base:{type:"string",description:"The name of the branch you want the changes pulled into."},body:{type:"string"},agent_role:{type:"string",description:"The role of the agent making this PR (e.g., 'dev')"},session_id:{type:"string",description:"The session ID of the agent"}},required:["owner","repo","title","head","base"]}},{name:"github_merge_pr",description:"Merges a pull request in a GitHub repository.",inputSchema:{type:"object",properties:{owner:{type:"string"},repo:{type:"string"},pull_number:{type:"number"},commit_title:{type:"string"},merge_method:{type:"string",enum:["merge","squash","rebase"]},agent_role:{type:"string",description:"The role of the agent merging this PR (e.g., 'pm')"},session_id:{type:"string",description:"The session ID of the agent"}},required:["owner","repo","pull_number"]}},{name:"github_sync_board",description:"Fetches open issues from a GitHub repository and dumps them into the local blackboard.",inputSchema:{type:"object",properties:{owner:{type:"string",description:"Repository owner (e.g. cloga)"},repo:{type:"string",description:"Repository name (e.g. optimus-code)"},workspace_path:{type:"string",description:"Absolute workspace path"}},required:["owner","repo","workspace_path"]}},{name:"dispatch_council",description:"Trigger a map-reduce multi-expert review for an architectural proposal using the Spartan Swarm protocol.",inputSchema:{type:"object",properties:{proposal_path:{type:"string",description:"The file path to the PROPOSAL.md file"},roles:{type:"array",items:{type:"string"},description:"An array of expert roles to spawn concurrently (e.g., ['security-expert', 'performance-tyrant'])"}},required:["proposal_path","roles"]}},{name:"roster_check",description:"Returns a unified directory of all available roles (T1 Local Personas and T2 Global Agents) to help the Master Agent understand current workforce capabilities before dispatching tools.",inputSchema:{type:"object",properties:{workspace_path:{type:"string",description:"The absolute path to the current project workspace to check for T1 local personas."}},required:["workspace_path"]}},{name:"delegate_task",description:"Delegate a specific execution task to a designated expert role.",inputSchema:{type:"object",properties:{role:{type:"string",description:"The name of the expert role (e.g., 'chief-architect', 'frontend-dev'). The system will auto-resolve this to the best available prompt."},task_description:{type:"string",description:"Detailed description of what the agent needs to do."},output_path:{type:"string",description:"The file path where the agent should write its final result or report. If not already under the workspace's .optimus/ directory, it will be automatically scoped to .optimus/results/<filename> within the workspace."},workspace_path:{type:"string",description:"Absolute path to the project workspace root. All artifacts (task blackboard, result files) will be isolated under <workspace_path>/.optimus/."},context_files:{type:"array",items:{type:"string"},description:"Optional array of workspace-relative paths to design documents, architecture specs, or requirement files that the agent must strictly read before executing the task."}},required:["role","task_description","output_path","workspace_path"]}},{name:"delegate_task_async",description:"Delegate a specific execution task to a designated expert role asynchronously without blocking the master agent.",inputSchema:{type:"object",properties:{role:{type:"string",description:"The name of the expert role (e.g., 'chief-architect', 'frontend-dev')."},task_description:{type:"string",description:"Detailed description of what the agent needs to do."},output_path:{type:"string",description:"The file path where the agent should write its final result or report."},workspace_path:{type:"string",description:"Absolute path to the project workspace root."},context_files:{type:"array",items:{type:"string"},description:"Optional array of workspace-relative paths to design documents, architecture specs, or requirement files that the agent must strictly read before executing the task."}},required:["role","task_description","output_path","workspace_path"]}},{name:"dispatch_council_async",description:"Trigger an async map-reduce multi-expert review for an architectural proposal.",inputSchema:{type:"object",properties:{proposal_path:{type:"string",description:"The file path to the PROPOSAL.md file"},roles:{type:"array",items:{type:"string"},description:"An array of expert roles to spawn concurrently (e.g., ['security-expert', 'performance-tyrant'])"},workspace_path:{type:"string",description:"Absolute path to the project workspace root."}},required:["proposal_path","roles","workspace_path"]}},{name:"check_task_status",description:"Poll the status of async queues or tasks.",inputSchema:{type:"object",properties:{taskId:{type:"string",description:"The ID of the task to check."},workspace_path:{type:"string",description:"Absolute path to the project workspace root."}},required:["taskId","workspace_path"]}}]}));z.setRequestHandler(l.CallToolRequestSchema,async a=>{if(a.params.name==="check_task_status"){let{taskId:t,workspace_path:e}=a.params.arguments;if(!t||!e)throw new Error("Missing taskId or workspace_path");O.reapStaleTasks(e);let r=O.loadManifest(e)[t];if(!r)return{content:[{type:"text",text:`Task ${t} not found in manifest.`}]};let i=`Task ${t} status: **${r.status}**
-`;return r.status==="completed"&&(i+=`
-Output is ready at ${r.output_path||"the review path"}.`),r.status==="failed"&&(i+=`
-Error: ${r.error_message}`),{content:[{type:"text",text:i}]}}if(a.params.name==="delegate_task_async"){let{role:t,task_description:e,output_path:n,workspace_path:r,context_files:i}=a.params.arguments;if(!t||!e||!n||!r)throw new l.McpError(l.ErrorCode.InvalidParams,"Invalid arguments");let s=`task_${Date.now()}_${Math.random().toString(36).substring(2,8)}`;return O.createTask(r,{taskId:s,type:"delegate_task",role:t,task_description:e,output_path:n,workspacePath:r,context_files:i||[]}),(0,tt.spawn)(process.execPath,[__filename,"--run-task",s,r],{detached:!0,stdio:"ignore"}).unref(),{content:[{type:"text",text:`\u2705 Task spawned successfully in background.
+`;
+        }
+      }
+      import_fs2.default.writeFileSync(synthesisPath, synthesisContent, "utf8");
+      console.error(`[Runner] Generated COUNCIL_SYNTHESIS.md at ${synthesisPath}`);
+      try {
+        const pmSynthesisPrompt = `You are the PM arbiter for this council review.
 
-**Task ID**: ${s}
-**Role**: ${t}
+Read the following council synthesis report and produce a UNIFIED VERDICT.
 
-Use check_task_status tool periodically with this task ID to check its completion.`}]}}if(a.params.name==="dispatch_council_async"){let{proposal_path:t,roles:e,workspace_path:n}=a.params.arguments;if(!t||!Array.isArray(e)||!n)throw new l.McpError(l.ErrorCode.InvalidParams,"Invalid arguments");let r=`council_${Date.now()}_${Math.random().toString(36).substring(2,8)}`,i=k.default.join(n,".optimus","reviews",r);return O.createTask(n,{taskId:r,type:"dispatch_council",roles:e,proposal_path:t,output_path:i,workspacePath:n}),(0,tt.spawn)(process.execPath,[__filename,"--run-task",r,n],{detached:!0,stdio:"ignore"}).unref(),{content:[{type:"text",text:`\u2705 Council spawned successfully in background.
+Your output MUST follow this exact format:
+## Unified Council Verdict
+**Decision**: APPROVED / REJECTED / APPROVED_WITH_CONDITIONS
+**Consensus Level**: UNANIMOUS / MAJORITY / SPLIT
 
-**Council ID**: ${r}
-**Roles**: ${e.join(", ")}
+### Key Agreements
+- (list points all reviewers agree on)
 
-Use check_task_status tool periodically with this Council ID to check completion.`}]}}if(a.params.name==="dispatch_council"){let{proposal_path:t,roles:e,workspace_path:n}=a.params.arguments;if(!t||!Array.isArray(e)||e.length===0)throw new l.McpError(l.ErrorCode.InvalidParams,"Invalid arguments: requires proposal_path and an array of roles");let r,i=t.indexOf(".optimus");i!==-1?r=t.substring(0,i):r=k.default.resolve(k.default.dirname(t));let s=Date.now(),o=k.default.join(r,".optimus","reviews",s.toString());_.default.mkdirSync(o,{recursive:!0}),console.error(`[MCP] Dispatching council with roles: ${e.join(", ")}`);let u=await Q(e,t,o,s.toString(),r);return{content:[{type:"text",text:`\u2696\uFE0F **Council Map-Reduce Review Completed**
+### Conditions (if any)
+- (list required changes before implementation)
+
+### Conflicts (if any)
+- (list unresolved disagreements)
+
+### Implementation Priority
+1. (ordered action items)
+
+Here is the synthesis report:
+
+${synthesisContent}`;
+        const verdictPath = import_path2.default.join(reviewsPath, "VERDICT.md");
+        await delegateTaskSingle(
+          "pm",
+          pmSynthesisPrompt,
+          verdictPath,
+          `reduce_${taskId}`,
+          task.workspacePath
+        );
+        console.error(`[Runner] PM verdict generated at ${verdictPath}`);
+      } catch (reduceErr) {
+        console.error(`[Runner] PM reduce phase failed (non-fatal): ${reduceErr.message}`);
+      }
+    }
+    const outputTarget = task.type === "dispatch_council" ? import_path2.default.join(task.output_path, "COUNCIL_SYNTHESIS.md") : task.output_path;
+    const verificationStatus = verifyOutputPath(outputTarget);
+    TaskManifestManager.updateTask(workspacePath, taskId, { status: verificationStatus });
+    console.error(`[Runner] Task ${taskId} finished with status: ${verificationStatus}.`);
+    await updateTaskGitHubIssue(workspacePath, taskId, verificationStatus, task.output_path);
+  } catch (err) {
+    console.error(`[Runner] Task ${taskId} failed:`, err);
+    TaskManifestManager.updateTask(workspacePath, taskId, { status: "failed", error_message: err.message });
+    await updateTaskGitHubIssue(workspacePath, taskId, "failed", void 0, err.message);
+  } finally {
+    clearInterval(heartbeatInterval);
+    process.exit(0);
+  }
+}
+async function updateTaskGitHubIssue(workspacePath, taskId, status, outputPath, errorMsg) {
+  try {
+    const manifest = TaskManifestManager.loadManifest(workspacePath);
+    const task = manifest[taskId];
+    if (!task?.github_issue_number) return;
+    const remote = parseGitRemote(workspacePath);
+    if (!remote) return;
+    const statusEmoji = status === "verified" ? "\u2705" : status === "partial" ? "\u26A0\uFE0F" : "\u274C";
+    let comment = `## ${statusEmoji} Task Completion Report
+
+`;
+    comment += `**Status:** \`${status}\`
+`;
+    comment += `**Task ID:** \`${taskId}\`
+`;
+    if (outputPath) comment += `**Output:** \`${outputPath}\`
+`;
+    if (errorMsg) comment += `**Error:** ${errorMsg}
+`;
+    comment += `
+*Auto-generated by Optimus MCP Runner*`;
+    await commentOnGitHubIssue(remote.owner, remote.repo, task.github_issue_number, comment);
+    if (status === "verified" || status === "failed") {
+      await closeGitHubIssue(remote.owner, remote.repo, task.github_issue_number);
+    }
+  } catch {
+  }
+}
+
+// ../src/mcp/mcp-server.ts
+var import_child_process2 = require("child_process");
+var import_dotenv = __toESM(require("dotenv"));
+import_dotenv.default.config({ path: import_path3.default.resolve(__dirname, "../../.env") });
+import_dotenv.default.config();
+var server = new import_server.Server(
+  {
+    name: "optimus-facade",
+    version: "1.0.0"
+  },
+  {
+    capabilities: {
+      resources: {},
+      tools: {}
+    }
+  }
+);
+server.setRequestHandler(import_types.ListResourcesRequestSchema, async () => {
+  return {
+    resources: [
+      {
+        uri: "optimus://system/instructions",
+        name: "Optimus System Instructions",
+        description: "Master workflow protocols and agnostic system instructions for Optimus agents.",
+        mimeType: "text/markdown"
+      }
+    ]
+  };
+});
+server.setRequestHandler(import_types.ReadResourceRequestSchema, async (request) => {
+  if (request.params.uri === "optimus://system/instructions") {
+    const workspacePath = process.env.OPTIMUS_WORKSPACE_ROOT || process.cwd();
+    const instructionsPath = import_path3.default.resolve(workspacePath, ".optimus", "config", "system-instructions.md");
+    if (!instructionsPath.startsWith(import_path3.default.resolve(workspacePath))) {
+      throw new import_types.McpError(import_types.ErrorCode.InvalidRequest, `Path traversal detected`);
+    }
+    try {
+      if (import_fs3.default.existsSync(instructionsPath)) {
+        const content = import_fs3.default.readFileSync(instructionsPath, "utf8");
+        return {
+          contents: [
+            {
+              uri: request.params.uri,
+              mimeType: "text/markdown",
+              text: content
+            }
+          ]
+        };
+      } else {
+        throw new import_types.McpError(import_types.ErrorCode.InvalidRequest, `The system-instructions.md file does not exist at ${instructionsPath}`);
+      }
+    } catch (e) {
+      throw new import_types.McpError(import_types.ErrorCode.InternalError, `Failed to read instructions: ${e.message}`);
+    }
+  }
+  throw new import_types.McpError(import_types.ErrorCode.InvalidRequest, `Resource not found: ${request.params.uri}`);
+});
+server.setRequestHandler(import_types.ListToolsRequestSchema, async () => {
+  return {
+    tools: [
+      {
+        name: "append_memory",
+        description: "Write experience, architectural decisions, and important project facts into the continuous memory system to evolve the project context.",
+        inputSchema: {
+          type: "object",
+          properties: {
+            category: { type: "string", description: "The category of the memory (e.g. 'architecture-decision', 'bug-fix', 'workflow')" },
+            tags: { type: "array", items: { type: "string" }, description: "A list of tags for selective loading" },
+            content: { type: "string", description: "The actual memory content to solidify" }
+          },
+          required: ["category", "tags", "content"]
+        }
+      },
+      {
+        name: "github_update_issue",
+        description: "Updates an existing issue in a GitHub repository (e.g. to close it or add comments).",
+        inputSchema: {
+          type: "object",
+          properties: {
+            owner: { type: "string", description: "Repository owner" },
+            repo: { type: "string", description: "Repository name" },
+            issue_number: { type: "number", description: "The number of the issue to update" },
+            state: { type: "string", enum: ["open", "closed"], description: "State of the issue" },
+            body: { type: "string", description: "New body for the issue (overwrites existing)" },
+            agent_role: { type: "string", description: "The role of the agent making this update" },
+            session_id: { type: "string", description: "The session ID of the agent" }
+          },
+          required: ["owner", "repo", "issue_number"]
+        }
+      },
+      {
+        name: "github_create_issue",
+        description: "Creates a new issue in a GitHub repository.",
+        inputSchema: {
+          type: "object",
+          properties: {
+            owner: { type: "string", description: "Repository owner (e.g. cloga)" },
+            repo: { type: "string", description: "Repository name (e.g. optimus-code)" },
+            title: { type: "string", description: "Issue title" },
+            body: { type: "string", description: "Issue body/contents" },
+            local_path: { type: "string", description: "The local blackboard file path (e.g. .optimus/proposals/PROPOSAL_XY.md) for A2A cross-reference" },
+            session_id: { type: "string", description: "The Session ID or Agent ID creating this issue for traceability" },
+            labels: { type: "array", items: { type: "string" }, description: "Labels to apply" }
+          },
+          required: ["owner", "repo", "title", "body", "local_path"]
+        }
+      },
+      {
+        name: "github_create_pr",
+        description: "Creates a new pull request in a GitHub repository.",
+        inputSchema: {
+          type: "object",
+          properties: {
+            owner: { type: "string" },
+            repo: { type: "string" },
+            title: { type: "string" },
+            head: { type: "string", description: "The name of the branch where your changes are implemented." },
+            base: { type: "string", description: "The name of the branch you want the changes pulled into." },
+            body: { type: "string" },
+            agent_role: { type: "string", description: "The role of the agent making this PR (e.g., 'dev')" },
+            session_id: { type: "string", description: "The session ID of the agent" }
+          },
+          required: ["owner", "repo", "title", "head", "base"]
+        }
+      },
+      {
+        name: "github_merge_pr",
+        description: "Merges a pull request in a GitHub repository.",
+        inputSchema: {
+          type: "object",
+          properties: {
+            owner: { type: "string" },
+            repo: { type: "string" },
+            pull_number: { type: "number" },
+            commit_title: { type: "string" },
+            merge_method: { type: "string", enum: ["merge", "squash", "rebase"] },
+            agent_role: { type: "string", description: "The role of the agent merging this PR (e.g., 'pm')" },
+            session_id: { type: "string", description: "The session ID of the agent" }
+          },
+          required: ["owner", "repo", "pull_number"]
+        }
+      },
+      {
+        name: "github_sync_board",
+        description: "Fetches open issues from a GitHub repository and dumps them into the local blackboard.",
+        inputSchema: {
+          type: "object",
+          properties: {
+            owner: { type: "string", description: "Repository owner (e.g. cloga)" },
+            repo: { type: "string", description: "Repository name (e.g. optimus-code)" },
+            workspace_path: { type: "string", description: "Absolute workspace path" }
+          },
+          required: ["owner", "repo", "workspace_path"]
+        }
+      },
+      {
+        name: "dispatch_council",
+        description: "Trigger a map-reduce multi-expert review for an architectural proposal using the Spartan Swarm protocol.",
+        inputSchema: {
+          type: "object",
+          properties: {
+            proposal_path: {
+              type: "string",
+              description: "The file path to the PROPOSAL.md file"
+            },
+            roles: {
+              type: "array",
+              items: { type: "string" },
+              description: "An array of expert roles to spawn concurrently (e.g., ['security-expert', 'performance-tyrant'])"
+            }
+          },
+          required: ["proposal_path", "roles"]
+        }
+      },
+      {
+        name: "roster_check",
+        description: "Returns a unified directory of all available roles (T1 Local Personas and T2 Global Agents) to help the Master Agent understand current workforce capabilities before dispatching tools.",
+        inputSchema: {
+          type: "object",
+          properties: {
+            workspace_path: {
+              type: "string",
+              description: "The absolute path to the current project workspace to check for T1 local personas."
+            }
+          },
+          required: ["workspace_path"]
+        }
+      },
+      {
+        name: "delegate_task",
+        description: "Delegate a specific execution task to a designated expert role.",
+        inputSchema: {
+          type: "object",
+          properties: {
+            role: {
+              type: "string",
+              description: "The name of the expert role (e.g., 'chief-architect', 'frontend-dev'). The system will auto-resolve this to the best available prompt."
+            },
+            task_description: {
+              type: "string",
+              description: "Detailed description of what the agent needs to do."
+            },
+            output_path: {
+              type: "string",
+              description: "The file path where the agent should write its final result or report. If not already under the workspace's .optimus/ directory, it will be automatically scoped to .optimus/results/<filename> within the workspace."
+            },
+            workspace_path: {
+              type: "string",
+              description: "Absolute path to the project workspace root. All artifacts (task blackboard, result files) will be isolated under <workspace_path>/.optimus/."
+            },
+            context_files: {
+              type: "array",
+              items: { type: "string" },
+              description: "Optional array of workspace-relative paths to design documents, architecture specs, or requirement files that the agent must strictly read before executing the task."
+            }
+          },
+          required: ["role", "task_description", "output_path", "workspace_path"]
+        }
+      },
+      {
+        name: "delegate_task_async",
+        description: "Delegate a specific execution task to a designated expert role asynchronously without blocking the master agent.",
+        inputSchema: {
+          type: "object",
+          properties: {
+            role: {
+              type: "string",
+              description: "The name of the expert role (e.g., 'chief-architect', 'frontend-dev')."
+            },
+            task_description: {
+              type: "string",
+              description: "Detailed description of what the agent needs to do."
+            },
+            output_path: {
+              type: "string",
+              description: "The file path where the agent should write its final result or report."
+            },
+            workspace_path: {
+              type: "string",
+              description: "Absolute path to the project workspace root."
+            },
+            context_files: {
+              type: "array",
+              items: { type: "string" },
+              description: "Optional array of workspace-relative paths to design documents, architecture specs, or requirement files that the agent must strictly read before executing the task."
+            }
+          },
+          required: ["role", "task_description", "output_path", "workspace_path"]
+        }
+      },
+      {
+        name: "dispatch_council_async",
+        description: "Trigger an async map-reduce multi-expert review for an architectural proposal.",
+        inputSchema: {
+          type: "object",
+          properties: {
+            proposal_path: {
+              type: "string",
+              description: "The file path to the PROPOSAL.md file"
+            },
+            roles: {
+              type: "array",
+              items: { type: "string" },
+              description: "An array of expert roles to spawn concurrently (e.g., ['security-expert', 'performance-tyrant'])"
+            },
+            workspace_path: {
+              type: "string",
+              description: "Absolute path to the project workspace root."
+            }
+          },
+          required: ["proposal_path", "roles", "workspace_path"]
+        }
+      },
+      {
+        name: "check_task_status",
+        description: "Poll the status of async queues or tasks.",
+        inputSchema: {
+          type: "object",
+          properties: {
+            taskId: {
+              type: "string",
+              description: "The ID of the task to check."
+            },
+            workspace_path: {
+              type: "string",
+              description: "Absolute path to the project workspace root."
+            }
+          },
+          required: ["taskId", "workspace_path"]
+        }
+      }
+    ]
+  };
+});
+server.setRequestHandler(import_types.CallToolRequestSchema, async (request) => {
+  if (request.params.name === "check_task_status") {
+    let { taskId, workspace_path } = request.params.arguments;
+    if (!taskId || !workspace_path) throw new Error("Missing taskId or workspace_path");
+    TaskManifestManager.reapStaleTasks(workspace_path);
+    const manifest = TaskManifestManager.loadManifest(workspace_path);
+    const task = manifest[taskId];
+    if (!task) {
+      return { content: [{ type: "text", text: `Task ${taskId} not found in manifest.` }] };
+    }
+    let effectiveStatus = task.status;
+    let details = "";
+    if (task.status === "running") {
+      const elapsed = Math.round((Date.now() - task.startTime) / 1e3);
+      details = `Task ${taskId} status: **running** (${elapsed}s elapsed)
+`;
+    } else if (task.status === "verified") {
+      details = `Task ${taskId} status: **verified** \u2705
+
+Output verified at ${task.output_path || "the review path"}.`;
+      if (task.type === "dispatch_council") {
+        const verdictPath = import_path3.default.join(task.output_path, "VERDICT.md");
+        if (import_fs3.default.existsSync(verdictPath)) {
+          details += `
+PM Verdict available at: ${verdictPath}`;
+        }
+      }
+    } else if (task.status === "completed") {
+      let outputExists = false;
+      if (task.output_path) {
+        try {
+          const stat = import_fs3.default.statSync(task.output_path);
+          outputExists = stat.isFile() ? stat.size > 0 : import_fs3.default.readdirSync(task.output_path).length > 0;
+        } catch {
+        }
+      }
+      effectiveStatus = outputExists ? "verified" : "partial";
+      if (effectiveStatus === "verified") {
+        details = `Task ${taskId} status: **verified** \u2705
+
+Output is ready at ${task.output_path}.`;
+      } else {
+        details = `Task ${taskId} status: **partial** \u26A0\uFE0F
+
+Process exited successfully but output_path is missing or empty: \`${task.output_path}\``;
+      }
+    } else if (task.status === "partial") {
+      details = `Task ${taskId} status: **partial** \u26A0\uFE0F
+
+Process exited successfully but output artifact was not found at: \`${task.output_path}\``;
+    } else if (task.status === "failed") {
+      details = `Task ${taskId} status: **failed** \u274C
+
+Error: ${task.error_message}`;
+    } else {
+      details = `Task ${taskId} status: **${task.status}**`;
+    }
+    return { content: [{ type: "text", text: details }] };
+  }
+  if (request.params.name === "delegate_task_async") {
+    let { role, task_description, output_path, workspace_path, context_files } = request.params.arguments;
+    if (!role || !task_description || !output_path || !workspace_path) {
+      throw new import_types.McpError(import_types.ErrorCode.InvalidParams, "Invalid arguments");
+    }
+    const taskId = `task_${Date.now()}_${Math.random().toString(36).substring(2, 8)}`;
+    TaskManifestManager.createTask(workspace_path, {
+      taskId,
+      type: "delegate_task",
+      role,
+      task_description,
+      output_path,
+      workspacePath: workspace_path,
+      context_files: context_files || []
+    });
+    let issueInfo = "";
+    const remote = parseGitRemote(workspace_path);
+    if (remote) {
+      const truncDesc = task_description.length > 300 ? task_description.substring(0, 300) + "..." : task_description;
+      const issue = await createGitHubIssue(
+        remote.owner,
+        remote.repo,
+        `[swarm-task] ${role}: ${taskId}`,
+        `## Auto-generated Swarm Task Tracker
+
+**Task ID:** \`${taskId}\`
+**Role:** \`${role}\`
+**Output Path:** \`${output_path}\`
+
+### Task Description
+${truncDesc}`,
+        ["swarm-task"]
+      );
+      if (issue) {
+        TaskManifestManager.updateTask(workspace_path, taskId, { github_issue_number: issue.number });
+        issueInfo = `
+**GitHub Issue**: ${issue.html_url}`;
+      }
+    }
+    const child = (0, import_child_process2.spawn)(process.execPath, [__filename, "--run-task", taskId, workspace_path], {
+      detached: true,
+      stdio: "ignore",
+      windowsHide: true
+    });
+    child.unref();
+    return { content: [{ type: "text", text: `\u2705 Task spawned successfully in background.
+
+**Task ID**: ${taskId}
+**Role**: ${role}${issueInfo}
+
+Use check_task_status tool periodically with this task ID to check its completion.` }] };
+  }
+  if (request.params.name === "dispatch_council_async") {
+    let { proposal_path, roles, workspace_path } = request.params.arguments;
+    if (!proposal_path || !Array.isArray(roles) || !workspace_path) {
+      throw new import_types.McpError(import_types.ErrorCode.InvalidParams, "Invalid arguments");
+    }
+    const taskId = `council_${Date.now()}_${Math.random().toString(36).substring(2, 8)}`;
+    const reviewsPath = import_path3.default.join(workspace_path, ".optimus", "reviews", taskId);
+    TaskManifestManager.createTask(workspace_path, {
+      taskId,
+      type: "dispatch_council",
+      roles,
+      proposal_path,
+      output_path: reviewsPath,
+      workspacePath: workspace_path
+    });
+    let issueInfo = "";
+    const remote = parseGitRemote(workspace_path);
+    if (remote) {
+      const issue = await createGitHubIssue(
+        remote.owner,
+        remote.repo,
+        `[swarm-council] ${roles.join(", ")}: ${taskId}`,
+        `## Auto-generated Council Review Tracker
+
+**Council ID:** \`${taskId}\`
+**Roles:** ${roles.map((r) => `\`${r}\``).join(", ")}
+**Proposal:** \`${proposal_path}\`
+**Reviews Path:** \`${reviewsPath}\``,
+        ["swarm-council"]
+      );
+      if (issue) {
+        TaskManifestManager.updateTask(workspace_path, taskId, { github_issue_number: issue.number });
+        issueInfo = `
+**GitHub Issue**: ${issue.html_url}`;
+      }
+    }
+    const child = (0, import_child_process2.spawn)(process.execPath, [__filename, "--run-task", taskId, workspace_path], {
+      detached: true,
+      stdio: "ignore",
+      windowsHide: true
+    });
+    child.unref();
+    return { content: [{ type: "text", text: `\u2705 Council spawned successfully in background.
+
+**Council ID**: ${taskId}
+**Roles**: ${roles.join(", ")}${issueInfo}
+
+Use check_task_status tool periodically with this Council ID to check completion.` }] };
+  }
+  if (request.params.name === "dispatch_council") {
+    let { proposal_path, roles, workspace_path } = request.params.arguments;
+    if (!proposal_path || !Array.isArray(roles) || roles.length === 0) {
+      throw new import_types.McpError(import_types.ErrorCode.InvalidParams, "Invalid arguments: requires proposal_path and an array of roles");
+    }
+    let workspacePath;
+    const optimusIndex = proposal_path.indexOf(".optimus");
+    if (optimusIndex !== -1) {
+      workspacePath = proposal_path.substring(0, optimusIndex);
+    } else {
+      workspacePath = import_path3.default.resolve(import_path3.default.dirname(proposal_path));
+    }
+    const timestampId = Date.now();
+    const reviewsPath = import_path3.default.join(workspacePath, ".optimus", "reviews", timestampId.toString());
+    import_fs3.default.mkdirSync(reviewsPath, { recursive: true });
+    console.error(`[MCP] Dispatching council with roles: ${roles.join(", ")}`);
+    const results = await dispatchCouncilConcurrent(roles, proposal_path, reviewsPath, timestampId.toString(), workspacePath);
+    return {
+      content: [
+        {
+          type: "text",
+          text: `\u2696\uFE0F **Council Map-Reduce Review Completed**
 All expert workers executed parallelly adhering to the Singleton Worker Rule.
 
-Reviews are saved in isolated path: \`${o}\`
+Reviews are saved in isolated path: \`${reviewsPath}\`
 
 Execution Logs:
-${u.join(`
-`)}
+${results.join("\n")}
 
-Please read these review files to continue.`}]}}else if(a.params.name==="append_memory"){let{category:t,tags:e,content:n}=a.params.arguments,r=process.env.OPTIMUS_WORKSPACE_ROOT||process.cwd(),i=k.default.resolve(r,".optimus","memory"),s=k.default.join(i,"continuous-memory.md");_.default.existsSync(i)||_.default.mkdirSync(i,{recursive:!0}),global.memoryLock||(global.memoryLock=Promise.resolve());try{await global.memoryLock;let o=new Promise((u,c)=>{try{let p=new Date().toISOString(),g=["---","id: "+("mem_"+Date.now()+"_"+Math.floor(Math.random()*1e3)),"category: "+(t||"uncategorized"),"tags: ["+(e?e.join(", "):"")+"]","created: "+p,"---",n,`
-`].join(`
-`);_.default.appendFileSync(s,g,"utf8"),u()}catch(p){c(p)}});return global.memoryLock=o,await o,{content:[{type:"text",text:`\u2705 Experience solidifed to memory!
-Tags: ${e.join(", ")}
-Memory appended to: ${s}`}]}}catch(o){return{content:[{type:"text",text:`Failed to append memory: ${o.message}`}],isError:!0}}}else if(a.params.name==="github_update_issue"){let{owner:t,repo:e,issue_number:n,state:r,body:i,agent_role:s,session_id:o}=a.params.arguments,u=process.env.GITHUB_TOKEN||process.env.GH_TOKEN;if(!u)throw new l.McpError(l.ErrorCode.InvalidRequest,"GITHUB_TOKEN env is not set");try{let c=i;(s||o)&&c&&(c+=`
+Please read these review files to continue.`
+        }
+      ]
+    };
+  } else if (request.params.name === "append_memory") {
+    let { category, tags, content } = request.params.arguments;
+    const workspacePath = process.env.OPTIMUS_WORKSPACE_ROOT || process.cwd();
+    const memoryDir = import_path3.default.resolve(workspacePath, ".optimus", "memory");
+    const memoryFile = import_path3.default.join(memoryDir, "continuous-memory.md");
+    if (!import_fs3.default.existsSync(memoryDir)) {
+      import_fs3.default.mkdirSync(memoryDir, { recursive: true });
+    }
+    if (!global.memoryLock) {
+      global.memoryLock = Promise.resolve();
+    }
+    try {
+      await global.memoryLock;
+      const writePromise = new Promise((resolve, reject) => {
+        try {
+          const timestamp = (/* @__PURE__ */ new Date()).toISOString();
+          const memoryId = "mem_" + Date.now() + "_" + Math.floor(Math.random() * 1e3);
+          const freshEntry = [
+            "---",
+            "id: " + memoryId,
+            "category: " + (category || "uncategorized"),
+            "tags: [" + (tags ? tags.join(", ") : "") + "]",
+            "created: " + timestamp,
+            "---",
+            content,
+            "\n"
+          ].join("\n");
+          import_fs3.default.appendFileSync(memoryFile, freshEntry, "utf8");
+          resolve();
+        } catch (err) {
+          reject(err);
+        }
+      });
+      global.memoryLock = writePromise;
+      await writePromise;
+      return {
+        content: [
+          {
+            type: "text",
+            text: `\u2705 Experience solidifed to memory!
+Tags: ${tags.join(", ")}
+Memory appended to: ${memoryFile}`
+          }
+        ]
+      };
+    } catch (err) {
+      return {
+        content: [{ type: "text", text: `Failed to append memory: ${err.message}` }],
+        isError: true
+      };
+    }
+  } else if (request.params.name === "github_update_issue") {
+    const { owner, repo, issue_number, state, body, agent_role, session_id } = request.params.arguments;
+    const token = process.env.GITHUB_TOKEN || process.env.GH_TOKEN;
+    if (!token) throw new import_types.McpError(import_types.ErrorCode.InvalidRequest, "GITHUB_TOKEN env is not set");
+    try {
+      let finalBody = body;
+      if ((agent_role || session_id) && finalBody) {
+        finalBody += "\n\n---\n**\u{1F916} Agent System Metadata [Update]:**\n";
+        if (agent_role) finalBody += `- **Agent Role:** \`${agent_role}\`
+`;
+        if (session_id) finalBody += `- **Agent Session ID:** \`${session_id}\`
+`;
+      }
+      const payload = {};
+      if (state) payload.state = state;
+      if (finalBody) payload.body = finalBody;
+      const resp = await fetch(`https://api.github.com/repos/${owner}/${repo}/issues/${issue_number}`, {
+        method: "PATCH",
+        headers: {
+          "Authorization": `Bearer ${token}`,
+          "Accept": "application/vnd.github.v3+json",
+          "Content-Type": "application/json",
+          "User-Agent": "Optimus-Agent"
+        },
+        body: JSON.stringify(payload)
+      });
+      if (!resp.ok) {
+        throw new Error("GitHub API Error: " + await resp.text());
+      }
+      const data = await resp.json();
+      return { content: [{ type: "text", text: `Issue #${issue_number} updated successfully. State is now: ${data.state}` }] };
+    } catch (err) {
+      return { content: [{ type: "text", text: `Failed to update Issue: ${err.message}` }], isError: true };
+    }
+  } else if (request.params.name === "github_create_issue") {
+    const { owner, repo, title, body, labels, local_path, session_id } = request.params.arguments;
+    if (!local_path) {
+      throw new import_types.McpError(import_types.ErrorCode.InvalidParams, "Violated Issue First Protocol: local_path is mandatory to bind to a blackboard file (e.g. .optimus/tasks/task.md)");
+    }
+    const token = process.env.GITHUB_TOKEN || process.env.GH_TOKEN;
+    if (!token) throw new import_types.McpError(import_types.ErrorCode.InvalidRequest, "GITHUB_TOKEN env is not set");
+    let finalBody = body;
+    if (local_path || session_id) {
+      finalBody += "\n\n---\n**\u{1F916} Agent System Metadata:**\n";
+      if (local_path) finalBody += `- **Local Blackboard:** \`${local_path}\`
+`;
+      if (session_id) finalBody += `- **Agent Session ID:** \`${session_id}\`
+`;
+    }
+    try {
+      const resp = await fetch(`https://api.github.com/repos/${owner}/${repo}/issues`, {
+        method: "POST",
+        headers: {
+          "Authorization": `Bearer ${token}`,
+          "Accept": "application/vnd.github.v3+json",
+          "Content-Type": "application/json",
+          "User-Agent": "Optimus-Agent"
+        },
+        body: JSON.stringify({ title, body: finalBody, labels: labels || [] })
+      });
+      if (!resp.ok) throw new Error(`GitHub API Error: ${resp.status}`);
+      const data = await resp.json();
+      return { content: [{ type: "text", text: `Issue created: ${data.html_url}` }] };
+    } catch (e) {
+      throw new import_types.McpError(import_types.ErrorCode.InternalError, String(e));
+    }
+  } else if (request.params.name === "github_create_pr") {
+    const { owner, repo, title, head, base, body } = request.params.arguments;
+    const token = process.env.GITHUB_TOKEN || process.env.GH_TOKEN;
+    if (!token) throw new import_types.McpError(import_types.ErrorCode.InvalidRequest, "GITHUB_TOKEN env is not set");
+    try {
+      const resp = await fetch(`https://api.github.com/repos/${owner}/${repo}/pulls`, {
+        method: "POST",
+        headers: {
+          "Authorization": `Bearer ${token}`,
+          "Accept": "application/vnd.github.v3+json",
+          "Content-Type": "application/json",
+          "User-Agent": "Optimus-Agent"
+        },
+        body: JSON.stringify({ title, head, base, body: body || "" })
+      });
+      if (!resp.ok) {
+        throw new Error("GitHub API Error: " + await resp.text());
+      }
+      const data = await resp.json();
+      return { content: [{ type: "text", text: `Pull request created successfully! PR Number: ${data.number}
+URL: ${data.html_url}` }] };
+    } catch (err) {
+      return { content: [{ type: "text", text: `Failed to create PR: ${err.message}` }], isError: true };
+    }
+  } else if (request.params.name === "github_merge_pr") {
+    const { owner, repo, pull_number, commit_title, merge_method } = request.params.arguments;
+    const token = process.env.GITHUB_TOKEN || process.env.GH_TOKEN;
+    if (!token) throw new import_types.McpError(import_types.ErrorCode.InvalidRequest, "GITHUB_TOKEN env is not set");
+    try {
+      const payload = { merge_method: merge_method || "merge" };
+      if (commit_title) payload.commit_title = commit_title;
+      const resp = await fetch(`https://api.github.com/repos/${owner}/${repo}/pulls/${pull_number}/merge`, {
+        method: "PUT",
+        headers: {
+          "Authorization": `Bearer ${token}`,
+          "Accept": "application/vnd.github.v3+json",
+          "Content-Type": "application/json",
+          "User-Agent": "Optimus-Agent"
+        },
+        body: JSON.stringify(payload)
+      });
+      if (!resp.ok) {
+        throw new Error("GitHub API Error: " + await resp.text());
+      }
+      const data = await resp.json();
+      return { content: [{ type: "text", text: `Pull request #${pull_number} merged successfully: ${data.message}` }] };
+    } catch (err) {
+      return { content: [{ type: "text", text: `Failed to merge PR: ${err.message}` }], isError: true };
+    }
+  } else if (request.params.name === "github_sync_board") {
+    const { owner, repo, workspace_path } = request.params.arguments;
+    const token = process.env.GITHUB_TOKEN || process.env.GH_TOKEN;
+    if (!token) throw new import_types.McpError(import_types.ErrorCode.InvalidRequest, "GITHUB_TOKEN env is not set");
+    try {
+      const resp = await fetch(`https://api.github.com/repos/${owner}/${repo}/issues?state=open`, {
+        headers: {
+          "Authorization": `Bearer ${token}`,
+          "Accept": "application/vnd.github.v3+json",
+          "User-Agent": "Optimus-Agent"
+        }
+      });
+      if (!resp.ok) throw new Error(`GitHub API Error: ${resp.status}`);
+      const issues = await resp.json();
+      let markdown = `# Task Board
 
----
-**\u{1F916} Agent System Metadata [Update]:**
-`,s&&(c+=`- **Agent Role:** \`${s}\`
-`),o&&(c+=`- **Agent Session ID:** \`${o}\`
-`));let p={};r&&(p.state=r),c&&(p.body=c);let m=await fetch(`https://api.github.com/repos/${t}/${e}/issues/${n}`,{method:"PATCH",headers:{Authorization:`Bearer ${u}`,Accept:"application/vnd.github.v3+json","Content-Type":"application/json","User-Agent":"Optimus-Agent"},body:JSON.stringify(p)});if(!m.ok)throw new Error("GitHub API Error: "+await m.text());let g=await m.json();return{content:[{type:"text",text:`Issue #${n} updated successfully. State is now: ${g.state}`}]}}catch(c){return{content:[{type:"text",text:`Failed to update Issue: ${c.message}`}],isError:!0}}}else if(a.params.name==="github_create_issue"){let{owner:t,repo:e,title:n,body:r,labels:i,local_path:s,session_id:o}=a.params.arguments;if(!s)throw new l.McpError(l.ErrorCode.InvalidParams,"Violated Issue First Protocol: local_path is mandatory to bind to a blackboard file (e.g. .optimus/tasks/task.md)");let u=process.env.GITHUB_TOKEN||process.env.GH_TOKEN;if(!u)throw new l.McpError(l.ErrorCode.InvalidRequest,"GITHUB_TOKEN env is not set");let c=r;(s||o)&&(c+=`
+`;
+      let count = 0;
+      for (const issue of issues) {
+        if (!issue.pull_request) {
+          count++;
+          markdown += `## [#${issue.number}] ${issue.title}
+`;
+          markdown += `- **URL**: ${issue.html_url}
+`;
+          markdown += `${issue.body ? issue.body.split("\n").map((l) => "> " + l).join("\n") : "> No description"}
 
----
-**\u{1F916} Agent System Metadata:**
-`,s&&(c+=`- **Local Blackboard:** \`${s}\`
-`),o&&(c+=`- **Agent Session ID:** \`${o}\`
-`));try{let p=await fetch(`https://api.github.com/repos/${t}/${e}/issues`,{method:"POST",headers:{Authorization:`Bearer ${u}`,Accept:"application/vnd.github.v3+json","Content-Type":"application/json","User-Agent":"Optimus-Agent"},body:JSON.stringify({title:n,body:c,labels:i||[]})});if(!p.ok)throw new Error(`GitHub API Error: ${p.status}`);return{content:[{type:"text",text:`Issue created: ${(await p.json()).html_url}`}]}}catch(p){throw new l.McpError(l.ErrorCode.InternalError,String(p))}}else if(a.params.name==="github_create_pr"){let{owner:t,repo:e,title:n,head:r,base:i,body:s}=a.params.arguments,o=process.env.GITHUB_TOKEN||process.env.GH_TOKEN;if(!o)throw new l.McpError(l.ErrorCode.InvalidRequest,"GITHUB_TOKEN env is not set");try{let u=await fetch(`https://api.github.com/repos/${t}/${e}/pulls`,{method:"POST",headers:{Authorization:`Bearer ${o}`,Accept:"application/vnd.github.v3+json","Content-Type":"application/json","User-Agent":"Optimus-Agent"},body:JSON.stringify({title:n,head:r,base:i,body:s||""})});if(!u.ok)throw new Error("GitHub API Error: "+await u.text());let c=await u.json();return{content:[{type:"text",text:`Pull request created successfully! PR Number: ${c.number}
-URL: ${c.html_url}`}]}}catch(u){return{content:[{type:"text",text:`Failed to create PR: ${u.message}`}],isError:!0}}}else if(a.params.name==="github_merge_pr"){let{owner:t,repo:e,pull_number:n,commit_title:r,merge_method:i}=a.params.arguments,s=process.env.GITHUB_TOKEN||process.env.GH_TOKEN;if(!s)throw new l.McpError(l.ErrorCode.InvalidRequest,"GITHUB_TOKEN env is not set");try{let o={merge_method:i||"merge"};r&&(o.commit_title=r);let u=await fetch(`https://api.github.com/repos/${t}/${e}/pulls/${n}/merge`,{method:"PUT",headers:{Authorization:`Bearer ${s}`,Accept:"application/vnd.github.v3+json","Content-Type":"application/json","User-Agent":"Optimus-Agent"},body:JSON.stringify(o)});if(!u.ok)throw new Error("GitHub API Error: "+await u.text());let c=await u.json();return{content:[{type:"text",text:`Pull request #${n} merged successfully: ${c.message}`}]}}catch(o){return{content:[{type:"text",text:`Failed to merge PR: ${o.message}`}],isError:!0}}}else if(a.params.name==="github_sync_board"){let{owner:t,repo:e,workspace_path:n}=a.params.arguments,r=process.env.GITHUB_TOKEN||process.env.GH_TOKEN;if(!r)throw new l.McpError(l.ErrorCode.InvalidRequest,"GITHUB_TOKEN env is not set");try{let i=await fetch(`https://api.github.com/repos/${t}/${e}/issues?state=open`,{headers:{Authorization:`Bearer ${r}`,Accept:"application/vnd.github.v3+json","User-Agent":"Optimus-Agent"}});if(!i.ok)throw new Error(`GitHub API Error: ${i.status}`);let s=await i.json(),o=`# Task Board
-
-`,u=0;for(let p of s)p.pull_request||(u++,o+=`## [#${p.number}] ${p.title}
-`,o+=`- **URL**: ${p.html_url}
-`,o+=`${p.body?p.body.split(`
-`).map(m=>"> "+m).join(`
-`):"> No description"}
-
-`);let c=k.default.join(n,".optimus","state","TODO.md");return _.default.mkdirSync(k.default.dirname(c),{recursive:!0}),_.default.writeFileSync(c,o,"utf8"),{content:[{type:"text",text:`Synced ${u} issues to ${c}`}]}}catch(i){throw new l.McpError(l.ErrorCode.InternalError,String(i))}}else if(a.params.name==="roster_check"){let{workspace_path:t}=a.params.arguments;if(!t)throw new l.McpError(l.ErrorCode.InvalidParams,"Invalid arguments: requires workspace_path");let e=k.default.join(t,".optimus","agents"),n=k.default.join(__dirname,"..","roles"),r=`\u{1F4CB} **Spartan Swarm Active Roster**
-
-`;if(r+=`### T1: Local Project Experts
-`,_.default.existsSync(e)){let s=_.default.readdirSync(e).filter(o=>o.endsWith(".md"));r+=s.length>0?s.map(o=>`- ${o.replace(".md","")}`).join(`
-`):`(No local overrides found)
-`}else r+=`(No local personas directory found)
-`;let i=k.default.join(t,".optimus","registry","available-agents.json");if(_.default.existsSync(i))try{let s=JSON.parse(_.default.readFileSync(i,"utf8"));r+=`
-### \u2699\uFE0F Dynamic Registry: Execution Engines & Agents
-`,r+=`**Available Execution Engines (Toolchains & Supported Models)**:
-`,Object.keys(s.engines).forEach(o=>{r+=`- [Engine: ${o}] Models: [${s.engines[o].available_models.join(", ")}]
-`}),r+=`
-**Strategic Identifiers (Modifiers)**:
-`,Object.keys(s.roles).forEach(o=>{r+=`- ${o}: [${s.roles[o].strategies.join(", ")}]
-`}),r+="*Note: Append these combinations to role names to spawn customized variants. Examples: `chief-architect_claude-code_claude-3-opus`, `chief-architect_copilot-cli_o1-preview_conservative`.*\n\n"}catch{}if(r+=`
-### T2: Global Spartan Regulars
-`,_.default.existsSync(n)){let s=_.default.readdirSync(n).filter(o=>o.endsWith(".md"));r+=s.length>0?s.map(o=>`- ${o.replace(".md","")}`).join(`
-`):`(No global agents found)
-`}else r+=`(No global agents directory found)
-`;return r+=`
-*Note: Master Agent may still summon T3 Generic Roles dynamically if needed.*`,{content:[{type:"text",text:r}]}}else if(a.params.name==="delegate_task"){let{role:t,task_description:e,output_path:n,context_files:r}=a.params.arguments,i=a.params.arguments.workspace_path;if(!t||!e||!n)throw new l.McpError(l.ErrorCode.InvalidParams,"Invalid arguments: requires role, task_description, output_path");i||(i=process.cwd(),n.includes("optimus-code")&&(i=n.split("optimus-code")[0]+"optimus-code"));let s=wt.default.randomUUID(),o=i,u=k.default.join(o,".optimus"),c=k.default.resolve(o,n),p=c.startsWith(u)?c:k.default.join(u,"results",k.default.basename(n)),m=k.default.join(o,".optimus","tasks");_.default.mkdirSync(m,{recursive:!0});let g=k.default.join(m,`task_${s}.md`);return _.default.writeFileSync(g,e,"utf8"),_.default.mkdirSync(k.default.dirname(p),{recursive:!0}),console.error(`[MCP] Delegating task to role: ${t}, output scoped to: ${p}`),{content:[{type:"text",text:await H(t,g,p,s,o,r)}]}}throw new l.McpError(l.ErrorCode.MethodNotFound,`Unknown tool: ${a.params.name}`)});if(process.argv.includes("--run-task")){let a=process.argv.indexOf("--run-task"),t=process.argv[a+1],e=process.argv[a+2];(!t||!e)&&(console.error("[Runner] Usage: --run-task <taskId> <workspacePath>"),process.exit(1)),ft(t,e).catch(n=>{console.error("[Runner] Fatal:",n),process.exit(1)})}else{async function a(){let t=new St.StdioServerTransport;await z.connect(t),console.error("Optimus Spartan Swarm MCP server running on stdio")}a().catch(t=>{console.error("Server error:",t),process.exit(1)})}
+`;
+        }
+      }
+      const p = import_path3.default.join(workspace_path, ".optimus", "state", "TODO.md");
+      import_fs3.default.mkdirSync(import_path3.default.dirname(p), { recursive: true });
+      import_fs3.default.writeFileSync(p, markdown, "utf8");
+      return { content: [{ type: "text", text: `Synced ${count} issues to ${p}` }] };
+    } catch (e) {
+      throw new import_types.McpError(import_types.ErrorCode.InternalError, String(e));
+    }
+  } else if (request.params.name === "roster_check") {
+    const { workspace_path } = request.params.arguments;
+    if (!workspace_path) {
+      throw new import_types.McpError(import_types.ErrorCode.InvalidParams, "Invalid arguments: requires workspace_path");
+    }
+    const t1Dir = import_path3.default.join(workspace_path, ".optimus", "agents");
+    const t2Dir = import_path3.default.join(workspace_path, ".optimus", "roles");
+    if (!import_fs3.default.existsSync(t2Dir)) {
+      import_fs3.default.mkdirSync(t2Dir, { recursive: true });
+    }
+    const builtInRolesDir = import_path3.default.join(__dirname, "..", "..", "optimus-plugin", "roles");
+    if (import_fs3.default.existsSync(builtInRolesDir)) {
+      const builtinFiles = import_fs3.default.readdirSync(builtInRolesDir);
+      for (const file of builtinFiles) {
+        if (file.endsWith(".md")) {
+          const projectFilePath = import_path3.default.join(t2Dir, file);
+          if (!import_fs3.default.existsSync(projectFilePath)) {
+            try {
+              import_fs3.default.copyFileSync(import_path3.default.join(builtInRolesDir, file), projectFilePath);
+            } catch (e) {
+            }
+          }
+        }
+      }
+    }
+    let roster = "\u{1F4CB} **Spartan Swarm Active Roster**\n\n";
+    roster += "### T1: Local Project Experts\n";
+    if (import_fs3.default.existsSync(t1Dir)) {
+      const t1Files = import_fs3.default.readdirSync(t1Dir).filter((f) => f.endsWith(".md"));
+      roster += t1Files.length > 0 ? t1Files.map((f) => `- ${f.replace(".md", "")}`).join("\n") : "(No local overrides found)\n";
+    } else {
+      roster += "(No local personas directory found)\n";
+    }
+    const registryPath = import_path3.default.join(workspace_path, ".optimus", "registry", "available-agents.json");
+    if (import_fs3.default.existsSync(registryPath)) {
+      try {
+        const registry = JSON.parse(import_fs3.default.readFileSync(registryPath, "utf8"));
+        roster += "\n### \u2699\uFE0F Dynamic Registry: Execution Engines & Agents\n";
+        roster += "**Available Execution Engines (Toolchains & Supported Models)**:\n";
+        Object.keys(registry.engines).forEach((engine) => {
+          roster += `- [Engine: ${engine}] Models: [${registry.engines[engine].available_models.join(", ")}]
+`;
+        });
+        roster += "\n**Strategic Identifiers (Modifiers)**:\n";
+        Object.keys(registry.roles).forEach((role) => {
+          roster += `- ${role}: [${registry.roles[role].strategies.join(", ")}]
+`;
+        });
+        roster += "*Note: Append these combinations to role names to spawn customized variants. Examples: `chief-architect_claude-code_claude-3-opus`, `chief-architect_copilot-cli_o1-preview_conservative`.*\n\n";
+      } catch (e) {
+      }
+    }
+    roster += "\n### T2: Project Default Roles (.optimus/roles)\n";
+    if (import_fs3.default.existsSync(t2Dir)) {
+      const t2Files = import_fs3.default.readdirSync(t2Dir).filter((f) => f.endsWith(".md"));
+      roster += t2Files.length > 0 ? t2Files.map((f) => `- ${f.replace(".md", "")}`).join("\n") : "(No project default roles found)\n";
+    } else {
+      roster += "(No project roles directory found)\n";
+    }
+    roster += "\n*Note: Master Agent may still summon T3 Generic Roles dynamically if needed.*";
+    return {
+      content: [{ type: "text", text: roster }]
+    };
+  } else if (request.params.name === "delegate_task") {
+    const { role, task_description, output_path, context_files } = request.params.arguments;
+    let workspace_path = request.params.arguments.workspace_path;
+    if (!role || !task_description || !output_path) {
+      throw new import_types.McpError(import_types.ErrorCode.InvalidParams, "Invalid arguments: requires role, task_description, output_path");
+    }
+    if (!workspace_path) {
+      workspace_path = process.cwd();
+      if (output_path.includes("optimus-code")) {
+        workspace_path = output_path.split("optimus-code")[0] + "optimus-code";
+      }
+    }
+    const sessionId = import_crypto.default.randomUUID();
+    const workspacePath = workspace_path;
+    const optimusDir = import_path3.default.join(workspacePath, ".optimus");
+    const resolvedOutputPath = import_path3.default.resolve(workspacePath, output_path);
+    const canonicalOutputPath = resolvedOutputPath.startsWith(optimusDir) ? resolvedOutputPath : import_path3.default.join(optimusDir, "results", import_path3.default.basename(output_path));
+    const tasksDir = import_path3.default.join(workspacePath, ".optimus", "tasks");
+    import_fs3.default.mkdirSync(tasksDir, { recursive: true });
+    const taskArtifactPath = import_path3.default.join(tasksDir, `task_${sessionId}.md`);
+    import_fs3.default.writeFileSync(taskArtifactPath, task_description, "utf8");
+    import_fs3.default.mkdirSync(import_path3.default.dirname(canonicalOutputPath), { recursive: true });
+    console.error(`[MCP] Delegating task to role: ${role}, output scoped to: ${canonicalOutputPath}`);
+    const result = await delegateTaskSingle(role, taskArtifactPath, canonicalOutputPath, sessionId, workspacePath, context_files);
+    return {
+      content: [{ type: "text", text: result }]
+    };
+  }
+  throw new import_types.McpError(import_types.ErrorCode.MethodNotFound, `Unknown tool: ${request.params.name}`);
+});
+if (process.argv.includes("--run-task")) {
+  const idx = process.argv.indexOf("--run-task");
+  const taskId = process.argv[idx + 1];
+  const workspacePath = process.argv[idx + 2];
+  if (!taskId || !workspacePath) {
+    console.error("[Runner] Usage: --run-task <taskId> <workspacePath>");
+    process.exit(1);
+  }
+  runAsyncWorker(taskId, workspacePath).catch((err) => {
+    console.error("[Runner] Fatal:", err);
+    process.exit(1);
+  });
+} else {
+  async function main() {
+    const transport = new import_stdio.StdioServerTransport();
+    await server.connect(transport);
+    console.error("Optimus Spartan Swarm MCP server running on stdio");
+  }
+  main().catch((error) => {
+    console.error("Server error:", error);
+    process.exit(1);
+  });
+}
+//# sourceMappingURL=mcp-server.js.map

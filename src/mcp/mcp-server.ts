@@ -10,9 +10,11 @@ import {
 } from "@modelcontextprotocol/sdk/types.js";
 import fs from "fs";
 import path from "path";
+import os from "os";
 import crypto from "crypto";
 import { dispatchCouncilConcurrent, delegateTaskSingle } from "./worker-spawner";
 import { TaskManifestManager } from "../managers/TaskManifestManager";
+import { parseGitRemote, createGitHubIssue } from "../utils/githubApi";
 import { runAsyncWorker } from "./council-runner";
 import { spawn } from "child_process";
 import dotenv from "dotenv";
@@ -334,9 +336,44 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
     if (!task) {
       return { content: [{ type: "text", text: `Task ${taskId} not found in manifest.` }] };
     }
-    let details = `Task ${taskId} status: **${task.status}**\n`;
-    if (task.status === 'completed') details += `\nOutput is ready at ${task.output_path || 'the review path'}.`;
-    if (task.status === 'failed') details += `\nError: ${task.error_message}`;
+
+    // Enhanced multi-tier status with artifact verification
+    let effectiveStatus = task.status;
+    let details = '';
+
+    if (task.status === 'running') {
+      const elapsed = Math.round((Date.now() - task.startTime) / 1000);
+      details = `Task ${taskId} status: **running** (${elapsed}s elapsed)\n`;
+    } else if (task.status === 'verified') {
+      details = `Task ${taskId} status: **verified** ✅\n\nOutput verified at ${task.output_path || 'the review path'}.`;
+      if (task.type === 'dispatch_council') {
+        const verdictPath = path.join(task.output_path!, 'VERDICT.md');
+        if (fs.existsSync(verdictPath)) {
+          details += `\nPM Verdict available at: ${verdictPath}`;
+        }
+      }
+    } else if (task.status === 'completed') {
+      // Legacy: re-verify output_path on read
+      let outputExists = false;
+      if (task.output_path) {
+        try {
+          const stat = fs.statSync(task.output_path);
+          outputExists = stat.isFile() ? stat.size > 0 : fs.readdirSync(task.output_path).length > 0;
+        } catch {}
+      }
+      effectiveStatus = outputExists ? 'verified' : 'partial';
+      if (effectiveStatus === 'verified') {
+        details = `Task ${taskId} status: **verified** ✅\n\nOutput is ready at ${task.output_path}.`;
+      } else {
+        details = `Task ${taskId} status: **partial** ⚠️\n\nProcess exited successfully but output_path is missing or empty: \`${task.output_path}\``;
+      }
+    } else if (task.status === 'partial') {
+      details = `Task ${taskId} status: **partial** ⚠️\n\nProcess exited successfully but output artifact was not found at: \`${task.output_path}\``;
+    } else if (task.status === 'failed') {
+      details = `Task ${taskId} status: **failed** ❌\n\nError: ${task.error_message}`;
+    } else {
+      details = `Task ${taskId} status: **${task.status}**`;
+    }
     
     return { content: [{ type: "text", text: details }] };
   }
@@ -351,14 +388,30 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
     TaskManifestManager.createTask(workspace_path, {
         taskId, type: "delegate_task", role, task_description, output_path, workspacePath: workspace_path, context_files: context_files || []
     });
+
+    // Best-effort: auto-create GitHub Issue for traceability
+    let issueInfo = '';
+    const remote = parseGitRemote(workspace_path);
+    if (remote) {
+        const truncDesc = task_description.length > 300 ? task_description.substring(0, 300) + '...' : task_description;
+        const issue = await createGitHubIssue(remote.owner, remote.repo,
+            `[swarm-task] ${role}: ${taskId}`,
+            `## Auto-generated Swarm Task Tracker\n\n**Task ID:** \`${taskId}\`\n**Role:** \`${role}\`\n**Output Path:** \`${output_path}\`\n\n### Task Description\n${truncDesc}`,
+            ['swarm-task']
+        );
+        if (issue) {
+            TaskManifestManager.updateTask(workspace_path, taskId, { github_issue_number: issue.number });
+            issueInfo = `\n**GitHub Issue**: ${issue.html_url}`;
+        }
+    }
     
     // Spawn background process
     const child = spawn(process.execPath, [__filename, "--run-task", taskId, workspace_path], {
-        detached: true, stdio: "ignore"
+        detached: true, stdio: "ignore", windowsHide: true
     });
     child.unref();
     
-    return { content: [{ type: "text", text: `✅ Task spawned successfully in background.\n\n**Task ID**: ${taskId}\n**Role**: ${role}\n\nUse check_task_status tool periodically with this task ID to check its completion.` }] };
+    return { content: [{ type: "text", text: `✅ Task spawned successfully in background.\n\n**Task ID**: ${taskId}\n**Role**: ${role}${issueInfo}\n\nUse check_task_status tool periodically with this task ID to check its completion.` }] };
   }
   
   if (request.params.name === "dispatch_council_async") {
@@ -372,14 +425,29 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
     TaskManifestManager.createTask(workspace_path, {
         taskId, type: "dispatch_council", roles, proposal_path, output_path: reviewsPath, workspacePath: workspace_path
     });
+
+    // Best-effort: auto-create GitHub Issue for traceability
+    let issueInfo = '';
+    const remote = parseGitRemote(workspace_path);
+    if (remote) {
+        const issue = await createGitHubIssue(remote.owner, remote.repo,
+            `[swarm-council] ${roles.join(', ')}: ${taskId}`,
+            `## Auto-generated Council Review Tracker\n\n**Council ID:** \`${taskId}\`\n**Roles:** ${roles.map((r: string) => `\`${r}\``).join(', ')}\n**Proposal:** \`${proposal_path}\`\n**Reviews Path:** \`${reviewsPath}\``,
+            ['swarm-council']
+        );
+        if (issue) {
+            TaskManifestManager.updateTask(workspace_path, taskId, { github_issue_number: issue.number });
+            issueInfo = `\n**GitHub Issue**: ${issue.html_url}`;
+        }
+    }
     
     // Spawn background process
     const child = spawn(process.execPath, [__filename, "--run-task", taskId, workspace_path], {
-        detached: true, stdio: "ignore"
+        detached: true, stdio: "ignore", windowsHide: true
     });
     child.unref();
     
-    return { content: [{ type: "text", text: `✅ Council spawned successfully in background.\n\n**Council ID**: ${taskId}\n**Roles**: ${roles.join(", ")}\n\nUse check_task_status tool periodically with this Council ID to check completion.` }] };
+    return { content: [{ type: "text", text: `✅ Council spawned successfully in background.\n\n**Council ID**: ${taskId}\n**Roles**: ${roles.join(", ")}${issueInfo}\n\nUse check_task_status tool periodically with this Council ID to check completion.` }] };
   }
 
   if (request.params.name === "dispatch_council") {
@@ -632,7 +700,25 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
     }
 
     const t1Dir = path.join(workspace_path, ".optimus", "agents");
-    const t2Dir = path.join(__dirname, "..", "roles");
+    
+    // Check and create T2 project-level profile directory natively
+    const t2Dir = path.join(workspace_path, '.optimus', 'roles');
+    if (!fs.existsSync(t2Dir)) {
+        fs.mkdirSync(t2Dir, { recursive: true });
+    }
+    // Lazy sync from native plugin to project's .optimus/roles if needed
+    const builtInRolesDir = path.join(__dirname, "..", "..", "optimus-plugin", "roles");
+    if (fs.existsSync(builtInRolesDir)) {
+        const builtinFiles = fs.readdirSync(builtInRolesDir);
+        for (const file of builtinFiles) {
+            if (file.endsWith('.md')) {
+                const projectFilePath = path.join(t2Dir, file);
+                if (!fs.existsSync(projectFilePath)) {
+                    try { fs.copyFileSync(path.join(builtInRolesDir, file), projectFilePath); } catch(e) {}
+                }
+            }
+        }
+    }
 
     let roster = "📋 **Spartan Swarm Active Roster**\n\n";
 
@@ -662,12 +748,12 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
       } catch (e) {}
     }
 
-    roster += "\n### T2: Global Spartan Regulars\n";
+    roster += "\n### T2: Project Default Roles (.optimus/roles)\n";
     if (fs.existsSync(t2Dir)) {
       const t2Files = fs.readdirSync(t2Dir).filter(f => f.endsWith('.md'));
-      roster += t2Files.length > 0 ? t2Files.map(f => `- ${f.replace('.md', '')}`).join('\n') : "(No global agents found)\n";
+      roster += t2Files.length > 0 ? t2Files.map(f => `- ${f.replace('.md', '')}`).join('\n') : "(No project default roles found)\n";
     } else {
-      roster += "(No global agents directory found)\n";
+      roster += "(No project roles directory found)\n";
     }
 
     roster += "\n*Note: Master Agent may still summon T3 Generic Roles dynamically if needed.*";

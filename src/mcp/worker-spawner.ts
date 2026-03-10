@@ -1,5 +1,6 @@
 import fs from "fs";
 import path from "path";
+import os from "os";
 import { AgentAdapter } from "../adapters/AgentAdapter";
 import { ClaudeCodeAdapter } from "../adapters/ClaudeCodeAdapter";
 import { GitHubCopilotAdapter } from "../adapters/GitHubCopilotAdapter";
@@ -38,6 +39,104 @@ function updateFrontmatter(content: string, updates: Record<string, string>): st
     
     const bodyStr = parsed.body.startsWith('\n') ? parsed.body : '\n' + parsed.body;
     return yamlStr + bodyStr;
+}
+
+export class AgentLockManager {
+    private locks = new Map<string, Promise<void>>();
+    private resolvers = new Map<string, () => void>();
+    private workspacePath: string;
+
+    constructor(workspacePath: string) {
+        this.workspacePath = workspacePath;
+    }
+
+    private get lockDir(): string {
+        return path.join(this.workspacePath, '.optimus', 'agents');
+    }
+
+    private lockFilePath(role: string): string {
+        return path.join(this.lockDir, `${role}.lock`);
+    }
+
+    async acquireLock(role: string): Promise<void> {
+        while (this.locks.has(role)) {
+            await this.locks.get(role);
+        }
+        let resolve: () => void;
+        const promise = new Promise<void>(r => { resolve = r; });
+        this.locks.set(role, promise);
+        this.resolvers.set(role, resolve!);
+        this.writeLockFile(role);
+    }
+
+    releaseLock(role: string): void {
+        const resolve = this.resolvers.get(role);
+        this.locks.delete(role);
+        this.resolvers.delete(role);
+        this.deleteLockFile(role);
+        if (resolve) resolve();
+    }
+
+    private writeLockFile(role: string): void {
+        try {
+            if (!fs.existsSync(this.lockDir)) {
+                fs.mkdirSync(this.lockDir, { recursive: true });
+            }
+            fs.writeFileSync(this.lockFilePath(role), JSON.stringify({ pid: process.pid, timestamp: Date.now() }), 'utf8');
+        } catch {
+            // Best-effort; in-memory lock is the primary mechanism
+        }
+    }
+
+    private deleteLockFile(role: string): void {
+        try {
+            fs.unlinkSync(this.lockFilePath(role));
+        } catch {
+            // File may already be gone
+        }
+    }
+
+    cleanStaleLocks(): void {
+        try {
+            if (!fs.existsSync(this.lockDir)) return;
+            const files = fs.readdirSync(this.lockDir);
+            for (const file of files) {
+                if (!file.endsWith('.lock')) continue;
+                const filePath = path.join(this.lockDir, file);
+                try {
+                    const content = JSON.parse(fs.readFileSync(filePath, 'utf8'));
+                    if (content.pid && !isProcessRunning(content.pid)) {
+                        fs.unlinkSync(filePath);
+                        console.error(`[AgentLockManager] Cleaned stale lock for ${file} (PID ${content.pid} no longer running)`);
+                    }
+                } catch {
+                    // Malformed lock file — remove it
+                    try { fs.unlinkSync(filePath); } catch { /* ignore */ }
+                }
+            }
+        } catch {
+            // Best-effort cleanup
+        }
+    }
+}
+
+function isProcessRunning(pid: number): boolean {
+    try {
+        process.kill(pid, 0);
+        return true;
+    } catch {
+        return false;
+    }
+}
+
+// Module-level singleton; initialized lazily per workspace
+let lockManagerInstance: AgentLockManager | null = null;
+function getLockManager(workspacePath: string): AgentLockManager {
+    if (!lockManagerInstance) {
+        lockManagerInstance = new AgentLockManager(workspacePath);
+        lockManagerInstance.cleanStaleLocks();
+    }
+    return lockManagerInstance;
 }
 
 export class ConcurrencyGovernor {
@@ -100,8 +199,27 @@ export async function delegateTaskSingle(roleArg: string, taskPath: string, outp
         try { fs.renameSync(legacyT1Dir, t1Dir); } catch(e) {}
     }
     
+    const t2Dir = path.join(workspacePath, '.optimus', 'roles');
+    if (!fs.existsSync(t2Dir)) {
+        fs.mkdirSync(t2Dir, { recursive: true });
+    }
+
+    // Lazy load/sync default roles to project profile
+    const builtInRolesDir = path.join(__dirname, '..', '..', 'optimus-plugin', 'roles');
+    if (fs.existsSync(builtInRolesDir)) {
+        const builtinFiles = fs.readdirSync(builtInRolesDir);
+        for (const file of builtinFiles) {
+            if (file.endsWith('.md')) {
+                const projectFilePath = path.join(t2Dir, file);
+                if (!fs.existsSync(projectFilePath)) {
+                    try { fs.copyFileSync(path.join(builtInRolesDir, file), projectFilePath); } catch(e) {}
+                }
+            }
+        }
+    }
+
     const t1Path = path.join(t1Dir, `${role}.md`);
-    const t2Path = path.join(__dirname, '..', 'roles', `${role}.md`);
+    const t2Path = path.join(t2Dir, `${role}.md`);
 
     let activeEngine = parsedRole.engine || 'claude-code';
     let activeModel = parsedRole.model;
@@ -136,34 +254,16 @@ export async function delegateTaskSingle(roleArg: string, taskPath: string, outp
     console.error(`[Orchestrator] Selected Stratum: ${resolvedTier}`);
     console.error(`[Orchestrator] Engine: ${activeEngine}, Session: ${activeSessionId || 'New/Ephemeral'}`);
 
-    if (shouldLocalize) {
-      if (!fs.existsSync(t1Dir)) fs.mkdirSync(t1Dir, { recursive: true });
-      try {
-        const t2ContentText = fs.readFileSync(t2Path, 'utf8');
-        const fd = fs.openSync(t1Path, 'wx');
-        const defaultMemory = `\n\n## Project Memory\n*Agent T1 Instantiated on ${new Date().toISOString()}*\n- (No memory appended yet)\n`;
-        fs.writeFileSync(fd, t2ContentText + defaultMemory, 'utf8');
-        fs.closeSync(fd);
-        console.error(`[Orchestrator] Promoted T2 to T1: ${t1Path}`);
-      } catch (e: any) {
-        if (e.code === 'EEXIST') {
-          console.error(`[Orchestrator] T1 promotion skipped (already done by another worker).`);
-        } else {
-          console.error(`[Orchestrator] T1 promotion failed:`, e);
-          resolvedTier += ' [T1 promotion failed]';
-        }
-      }
-    }
+    // Removed the "Promotion to T1" behavior so T2 strictly remains a global fallback 
+    // and does not pollute the workspace-level .optimus mapping unless explicitly overridden by user.
 
     const taskText = fs.existsSync(taskPath) ? fs.readFileSync(taskPath, 'utf8') : taskPath;
 
     let personaContext = "";
     if (t1Content) {
         personaContext = parseFrontmatter(t1Content).body.trim();
-    } else if (fs.existsSync(t1Path)) {
-        // In case it was localized by another concurrent thread
-        const concurrentContent = fs.readFileSync(t1Path, 'utf8');
-        personaContext = parseFrontmatter(concurrentContent).body.trim();
+    } else {
+        personaContext = "No persona found.";
     }
 
 let contextContent = "";
@@ -197,6 +297,8 @@ ${taskText}${contextContent}
 
 Please provide your complete execution result below.`;
 
+    const lockManager = getLockManager(workspacePath);
+    await lockManager.acquireLock(role);
     try {
         await ConcurrencyGovernor.acquire();
         const response = await adapter.invoke(basePrompt, 'agent');
@@ -221,6 +323,7 @@ Please provide your complete execution result below.`;
         throw new Error(`Worker execution failed: ${e.message}`);
     } finally {
         ConcurrencyGovernor.release();
+        lockManager.releaseLock(role);
     }
 }
 
