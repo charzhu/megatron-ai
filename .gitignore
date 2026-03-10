@@ -12,3 +12,11 @@ temp/
 temp_debug/
 *.log
 [LOG]
+
+!.github/copilot-instructions.md
+
+# Env Files
+.env
+.env.*
+
+/temp_scripts/

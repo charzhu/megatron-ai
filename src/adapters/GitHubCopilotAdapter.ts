@@ -1,5 +1,7 @@
 import { PersistentAgentAdapter } from './PersistentAgentAdapter';
 import { AgentMode } from '../types/SharedTaskContext';
+import * as fs from 'fs';
+import * as path from 'path';
 // Copilot CLI uses ● (U+25CF filled circle) and tree-drawing chars for tool trace lines
 // Also handle ⏺ (U+23FA) and • (U+2022) for robustness
 const COPILOT_PROCESS_LINE_RE = /^[●⏺•└│├▶→↳✓✗]/;
@@ -9,14 +11,21 @@ export class GitHubCopilotAdapter extends PersistentAgentAdapter {
         super(id, name, modelFlag, '?>', modes);
     }
 
-    protected shouldUseStructuredOutput(mode: AgentMode): boolean {
-        return mode === 'plan';
+    protected shouldUsePersistentSession(mode: AgentMode): boolean {
+        return false;
     }
 
-    protected getNonInteractiveCommand(mode: AgentMode, prompt: string): { cmd: string, args: string[] } {
-        const command = super.getNonInteractiveCommand(mode, prompt);
+    protected shouldUseStructuredOutput(mode: AgentMode): boolean {
+        return mode === 'plan' || mode === 'agent';
+    }
+
+    protected getNonInteractiveCommand(mode: AgentMode, prompt: string, sessionId?: string): { cmd: string, args: string[] } {
+        const command = super.getNonInteractiveCommand(mode, prompt, sessionId);
         if (this.shouldUseStructuredOutput(mode)) {
             command.args.push('--output-format', 'json', '--stream', 'on');
+        }
+        if (sessionId) {
+            command.args.push('--resume', sessionId);
         }
         return command;
     }
@@ -50,6 +59,10 @@ export class GitHubCopilotAdapter extends PersistentAgentAdapter {
         const args: string[] = [];
         const cwd = PersistentAgentAdapter.getWorkspacePath();
         args.push('--add-dir', cwd);
+
+        if (this.modelFlag) {
+            args.push('--model', this.modelFlag);
+        }
 
         if (mode === 'plan') {
             // -p flag already prevents file modifications; no extra flags needed
