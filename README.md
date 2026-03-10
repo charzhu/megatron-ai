@@ -1,85 +1,115 @@
-﻿# Optimus Code 
+<div align="center">
+  <h1> Optimus Code</h1>
+  <p><b>The Ultimate Multi-Agent Orchestrator. Let the AI Council debate, you make the final call.</b></p>
+  
+  [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
+  [![Framework: Model Context Protocol](https://img.shields.io/badge/MCP-Native-brightgreen.svg)](#)
+</div>
 
-> *The Ultimate Multi-Agent Orchestrator. Let models debate, you make the final call.*
+---
 
 ##  What is Optimus Code?
 
-Optimus Code is a VS Code extension that acts as an orchestration engine. Rather than being just another tool that sends prompts directly to an API, it transforms various LLM clients into background "workers" via an extensible **Adapter Pattern**. 
+Optimus Code is a powerful **Multi-Agent Orchestration Engine** built natively on the Model Context Protocol (MCP). It acts as a background daemon (Orchestrator) that transforms isolated IDEs (like *Claude Code*, *Cursor*, *Windsurf*) into a synchronized swarm of background workers that can **collaborate**, **debate**, and **execute** complex software engineering tasks autonomously.
 
-It provides a **persistent Chat View in the sidebar**, where you can type your prompts. The engine will summon multiple AI brains globally, gather their architectural plans, and present them in the chat panel simultaneously.
+> **Architecture Shift:** Optimus is a **pure MCP Server Plugin**, meaning it is 100% editor-agnostic. No VS Code extension required. It separates your **Data** (roles, skills, and memory in .optimus/) from the **Engine** (npx stream execution), ensuring zero-bloat.
 
-##  Features
+---
 
-*   **Sidebar Chat Interface:** Built with official VS Code UI Toolkit.
-*   **Multi-Agent Generation:** Asks Gemini, Claude, and Copilot for their solutions and streams them back to you in one place.
-*   **Extensible Adapter System:** Easily add your own AI agents (Doubao, Kimi, DeepSeek etc.) by implementing a simple Interface without touching the core UI code.
-*   **Auto-only Council Workflow:** Selected planner agents debate in parallel, then one executor agent acts on the synthesized result.
-*   **Persistent History Foundation:** The extension already saves council sessions and is evolving toward resumable task state instead of isolated chat transcripts.
+##  Next-Generation Features
 
-##  How Auto Mode Works Today
+###  The Spartan Swarm Protocol
+Tired of one AI getting stuck in a loop or writing insecure code? Optimus features **Council Review (Concurrent Map-Reduce Paradigms)**.
+Submit a complex proposal, and the Orchestrator will simultaneously spawn a *Chief Architect*, a *PM*, and a *QA Engineer* to review your design from multiple angles, completely isolated from each other's context windows to prevent hallucination bleed.
 
-Every user turn runs through the same two-stage pipeline:
+###  Hybrid SDLC (Software Development Life Cycle)
+Optimus marries the speed of local computation with the tracking power of the cloud:
+- **Local AI Blackboard**: Agents use hidden \.optimus/\ markdown files and task queues to draft, debate, and store long-term memory fast.
+- **Native GitHub Integration**: Powered by pure Node.js MCP Tools, the built-in *PM* Agent can automatically create GitHub Epics to secure tracking IDs, while the *Dev* writes code, submits PRs, and links them backbringing 100% human-readable traceability to AI operations.
 
-1. **Council Planning**: up to 3 selected planner agents run in parallel and produce independent plans.
-2. **Executor Action**: one executor agent receives the successful planner outputs and performs the final action.
+###  Dynamic Role-Based Skill Binding
+Easily add your own AI agents and tooling by dropping simple markdown definitions into your workspace. By editing the YAML frontmatter of a Persona (e.g., adding \skills: [git-workflow, delegate_task]\), the MCP daemon dynamically grants new tool-use capabilities to specific agents on the fly.
 
-This means Optimus Code is already more than a chat wrapper. It is an orchestrator that separates broad planning from narrow execution.
+---
 
-##  Target Architecture
+##  Getting Started: Zero-Install Deployment (Recommended)
 
-The next major direction is **app-level multi-turn** built on a shared task state owned by Optimus Code itself.
+Thanks to standard NPM architecture, you don't even need to globally install the code. Use standard 
+px hooks to keep your project lightweight while always running the latest version!
 
-Instead of depending on a single CLI daemon to remember prior turns, the extension will maintain task-scoped state such as:
+### Step 1: Initialize the "Soul" (Workspace Config)
+Navigate to your target project directory and run the initialization script:
+`ash
+npx -y github:cloga/optimus-code#main init
+`
+*Auto-Injection Magic:* This will create a local .optimus/ config folder holding your team's prompts, roles, and skills. It will also auto-detect your tools and transparently inject the PM system instructions directly into CLAUDE.md or .github/copilot-instructions.md.
 
-*   user intent history
-*   planner contributions
-*   executor outcomes
-*   files touched and commands observed
-*   open questions, blockers, and latest summaries
+### Step 2: Mount the "Body" (MCP Server)
+Now, hook the Orchestrator Engine to your favorite AI terminal or IDE!
 
-This is the preferred direction because it lets agents share the same task facts. In other words, agents will not merely remember their own previous output; they will be able to see what the other agents already did.
+**For Claude Code:**
+`ash
+claude mcp add optimus-swarm npx -y github:cloga/optimus-code#main serve
+`
 
-The intended implementation shape is:
+**For Cursor / Windsurf / Roo Cline:**
+Add this directly to your MCP Configuration settings (e.g., \.cursor/mcp.json\):
+`json
+{
+  "mcpServers": {
+    "optimus-swarm": {
+      "command": "npx",
+      "args": ["-y", "github:cloga/optimus-code#main", "serve"],
+      "type": "stdio"
+    }
+  }
+}
+`
 
-1. create or load a shared task record
-2. collect structured planner contributions
-3. synthesize executor context from shared state rather than raw concatenated text
-4. persist a resumable task snapshot for future continuation
+### Step 3: Set up GitHub Environment (Optional but Recommended)
+For Issue tracking and PR magic, create a .env file in your project root with your GitHub PAT:
+`ash
+GITHUB_TOKEN=ghp_your_token_here
+`
 
-##  Getting Started (Developer Guide)
+---
 
-1. Clone this repository and install dependencies:
-   ```bash
-   npm install
-   ```
-2. Ensure you have the necessary CLI tools installed (gh copilot and @anthropic-ai/claude-code).
-3. Press F5 in VS Code to start debugging.
-4. Open the **Optimus Code Activity Bar** on the left.
-5. Start chatting and watch the multi-agent council provide their plans!
+##  Alternative: Global Installation
 
-## 🧪 Recommended Test Prompts (Copy & Paste)
+If you prefer to have the binaries installed locally without npx fetching every time:
 
-When running the extension locally via F5, try pasting these prompts into the Optimus Code sidebar chat to test the side-by-side capabilities of the different configured agents:
+`ash
+# 1. Install globally
+npm install -g cloga/optimus-code#main
 
-### 1. Algorithm & Code Quality
-> "Write a robust, type-safe deep clone function in TypeScript. Include comments explaining how you handle circular references and special objects like Date or Regex."
-*Tests raw coding ability and TypeScript syntax formatting.*
+# 2. Init specific workspace
+optimus init
 
-### 2. System Architecture
-> "Design a distributed rate-limiting system for a highly trafficked API. Explain the components, the storage layer (e.g., Redis), and provide a basic Node.js implementation example."
-*Compares how different models plan macro-architecture and structure long-form Markdown.*
+# 3. Add to your MCP client
+claude mcp add optimus-swarm optimus serve
+`
 
-### 3. Frontend / UI Generation
-> "Give me a single-file HTML/JS/CSS implementation of a sleek Kanban board column that accepts dragged items. Use modern Flexbox."
-*Tests the Markdown rendering in your VS Code Webview (specifically for large code blocks).*
+---
 
-### 4. Agentic Local Workspace Reading (e.g., Claude Code CLI)
-> "Analyze the current workspace. Look into the `src/` directory and summarize what this VS Code extension does."
-*Tests infinite-timeout streaming and whether the underlying CLI tool correctly utilizes local file-reading skills.*
+## CLI Reference
 
-##  Architecture Notes For Contributors
+`	ext
+optimus init        Bootstrap .optimus/ workspace (rules, roles, skills) in current directory
+optimus serve       Start the pure Node.js MCP server daemon (stdio transport)
+optimus version     Print version
+optimus help        Show help
+`
 
-*   The current Auto pipeline is intentionally preserved. Any future multi-turn work must extend the council -> executor model rather than replacing it with a generic chat loop.
-*   Shared task memory should live in the orchestrator layer, not inside one specific adapter.
-*   Claude currently uses one-shot execution for both planning and executor phases because that path is more reliable in the VS Code extension host than a non-TTY daemon.
-*   If native CLI-level persistent sessions are reintroduced later, they should be optional and adapter-specific.
+---
+
+##  Try it Yourself! (Test Prompts)
+
+Once your MCP server is mounted, type these into your AI prompt window:
+
+- **The Architect's Swarm**: *"Use the dispatch_council tool to summon the Chief Architect and QA Engineer to review our PROPOSAL.md."*
+- **Task Delegation**: *"Use the delegate_task tool to assign the PM to create an Issue tracking the migration to Tailwind CSS."*
+- **Roster & Capabilities Check**: *"Run roster_check to see what agents we have available for this project."*
+
+---
+
+>  *Built for the future of software engineering. Stop prompting, start orchestrating.*

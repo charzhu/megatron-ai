@@ -1,6 +1,5 @@
 import * as fs from 'fs';
 import * as path from 'path';
-import * as vscode from 'vscode';
 import { PersistentAgentAdapter } from '../adapters/PersistentAgentAdapter';
 import {
     CompleteTurnInput,
@@ -11,15 +10,110 @@ import {
     TurnRecord,
 } from '../types/SharedTaskContext';
 
+export interface StateStore {
+    get<T>(key: string, defaultValue?: T): T;
+    update(key: string, value: any): Promise<void>;
+}
+
+export interface OptimusConfig {
+    get<T>(key: string): T | undefined;
+}
+
+export class FileSystemStateStore implements StateStore {
+    private filePath: string;
+    private cache: Record<string, any> | undefined;
+
+    constructor(workspacePath: string) {
+        const dir = path.join(workspacePath, '.optimus', 'state');
+        if (!fs.existsSync(dir)) {
+            fs.mkdirSync(dir, { recursive: true });
+        }
+        this.filePath = path.join(dir, 'state.json');
+    }
+
+    private load(): Record<string, any> {
+        if (this.cache) return this.cache;
+        try {
+            if (fs.existsSync(this.filePath)) {
+                this.cache = JSON.parse(fs.readFileSync(this.filePath, 'utf8'));
+            } else {
+                this.cache = {};
+            }
+        } catch {
+            this.cache = {};
+        }
+        return this.cache!;
+    }
+
+    public get<T>(key: string, defaultValue?: T): T {
+        const data = this.load();
+        return data[key] !== undefined ? data[key] : (defaultValue as T);
+    }
+
+    public async update(key: string, value: any): Promise<void> {
+        const data = this.load();
+        data[key] = value;
+        fs.writeFileSync(this.filePath, JSON.stringify(data, null, 2), 'utf8');
+        this.cache = data;
+    }
+}
+
+export class FileSystemConfig implements OptimusConfig {
+    private filePath: string;
+    private cache: Record<string, any> | undefined;
+
+    constructor(workspacePath: string) {
+        this.filePath = path.join(workspacePath, 'package.json');
+    }
+
+    private load(): Record<string, any> {
+        if (this.cache) return this.cache;
+        try {
+            if (fs.existsSync(this.filePath)) {
+                const pkg = JSON.parse(fs.readFileSync(this.filePath, 'utf8'));
+                this.cache = pkg.contributes?.configuration?.properties || {};
+            } else {
+                this.cache = {};
+            }
+        } catch {
+            this.cache = {};
+        }
+        return this.cache!;
+    }
+
+    public get<T>(key: string): T | undefined {
+        const data = this.load();
+        const settingsPath = path.join(PersistentAgentAdapter.getWorkspacePath(), '.vscode', 'settings.json');
+        try {
+            if (fs.existsSync(settingsPath)) {
+                const settings = JSON.parse(fs.readFileSync(settingsPath, 'utf8'));
+                if (settings[`optimusCode.${key}`] !== undefined) {
+                    return settings[`optimusCode.${key}`] as T;
+                }
+            }
+        } catch {
+            // ignore
+        }
+        return data[`optimusCode.${key}`]?.default as T | undefined;
+    }
+}
+
 export class SharedTaskStateManager {
     private static readonly storageKey = 'optimusTaskStates';
     private static readonly maxTasks = 25;
     private static readonly defaultCompactThreshold = 800000;
+    
+    private globalState: StateStore;
+    private config: OptimusConfig;
 
-    constructor(private readonly globalState: vscode.Memento) {}
+    constructor(workspacePath?: string) {
+        const resolvedWorkspace = workspacePath || PersistentAgentAdapter.getWorkspacePath();
+        this.globalState = new FileSystemStateStore(resolvedWorkspace);
+        this.config = new FileSystemConfig(resolvedWorkspace);
+    }
 
     public getCompactThreshold(): number {
-        const configured = vscode.workspace.getConfiguration('optimusCode').get<number>('compactThresholdTokens');
+        const configured = this.config.get<number>('compactThresholdTokens');
         if (typeof configured !== 'number' || !Number.isFinite(configured) || configured < 1000) {
             return SharedTaskStateManager.defaultCompactThreshold;
         }
@@ -33,11 +127,17 @@ export class SharedTaskStateManager {
         let taskState = input.taskId
             ? tasks.find(task => task.taskId === input.taskId)
             : undefined;
+
+        if (taskState && taskState.masterAgentType && input.masterAgentType && taskState.masterAgentType !== input.masterAgentType) {
+            throw new Error(`Task '${taskState.title}' is bound to agent '${taskState.masterAgentType}'. You cannot switch to '${input.masterAgentType}' mid-session.`);
+        }
+
         const isNewTask = !taskState;
 
         if (!taskState) {
             taskState = {
                 taskId: this.buildId('task'),
+                masterAgentType: input.masterAgentType,
                 createdAt: now,
                 updatedAt: now,
                 title: this.buildTaskTitle(input.prompt),
@@ -77,6 +177,7 @@ export class SharedTaskStateManager {
             status: 'in_progress',
             plannerContributions: [],
             referencedTurnSequences: input.referencedTurnSequences,
+            attachments: input.attachments,
         };
 
         taskState.turnHistory.push(turnRecord);
@@ -147,6 +248,13 @@ export class SharedTaskStateManager {
             '</task-context>',
         ];
 
+        if (turnRecord.attachments && turnRecord.attachments.length > 0) {
+            parts.push('', 'User provided attachments:');
+            for (const att of turnRecord.attachments) {
+                parts.push(`- [${att.mimeType}] ${att.filePath}`);
+            }
+        }
+
         if (referencedContext) {
             parts.push('', referencedContext);
         }
@@ -196,6 +304,13 @@ export class SharedTaskStateManager {
 
         const parts = [
             'You are the executor agent for Optimus Code.',
+            '',
+            'RESPONSE GUIDELINES:',
+            '- Lead with the direct answer or result first.',
+            '- Be concise and direct. Avoid filler words.',
+            '- Use bullet points for lists and steps.',
+            '- Do not repeat task context unless necessary.',
+            '- Prioritize code snippets and technical details.',
             ...rulesParts,
             ...memoryParts,
             '',
@@ -315,6 +430,13 @@ export class SharedTaskStateManager {
         const parts = [
             'You are the executor agent for Optimus Code.',
             'This task was initially routed as DIRECT EXECUTION, but a validation planner detected it requires more careful planning.',
+            '',
+            'RESPONSE GUIDELINES:',
+            '- Lead with the direct answer or result first.',
+            '- Be concise and direct. Avoid filler words.',
+            '- Use bullet points for lists and steps.',
+            '- Do not repeat task context unless necessary.',
+            '- Prioritize code snippets and technical details.',
             'You have both the original user request and the planner\'s analysis below. Use the planner insight to guide your approach, but execute the full user request.',
             ...rulesParts,
             ...memoryParts,
@@ -336,13 +458,20 @@ export class SharedTaskStateManager {
             blockedReasons,
         ];
 
+        if (turnRecord.attachments && turnRecord.attachments.length > 0) {
+            parts.push('', 'User provided attachments:');
+            for (const att of turnRecord.attachments) {
+                parts.push(`- [${att.mimeType}] ${att.filePath}`);
+            }
+        }
+
         if (referencedContext) {
             parts.push('', referencedContext);
         }
 
         parts.push(
             '',
-            'Validation planner analysis (explains why this task needs careful execution):',
+            'Validation planner analysis(explains why this task needs careful execution):',
             plannerInsight,
             '',
             enrichedPrompt,
@@ -391,6 +520,13 @@ export class SharedTaskStateManager {
         const parts = [
             'You are the executor agent for Optimus Code.',
             'This is a DIRECT EXECUTION turn — no planner analysis was performed. Execute the user request directly.',
+            '',
+            'RESPONSE GUIDELINES:',
+            '- Lead with the direct answer or result first.',
+            '- Be concise and direct. Avoid filler words.',
+            '- Use bullet points for lists and steps.',
+            '- Do not repeat task context unless necessary.',
+            '- Prioritize code snippets and technical details.',
             ...rulesParts,
             ...memoryParts,
             '',
@@ -410,6 +546,13 @@ export class SharedTaskStateManager {
             'Known blockers:',
             blockedReasons,
         ];
+
+        if (turnRecord.attachments && turnRecord.attachments.length > 0) {
+            parts.push('', 'User provided attachments:');
+            for (const att of turnRecord.attachments) {
+                parts.push(`- [${att.mimeType}] ${att.filePath}`);
+            }
+        }
 
         if (referencedContext) {
             parts.push('', referencedContext);
@@ -502,6 +645,7 @@ export class SharedTaskStateManager {
     public listTaskSnapshots(): TaskSnapshot[] {
         return this.getTasks().map(task => ({
             taskId: task.taskId,
+            masterAgentType: task.masterAgentType,
             title: task.title,
             status: task.status,
             pinned: task.pinned,
@@ -552,6 +696,16 @@ export class SharedTaskStateManager {
         const taskState = tasks.find(task => task.taskId === taskId);
         if (!taskState) { return false; }
         taskState.pinned = !taskState.pinned;
+        taskState.updatedAt = Date.now();
+        await this.saveTasks(tasks);
+        return true;
+    }
+
+    public async updateTaskCliSessionId(taskId: string, cliSessionId: string): Promise<boolean> {
+        const tasks = this.getTasks();
+        const taskState = tasks.find(task => task.taskId === taskId);
+        if (!taskState) { return false; }
+        taskState.cliSessionId = cliSessionId;
         taskState.updatedAt = Date.now();
         await this.saveTasks(tasks);
         return true;
@@ -693,7 +847,7 @@ export class SharedTaskStateManager {
         return this.clone(taskState);
     }
 
-    private getTasks(): SharedTaskState[] {
+    public getTasks(): SharedTaskState[] {
         return this.globalState.get<SharedTaskState[]>(SharedTaskStateManager.storageKey, []);
     }
 
@@ -711,12 +865,11 @@ export class SharedTaskStateManager {
         return `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
     }
 
-    private readRulesMd(): string | null {
+    public readRulesMd(): string | null {
         try {
-            const workspaceFolders = vscode.workspace.workspaceFolders;
-            if (!workspaceFolders || workspaceFolders.length === 0) { return null; }
-            const rootPath = workspaceFolders[0].uri.fsPath;
-            const rulesPath = path.join(rootPath, '.optimus', 'rules.md');
+            const rootPath = PersistentAgentAdapter.getWorkspacePath();
+            if (!rootPath) { return null; }
+            const rulesPath = path.join(rootPath, '.optimus', 'config', 'system-instructions.md');
             
             let rulesContent = "";
             if (fs.existsSync(rulesPath)) {
@@ -730,7 +883,7 @@ export class SharedTaskStateManager {
             }
 
             // Inject available engines and models dynamically from settings
-            const modelsConfig = vscode.workspace.getConfiguration('optimusCode').get<any>('models');
+            const modelsConfig = this.config.get<any>('models');
             if (modelsConfig) {
                 rulesContent += `\n\n## Available CLI Engines and Models (Dynamic)\n`;
                 if (modelsConfig.claude_code) {
@@ -749,9 +902,9 @@ export class SharedTaskStateManager {
 
     public readMemoryMd(): string | null {
         try {
-            const workspaceFolders = vscode.workspace.workspaceFolders;
-            if (!workspaceFolders || workspaceFolders.length === 0) { return null; }
-            const memPath = path.join(workspaceFolders[0].uri.fsPath, '.optimus', 'memory.md');
+            const rootPath = PersistentAgentAdapter.getWorkspacePath();
+            if (!rootPath) { return null; }
+            const memPath = path.join(rootPath, '.optimus', 'state', 'memory.md');
             if (!fs.existsSync(memPath)) { return null; }
             return fs.readFileSync(memPath, 'utf8');
         } catch {
@@ -761,11 +914,11 @@ export class SharedTaskStateManager {
 
     public writeMemoryMd(newContent: string): void {
         try {
-            const workspaceFolders = vscode.workspace.workspaceFolders;
-            if (!workspaceFolders || workspaceFolders.length === 0) { return; }
-            const optimusDir = path.join(workspaceFolders[0].uri.fsPath, '.optimus');
+            const rootPath = PersistentAgentAdapter.getWorkspacePath();
+            if (!rootPath) { return; }
+            const optimusDir = path.join(rootPath, '.optimus');
             if (!fs.existsSync(optimusDir)) { fs.mkdirSync(optimusDir, { recursive: true }); }
-            const memPath = path.join(optimusDir, 'memory.md');
+            const memPath = path.join(optimusDir, 'state', 'memory.md');
             fs.writeFileSync(memPath, newContent, 'utf8');
         } catch {
             // non-fatal: memory write failure should never block turn completion
