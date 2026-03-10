@@ -23,7 +23,9 @@ async function build() {
     outfile: path.resolve(__dirname, 'dist', 'mcp-server.js'),
     // CRITICAL: vscode must NEVER be bundled — it should not even be imported
     // If it appears, the build should fail, not silently externalize it
-    external: [],
+    external: [
+      ...Object.keys(require('./package.json').dependencies || {})
+    ],
     logLevel: 'info',
     metafile: true,
     tsconfig: path.resolve(__dirname, '..', 'tsconfig.json'),

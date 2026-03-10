@@ -3,6 +3,6 @@
   "version": "0.1.0",
   "description": "Spartan Swarm Orchestrator Plugin for Claude Code",
   "skills": "./skills/",
-  "agents": "./agents/",
+  "agents": "./roles/",
   "mcpServers": "./.mcp.json"
 }

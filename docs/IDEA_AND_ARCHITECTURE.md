@@ -43,7 +43,7 @@ Capabilities and pipelines are no longer hardcoded in TypeScript. An Agent insta
 `Agent = [CLI Engine] + [Session ID] + [System Prompt/Persona] + [Working Dir]`
 * **CLI Engine**: `claude_code` or `copilot_cli`.
   * **Session ID (Episodic Memory / 物理记忆记忆体)**: The physical thread ID that binds the Agent's episodic memory and execution lifecycle to a dedicated SQLite/LevelDB database.
-  * **System Prompt/Persona (Core Identity / 人格记忆)**: An initial payload granting its rigid rules, expertise, and goals (e.g., from `.optimus/personas/*.md`).
+  * **System Prompt/Persona (Core Identity / 人格记忆)**: An initial payload granting its rigid rules, expertise, and goals (e.g., from `.optimus/agents/<role>.md` for T1 stateful agents, or `.optimus/roles/<role>.md` for T2 read-only templates).
 
 #### 2.3 Dynamic Skill Binding (Hot-Swappable)
 Because underlying Agents operate via CLI initialization sequences, tools and Skills (instructions) are bound at the **Workspace / Directory Environment** layer.
@@ -116,22 +116,32 @@ To bypass the limitations of Stateful CLI Coding Agents (which are designed for 
 In the MCP Facade paradigm, the Master Agent commands the Swarm by roles (e.g., `["security", "db-tyrant"]`), but it doesn't need to know *how* those experts are built. The Node.js MCP Controller uses a **Three-Tier Cascade Assembly (三层级联装配策略)** to construct the expert's ultimate System Prompt. Rather than a simple mutual exclusion (fallback), the tiers can optionally merge to form a deeply contextualized worker:
 
 1. **T3 - Zero-Shot Dynamic Base (临时动员兵 - 底层兜底)**: The Controller always generates a baseline identity string: `"You are a specialized expert: <role>. Analyze objectively from your domain's perspective."` This guarantees that even completely made-up roles (e.g., `graphql-performance-specialist`) will snap into the correct behavioral frame.
-2. **T2 - Built-in Plugin Agents (斯巴达正规军 - 核心纪律)**: The Controller checks the plugin's deployed `agents/` directory (e.g., `optimus-plugin/agents/<role>.md`). If found, it appends these universally standardized rules (e.g., OWASP top 10 for `security`) to the payload. These represent our general-purpose "Industry Best Practices."
-3. **T1 - Local Project Personas (本地领域专家 - 顶层覆写)**: Finally, it checks the workspace for `.optimus/personas/<role>.md`. If found, these local rules are appended last (carrying the highest LLM attention weight). This allows a specific repo to override or augment the generic T2 expert (e.g., *"As a DB Tyrant, in THIS project, you must enforce the internal XYZ ORM dialect over standard SQL"*).
+2. **T2 - Project Default Role Templates (斯巴达正规军 - 核心纪律)**: The Controller checks the workspace's `.optimus/roles/<role>.md` directory. These are **read-only default templates** hydrated into the project on `optimus init`, enabling Git-tracked, team-shareable best practices (e.g., OWASP top 10 for `security`). T2 templates are never modified at runtime by the orchestrator.
+3. **T1 - Local Session Agents (本地领域专家 - 顶层覆写)**: The Controller checks the workspace for `.optimus/agents/<role>.md`. If found, these local agent definitions are appended last (carrying the highest LLM attention weight). **T1 agents are stateful**: when executed, `worker-spawner.ts` natively intercepts and persists the agent's `session_id`, `engine`, and `model` configuration using **YAML frontmatter** at the top of the Markdown file:
 
-**(Important Note)**: While the actual filesystem readout logic (Cascade Resolution) resides natively inside the MCP `worker-spawner.js` code to maintain deterministic fallback behavior, it is strongly driven by the **Master Agent's Skill prompts** (e.g., instructing the LLM that it CAN dynamically invent new roles to trigger T3 generation). This ensures standard tooling API semantics while offering complex routing behavior.
+   ```yaml
+   ---
+   engine: claude-code
+   session_id: abc123-xyz
+   model: claude-sonnet-4-20250514
+   ---
+   ```
 
-**The Assembly Outcome**: The final Worker Prompt is fundamentally a concatenation: `[T3 Role Injection] + [T2 General Practices] + [T1 Local Overrides]`. This allows a locally defined `.optimus/personas/security.md` to be extremely short (just mentioning a specific local auth bug caveat), while still inheriting the 500-line global security prowess from T2.
+   This enables **permanent session state** ("no amnesia") across separate executions. A T1 agent can be stopped and resumed days later with full context continuity, because the frontmatter binds it to its physical CLI session.
+
+**(Important Note)**: While the actual filesystem readout logic (Cascade Resolution) resides natively inside the MCP `worker-spawner.ts` code to maintain deterministic fallback behavior, it is strongly driven by the **Master Agent's Skill prompts** (e.g., instructing the LLM that it CAN dynamically invent new roles to trigger T3 generation). This ensures standard tooling API semantics while offering complex routing behavior.
+
+**The Assembly Outcome**: The final Worker Prompt is fundamentally a concatenation: `[T3 Role Injection] + [T2 Role Templates] + [T1 Agent Overrides]`. This allows a locally defined `.optimus/agents/security.md` (T1) to be extremely short (just mentioning a specific local auth bug caveat), while still inheriting the comprehensive security guidance from the T2 template in `.optimus/roles/security.md`.
 
 #### Swarm Autonomous Evolution (自主进化与动态招募机制)
 Crucially, the entire Spartan Registry is **not statically hardcoded by humans**. It is a dynamic ecosystem driven entirely by the Master Agent's autonomy. In the beginning, a project may exist with ZERO predefined roles—everything starts as a generic T3. 
 
-The Master Agent governs the lifecycle of these personas autonomously:
-1. **Dynamic Recruitment (T3 临时征用)**: When faced with a novel problem, the Master Agent calculates the necessary domain expertise and invents a role title (e.g., `dispatch_council(roles: ["webgl-shader-guru"])`). It relies on the T3 Zero-Shot fallback to test this new worker directly on the battlefield. 
-2. **Project-Scoped Solidification (T1 本地提拔)**: If the Master Agent notices project-specific idiosyncrasies causing the T3 worker to fail or hallucinate, it uses file I/O to synthesize and write a `.optimus/personas/webgl-shader-guru.md` (T1). It has successfully promoted the temporary worker to a project-aware, disciplined local expert.
-3. **Global Abstraction & Promotion (T2 通用固化与复用)**: Once the Master Agent recognizes that a newly refined T1 expert possesses highly reusable, standard-industry logic that transcends the current project (e.g., a pristine `react-hooks-reviewer`), it has the autonomy to migrate or extract those universal principles into the globally scoped Plugin directory (e.g., `optimus-plugin/agents/react-hooks-reviewer.md` - the T2 layer). 
+The Master Agent governs the lifecycle of these agents autonomously:
+1. **Dynamic Recruitment (T3 临时征用)**: When faced with a novel problem, the Master Agent calculates the necessary domain expertise and invents a role title (e.g., `dispatch_council(roles: ["webgl-shader-guru"])`). It relies on the T3 Zero-Shot fallback to test this new worker directly on the battlefield.
+2. **Project-Scoped Solidification (T1 本地提拔)**: If the Master Agent notices project-specific idiosyncrasies causing the T3 worker to fail or hallucinate, it uses file I/O to synthesize and write a `.optimus/agents/webgl-shader-guru.md` (T1). The frontmatter will automatically capture the agent's `session_id` and `engine` on first execution, making it a persistent, project-aware local expert.
+3. **Template Promotion (T2 通用固化与复用)**: Once a T1 agent definition proves to contain highly reusable, standard-industry logic that transcends the current project (e.g., a pristine `react-hooks-reviewer`), those universal principles can be extracted into a read-only T2 template at `.optimus/roles/react-hooks-reviewer.md`. On future `optimus init` runs in other workspaces, this template is hydrated automatically for the team.
 
-Through this pipeline (T3 -> T1 -> T2), the Swarm self-organizes. It drafts its own domain armies based strictly on what succeeds in production, transferring localized trauma into global institutional memory automatically.
+**Important: T1 and T2 remain independent tiers.** The orchestration logic in `worker-spawner.ts` no longer forcibly "promotes" or clones T2 templates into T1 agents automatically. T2 serves as a standard fallback layer of read-only templates; T1 serves as stateful session-bound overrides. They coexist without automatic conversion.
 
 This routing completely abstracts prompted-persona-engineering away from the Master Agent. It simply orders the MCP Tool: `"Spawn a db-tyrant"`, and the Facade assembles the smartest available configuration for that role before executing the worker thread.
 
@@ -162,18 +172,28 @@ When a massive refactoring or architectural task is triggered, the Orchestrator 
 ## Configuration & Context Management
 **The Multi-Tiered Memory & Blackboard System**: To maintain a "Single Source of Truth" (SSOT) across all multi-agent backends (Copilot, Claude, etc.), we explicitly split memory into **Static Persona Configs (人格/经验记忆)** managed as plain text, and **Dynamic Flow State (事件/短期记忆)** managed via the underlying CLI's native SQLite stores mapped to `--session-id`. 
 
-Crucially, Optimus Code distinguishes between **Local (Project-Scoped)** and **Global (Optimus-Scoped)** dimensions:
+Crucially, Optimus Code is now **entirely project-scoped**. All agent and role definitions live within the workspace's `.optimus/` directory:
 
 #### 1. Local Workspace Project Plane (`<workspace>/.optimus/`)
 - **Local Blackboard (`.optimus/PROPOSAL.md`, `TODO.md`)**: The artifact-driven communication bus confined to the specific project being edited.
 - **Local Memory (`.optimus/memory.md`)**: Long-term agent memory hot cache specific to this codebase's architecture and quirks.
-- **Local Rules & Personas (`.optimus/rules.md`, `.optimus/personas/`)**: Configurations that override generic behaviors strictly for this repository.
+- **T2 Role Templates (`.optimus/roles/`)**: Read-only default role templates, hydrated into the workspace on `optimus init`. These provide standardized best-practice prompts (e.g., security, architecture review) and are intended to be Git-tracked alongside the project for team-wide consistency. The orchestrator reads these purely as read-only templates and never modifies them at runtime.
+- **T1 Session Agents (`.optimus/agents/`)**: Stateful, per-project agent definitions that override or augment T2 templates for this specific repository. Each T1 agent file uses **YAML frontmatter** to persist its `session_id`, `engine`, and `model` across executions:
 
-#### 2. Global Optimus OS Plane (`~/.optimus/` or Plugin Global Cache)
-Because the Master Agent acts as an autonomous entity roaming across *all* your projects, it requires a global brain to sync learnings cross-repo.
-- **Global Memory (`~/.optimus/global_memory.md`)**: Persistent user preferences (e.g., "The CEO always prefers React functional components", "Never use tabs, only 4 spaces"). The Master Agent reads this alongside local memory to maintain consistency across every workspace.
-- **Global Blackboard (`~/.optimus/global_bus/`)**: Used for extreme multi-repo orchestration. If a backend API repo changes, the Master Agent can write an event to the Global Blackboard. When the frontend repo is opened, the local Master Agent reads the Global Blackboard and says: *"I see the Backend API updated its schemas 2 hours ago. Spawning a council to update our frontend types."*
-- **Global Personas (`~/.optimus/personas/` or MCP `agents/`)**: The T2 "斯巴达正规军" (Spartan Regulars) layer. Agents promoted from Local to Global live here, ready to be dispatched into any new workspace.
+  ```yaml
+  ---
+  engine: claude-code
+  session_id: abc123-xyz
+  model: claude-sonnet-4-20250514
+  ---
+  # Security Expert (Project-Specific Overrides)
+  In THIS project, always enforce the internal XYZ ORM dialect...
+  ```
+
+  This frontmatter-based persistence eliminates "amnesia" — agents resume exactly where they left off, with full episodic memory intact.
+- **Local Rules (`.optimus/rules.md`)**: Additional configurations that override generic behaviors strictly for this repository.
+
+> **Note on Global State**: The previous architecture stored global agent profiles at `~/.optimus/` (including `~/.optimus/global_memory.md`, `~/.optimus/global_bus/`, and `~/.optimus/personas/`). This global OS-level directory is **no longer used**. All role and agent definitions are now strictly project-scoped within `<workspace>/.optimus/`. T2 default templates are hydrated directly into each workspace's `.optimus/roles/` directory, making them Git-trackable and eliminating cross-project implicit state.
 
 ---
 
@@ -184,25 +204,32 @@ To achieve true CLI independence, cross-IDE compatibility, and stateless concurr
 ### Directory Structure & Component Mapping
 ```text
 optimus-plugin/
-├── .claude-plugin/              
+├── .claude-plugin/
 │   └── plugin.json              # Plugin manifest and definitions
 ├── .mcp.json                    # MCP Server definition (Registers the Node.js backend)
 ├── skills/                      # Northbound Layer: Cognitive behaviors for Master Agent
 │   ├── council-review/SKILL.md  # Triggers `dispatch_council` tool
 │   └── delegate-task/SKILL.md   # Triggers `execute_worker` tool
-├── agents/                      # T2 Layer: Globally promoted Spartan Regulars
-│   ├── security-expert.md       
-│   └── refactoring-architect.md 
 └── scripts/                     # Midplane & Southbound: The Controller & Spawner
     ├── mcp-server.js            # Extends Model Context Protocol
-    ├── controller.js            # Implements T3->T1->T2 Cascade Assembly and Singleton Locks
-    └── worker-spawner.js        # Spawns headless sub-CLI instances
+    ├── controller.js            # Implements T3->T2->T1 Cascade Assembly and Singleton Locks
+    └── worker-spawner.ts        # Spawns headless sub-CLI instances; persists T1 YAML frontmatter
+
+<workspace>/.optimus/            # Project-scoped data (created by `optimus init`)
+├── roles/                       # T2 Layer: Read-only default templates (hydrated on init)
+│   ├── security-expert.md
+│   └── refactoring-architect.md
+├── agents/                      # T1 Layer: Stateful session agents (YAML frontmatter persistence)
+│   └── pm.md                    # Example: PM agent with session_id in frontmatter
+├── memory.md                    # Local long-term memory
+├── rules.md                     # Local behavioral overrides
+└── PROPOSAL.md / TODO.md        # Blackboard artifacts
 ```
 
 ### Functional Modules
 1. **The Cognitive Layer (`skills/`)**: Overrides the Master Agent's behavior, teaching it to draft `PROPOSAL.md` and use the native MCP tools (like `roster_check` and `delegate_task`). 
 2. **The MCP Facade Server (`scripts/mcp-server.js`)**: The "Marionette Controller" exposing stateless JSON schemas to the LLM while carrying the heavy burden of local concurrency, SQLite isolation (`--session-id`), and directory creation.
-3. **The Headless Spawn Engine (`scripts/worker-spawner.js`)**: The underlying Node.js layer that hijacks I/O of tools like Claude Code or Copilot CLI, transforming them into "One-off Functions".
+3. **The Headless Spawn Engine (`scripts/worker-spawner.ts`)**: The underlying Node.js/TypeScript layer that hijacks I/O of tools like Claude Code or Copilot CLI, transforming them into "One-off Functions". It is also responsible for **T1 YAML frontmatter persistence** — intercepting and saving `session_id`, `engine`, and `model` into agent files on execution. Importantly, `worker-spawner.ts` does **not** auto-promote T2 templates into T1 agents; the two tiers remain independent.
 
 ### The "Dumb Tools, Smart Skills" Paradigm (Architectural Principle)
 During the transition to MCP, we discovered a core design pattern for Agentic systems: **Do not write complex state machines or routing logic in code (TypeScript/Node); write them in Prompts (Skills).**

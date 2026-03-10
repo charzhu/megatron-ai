@@ -1,0 +1,126 @@
+{
+  "task_1773163485996_jyzs6p": {
+    "taskId": "task_1773163485996_jyzs6p",
+    "type": "delegate_task",
+    "role": "tech-lead",
+    "task_description": "Implement GitHub Issue #51: Hybrid Concurrency Locking for T1 Agents.\n\n## Objective\nAdd an `AgentLockManager` class to `src/mcp/worker-spawner.ts` that prevents concurrent dispatch to the same T1 agent session (which would cause SQLITE_BUSY crashes in the underlying Claude CLI).\n\n## Architecture (from approved PROPOSAL_t1_session_locking.md)\n\n### Primary: In-Memory Promise Queue\n- Create a class `AgentLockManager` with a private `Map<string, Promise<void>>` (keyed by agent role name).\n- Expose `acquireLock(role: string): Promise<void>` — if the role is already locked, wait on the existing promise. Returns when the lock is acquired.\n- Expose `releaseLock(role: string): void` — resolves the queued promise and removes from map.\n- The lock is advisory and process-scoped (lives within the MCP server Node process).\n\n### Secondary: .lock File Sentinels\n- When a lock is acquired, write a `.optimus/agents/<role>.lock` file containing `{ pid: process.pid, timestamp: Date.now() }`.\n- When released, delete the `.lock` file.\n- On MCP server startup, scan `.optimus/agents/*.lock` files. If the PID in the file is no longer running, clean up the stale lock (crash recovery).\n\n### Integration\n- In `delegateTaskSingle()` function, wrap the `adapter.invoke()` call inside:\n  ```typescript\n  await lockManager.acquireLock(role);\n  try {\n    // existing adapter.invoke() logic\n  } finally {\n    lockManager.releaseLock(role);\n  }\n  ```\n\n## Constraints\n- Do NOT introduce any new npm dependencies.\n- Do NOT import `vscode` namespace — this must remain 100% environment-agnostic Node.js.\n- Keep the implementation minimal — no over-engineering.\n- Write clean TypeScript that compiles with the existing tsconfig.json.\n\n## Deliverables\nWrite the complete implementation code for AgentLockManager and the integration diff for worker-spawner.ts to the output file.",
+    "output_path": ".optimus/tasks/task_issue_51_tech_lead.md",
+    "workspacePath": "c:\\Users\\lochen\\optimus-code",
+    "context_files": [
+      ".optimus/proposals/PROPOSAL_t1_session_locking.md",
+      "src/mcp/worker-spawner.ts"
+    ],
+    "status": "completed",
+    "startTime": 1773163485996,
+    "heartbeatTime": 1773163846460,
+    "pid": 202644
+  },
+  "task_1773164113333_uak4o5": {
+    "taskId": "task_1773164113333_uak4o5",
+    "type": "delegate_task",
+    "role": "qa-engineer",
+    "task_description": "QA Review for Issue #51: Hybrid Concurrency Locking for T1 Agents.\n\n## What to verify\n\nThe tech-lead just implemented `AgentLockManager` in `src/mcp/worker-spawner.ts`. Your job is to review the code for correctness and edge cases.\n\n### Checklist:\n1. **Lock semantics**: Verify that `acquireLock()` correctly queues concurrent callers (they should await, not fail). Verify `releaseLock()` properly unblocks the next waiter.\n2. **Race conditions**: Check if there's a TOCTOU gap between checking `this.locks.has(role)` and setting the new promise. Is the while-loop safe against spurious wakeups?\n3. **Lock file I/O**: Confirm `.lock` files are written/deleted correctly. Verify `cleanStaleLocks()` handles malformed JSON, missing directories, and dead PIDs.\n4. **Integration point**: In `delegateTaskSingle()`, confirm the lock is acquired BEFORE `ConcurrencyGovernor.acquire()` and released in the `finally` block AFTER `ConcurrencyGovernor.release()`.\n5. **No vscode imports**: Confirm the file remains 100% environment-agnostic Node.js.\n6. **Compilation**: Run `npm run build` in `optimus-plugin/` and confirm it succeeds.\n7. **Scope creep**: The tech-lead also added Global T2 user profile directory sync logic (`~/.optimus/global_agents/`). Note whether this is clean or problematic.\n\nWrite findings to the output file with PASS/FAIL per checklist item and an overall verdict.",
+    "output_path": ".optimus/reports/qa_issue_51_lock_review.md",
+    "workspacePath": "c:\\Users\\lochen\\optimus-code",
+    "context_files": [
+      "src/mcp/worker-spawner.ts",
+      ".optimus/proposals/PROPOSAL_t1_session_locking.md"
+    ],
+    "status": "completed",
+    "startTime": 1773164113335,
+    "heartbeatTime": 1773164293757,
+    "pid": 46588
+  },
+  "council_1773164283679_rkhauy": {
+    "taskId": "council_1773164283679_rkhauy",
+    "type": "dispatch_council",
+    "roles": [
+      "chief-architect",
+      "pm",
+      "security"
+    ],
+    "proposal_path": "c:\\Users\\lochen\\optimus-code\\.optimus\\proposals\\PROPOSAL_task_completion_contract.md",
+    "output_path": "c:\\Users\\lochen\\optimus-code\\.optimus\\reviews\\council_1773164283679_rkhauy",
+    "workspacePath": "c:\\Users\\lochen\\optimus-code",
+    "status": "completed",
+    "startTime": 1773164283681,
+    "heartbeatTime": 1773164584158,
+    "pid": 164136
+  },
+  "task_1773165691599_giqlqj": {
+    "taskId": "task_1773165691599_giqlqj",
+    "type": "delegate_task",
+    "role": "workspace-janitor",
+    "task_description": "The root directory is currently cluttered with debugging scripts and text dumps.\n\nMission:\n1. Create `.optimus/temp_scripts/` and `.optimus/temp_logs/` if they don't exist.\n2. Move all loose `*.js` and `*.js.map` files in the root (e.g. fix_ts.js, rewrite*.js, inject.js) to `.optimus/temp_scripts/`.\n3. Move all loose `*.txt` and `*.log` files to `.optimus/temp_logs/`.\n4. Delete the file exactly named `nul`.\n5. Check if `REFACTOR_PLAN_SESSION_IPC.md` is in the root. If `docs/REFACTOR_PLAN_SESSION_IPC.md` already exists, delete the root one; otherwise, move it to `docs/`.\n6. DO NOT TOUCH essential project files: package.json, packages-lock.json, tsconfig.json, CHANGELOG.md, README.md, .env, .gitignore. DO NOT TOUCH directories like src/, optimus-plugin/, docs/, test-ipc/, node_modules/.\n\nExecute standard system commands to resolve this. Write a report of what you moved and deleted.",
+    "output_path": ".optimus/reports/root_cleanup_report.md",
+    "workspacePath": "c:/Users/lochen/optimus-code",
+    "context_files": [],
+    "status": "completed",
+    "startTime": 1773165691600,
+    "heartbeatTime": 1773165691600,
+    "pid": 109220
+  },
+  "task_1773165728443_wkcqff": {
+    "taskId": "task_1773165728443_wkcqff",
+    "type": "delegate_task",
+    "role": "technical-writer",
+    "task_description": "Our project architecture has recently evolved significantly, particularly regarding agent role management (T1, T2, T3) and session persistence.\n\nKey Architectural Updates to document:\n1. **T2 Roles (Project Default Templates)**: These are NO LONGER stored in a global system OS directory. Instead, default templates are hydrated directly into `[Workspace]/.optimus/roles/`. This allows project-level Git tracking and 'out-of-the-box' iteration for teams. The orchestrator reads these purely as read-only templates.\n2. **T1 Roles (Local Session Agents)**: Stored in `[Workspace]/.optimus/agents/`. When a T1 role is executed, its `session_id`, `engine`, and `model` configuration are natively intercepted and saved at the top of the Markdown file using **YAML Frontmatter** (e.g. `--- \\n engine: claude-code\\n session_id: xyz \\n ---`). This enables permanent session states ('no amnesia') across separate executions.\n3. The orchestration logic inside `worker-spawner.ts` no longer forcibly 'promotes' or clones T2 agents into T1 agents automatically. They remain independent - T2 as standard fallbacks, T1 as stateful overrides.\n\nMission:\nExplore and edit `README.md` and `docs/IDEA_AND_ARCHITECTURE.md` (and any other relevant design documents you find in `docs/`). Completely replace old mentions of global profiles (`~/.optimus/global_agents/`) or legacy folder structure (`.optimus/personas/`), and rigorously explain the new YAML frontmatter T1 persistence and the strict project-level T2 scoping (`.optimus/roles/`).",
+    "output_path": ".optimus/reports/doc_update_report.md",
+    "workspacePath": "C:/Users/lochen/optimus-code",
+    "context_files": [
+      "README.md",
+      "docs/IDEA_AND_ARCHITECTURE.md"
+    ],
+    "status": "completed",
+    "startTime": 1773165728444,
+    "heartbeatTime": 1773166208927,
+    "pid": 129432
+  },
+  "task_1773166917827_mm2nsl": {
+    "taskId": "task_1773166917827_mm2nsl",
+    "type": "delegate_task",
+    "role": "qa-engineer",
+    "task_description": "QA Review for Issue #53: Enforced Task Completion Contract.\n\nBranch: feature/issue-53-task-completion-contract (already pushed to remote)\n\n## What to verify\n\n### 1. TaskRecord Schema\n- Verify `TaskManifestManager.ts` now includes `partial`, `verified` status and `github_issue_number` field.\n\n### 2. Output Verification in council-runner.ts\n- `verifyOutputPath()` correctly distinguishes files vs directories, empty vs non-empty.\n- `runAsyncWorker()` no longer blindly marks tasks as `completed` — it checks output first.\n- For councils, it checks `COUNCIL_SYNTHESIS.md` specifically.\n\n### 3. Multi-tier check_task_status\n- `running` shows elapsed time\n- `verified` shows output path (+ VERDICT.md for councils)\n- `partial` warns about missing output\n- `failed` shows error message\n- Legacy `completed` is re-verified on read\n\n### 4. Auto GitHub Issue Creation\n- `delegate_task_async` creates `[swarm-task]` labeled Issue before spawning\n- `dispatch_council_async` creates `[swarm-council]` labeled Issue before spawning\n- `github_issue_number` is stored in manifest\n- If GITHUB_TOKEN missing, gracefully skips (no crash)\n\n### 5. Auto GitHub Issue Closure\n- `council-runner.ts` comments on Issue upon completion (verified/partial/failed)\n- Issue is closed on `verified` or `failed`, left open on `partial`\n\n### 6. Council PM Reduce (Map-Reduce)\n- After concatenating reviews, PM is delegated to produce `VERDICT.md`\n- Failure of PM reduce is non-fatal\n\n### 7. Compilation\n- Run `npm run build` in `optimus-plugin/` and confirm success.\n\n### 8. No vscode imports\n- All modified files remain 100% environment-agnostic Node.js.\n\nWrite a structured PASS/FAIL report per checklist item to the output file. If all pass, state overall PASS. If any critical fails, state overall FAIL with details.",
+    "output_path": ".optimus/reports/qa_issue_53_completion_contract.md",
+    "workspacePath": "c:\\Users\\lochen\\optimus-code",
+    "context_files": [
+      "src/mcp/council-runner.ts",
+      "src/mcp/mcp-server.ts",
+      "src/managers/TaskManifestManager.ts",
+      "src/utils/githubApi.ts",
+      "src/mcp/worker-spawner.ts"
+    ],
+    "status": "verified",
+    "startTime": 1773166917828,
+    "heartbeatTime": 1773167218296,
+    "pid": 72168
+  },
+  "task_1773167078850_j063zb": {
+    "taskId": "task_1773167078850_j063zb",
+    "type": "delegate_task",
+    "role": "pm",
+    "task_description": "## Task: Clean up GitHub Issues for cloga/optimus-code\n\nUse the `github_sync_board` tool first with `{ owner: \"cloga\", repo: \"optimus-code\", workspace_path: \"c:/Users/lochen/optimus-code\" }` to get the current open issues.\n\nThen review each open issue and take action:\n\n### Close these (already implemented):\n- **#44** — Native Session ID Capture & Binding → Already merged via PR #46\n- **#51** — Hybrid Concurrency Locking for T1 Agents → AgentLockManager implemented and merged\n- **#53** — Enforced Task Completion Contract → Implemented (multi-tier status, auto GitHub Issue tracking, PM Map-Reduce)\n\n### Review and close if outdated:\n- Any issue that references old architecture (e.g., SharedTaskStateManager refactor, old T3 configurability proposals) that has been superseded by the new Spartan Swarm architecture\n- Any issue created by automated test runs or accidental duplicates\n\n### Keep open:\n- **#45** — T1 & T2 Path Resolution / Move T2 to User Profile → Still pending\n- **#54** — T3 Zero-Shot Agent prompt generation → Still pending\n- Any other issue that represents genuinely pending work\n\nFor each issue you close, use `github_update_issue` with `{ owner: \"cloga\", repo: \"optimus-code\", issue_number: <N>, state: \"closed\", body: \"<reason for closing>\" }`.\n\nWrite a summary of all actions taken (which issues closed, which kept open, and why) to the output file.",
+    "output_path": ".optimus/reports/pm_issue_cleanup.md",
+    "workspacePath": "c:\\Users\\lochen\\optimus-code",
+    "context_files": [],
+    "status": "verified",
+    "startTime": 1773167078852,
+    "heartbeatTime": 1773167320077,
+    "github_issue_number": 55,
+    "pid": 123640
+  },
+  "task_1773167155028_jdhe4x": {
+    "taskId": "task_1773167155028_jdhe4x",
+    "type": "delegate_task",
+    "role": "tech-lead",
+    "task_description": "## Task: Clean up Git branches for cloga/optimus-code\n\nWorkspace: `c:/Users/lochen/optimus-code`\n\n### Step 1: List all branches\nRun `git branch -a` to see all local and remote branches.\n\n### Step 2: Identify branches to delete\n- **Merged branches**: Any branch already merged into `main` or `master` should be deleted (both local and remote). Use `git branch --merged main` and `git branch --merged master` to find them.\n- **Stale feature branches**: Branches like `feature/issue-*` that correspond to closed issues should be deleted.\n- **Keep**: `main`, `master`, and any branch with active open PRs or open issues.\n\n### Step 3: Delete local branches\nFor each branch to delete:\n```bash\ngit branch -d <branch-name>\n```\n\n### Step 4: Delete remote branches\nFor each remote branch to delete:\n```bash\ngit push origin --delete <branch-name>\n```\n\n### Step 5: Clean up remote tracking refs\n```bash\ngit remote prune origin\n```\n\n### Important\n- Do NOT delete `main` or `master`\n- Do NOT delete `feature/issue-53-task-completion-contract` — it has an active PR pending\n- If unsure about a branch, keep it and note it in your report\n\nWrite a summary of all branches deleted (local + remote) and any kept with reasons to the output file.",
+    "output_path": ".optimus/reports/tech_lead_branch_cleanup.md",
+    "workspacePath": "c:\\Users\\lochen\\optimus-code",
+    "context_files": [],
+    "status": "verified",
+    "startTime": 1773167155029,
+    "heartbeatTime": 1773167336094,
+    "github_issue_number": 56,
+    "pid": 84100
+  }
+}

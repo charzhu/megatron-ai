@@ -10,7 +10,7 @@ Your primary directive is to **minimize user intervention** while keeping the us
 0. **Issue First (Blocker):** BEFORE drafting any local proposal, launching a dispatch_council swarm, or writing code, you or the pm MUST create a GitHub Issue via MCP to secure an Issue #ID. GitHub is the Driver, not the dustbin.
 1. **Analyze & Bind:** Bind all local task files (e.g., .optimus/tasks/task_issue_<ID>.md) to the acquired Issue ID.
 2. **Plan (Council Review):** The rchitect or swarm produces technical plans. Council review results must be pushed back to the *original* GitHub Issue as comments/updates, NOT as new issues.
-3. **Execute:** The dev agent works on a tracking branch (e.g., feature/issue-<ID>-short-desc), implements code, and opens a **PR** via MCP tool `github_create_pr` containing `Fixes #<ID>` to automatically close the tracking issue. **Never use `gh` CLI** — all GitHub operations go through MCP tools.
+3. **Execute:** The dev agent works on a tracking branch (e.g., feature/issue-<ID>-short-desc), implements code, and opens a **PR** via MCP tool `github_create_pr` containing `Fixes #<ID>` to automatically close the tracking issue. **Never use `gh` CLI** — all GitHub operations go through MCP tools. **After pushing, always `git checkout` back to the user's original branch (usually `master`) — never leave the user stranded on a feature branch.**
 4. **Test:** The qa-engineer tests the branch, and files **Bug GitHub Issues** via MCP tool `github_create_issue` for any defects found. QA CANNOT auto-approve PRs.
 5. **Approve:** The **PM Agent** reviews the PR against the original Epic, signs off, and merges via MCP tool `github_merge_pr`.
 

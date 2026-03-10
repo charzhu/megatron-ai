@@ -28,7 +28,13 @@ Optimus marries the speed of local computation with the tracking power of the cl
 - **Native GitHub Integration**: Powered by pure Node.js MCP Tools, the built-in *PM* Agent can automatically create GitHub Epics to secure tracking IDs, while the *Dev* writes code, submits PRs, and links them backbringing 100% human-readable traceability to AI operations.
 
 ###  Dynamic Role-Based Skill Binding
-Easily add your own AI agents and tooling by dropping simple markdown definitions into your workspace. By editing the YAML frontmatter of a Persona (e.g., adding \skills: [git-workflow, delegate_task]\), the MCP daemon dynamically grants new tool-use capabilities to specific agents on the fly.
+Easily add your own AI agents and tooling by dropping simple markdown definitions into your workspace. By editing the YAML frontmatter of a Role or Agent file (e.g., adding `skills: [git-workflow, delegate_task]`), the MCP daemon dynamically grants new tool-use capabilities to specific agents on the fly.
+
+###  Three-Tier Role Architecture (T1 / T2 / T3)
+Optimus uses a strict three-tier role resolution system, all scoped to your project workspace:
+- **T1 - Local Session Agents (`.optimus/agents/`)**: Stateful, per-project agents with YAML frontmatter persistence. When executed, their `session_id`, `engine`, and `model` are saved directly in the Markdown file's frontmatter, enabling permanent session state across executions.
+- **T2 - Project Default Templates (`.optimus/roles/`)**: Read-only default role templates hydrated into your workspace on `init`. Git-trackable, team-shareable, and never modified at runtime.
+- **T3 - Zero-Shot Dynamic Roles**: Auto-generated baseline identities for any role name not found in T1 or T2. No file required.
 
 ---
 
@@ -42,7 +48,7 @@ Navigate to your target project directory and run the initialization script:
 `ash
 npx -y github:cloga/optimus-code#main init
 `
-*Auto-Injection Magic:* This will create a local .optimus/ config folder holding your team's prompts, roles, and skills. It will also auto-detect your tools and transparently inject the PM system instructions directly into CLAUDE.md or .github/copilot-instructions.md.
+*Auto-Injection Magic:* This will create a local `.optimus/` config folder holding your team's role templates (`.optimus/roles/`), agent definitions (`.optimus/agents/`), and skills. It will also auto-detect your tools and transparently inject the PM system instructions directly into `CLAUDE.md` or `.github/copilot-instructions.md`.
 
 ### Step 2: Mount the "Body" (MCP Server)
 Now, hook the Orchestrator Engine to your favorite AI terminal or IDE!
@@ -94,7 +100,7 @@ claude mcp add optimus-swarm optimus serve
 ## CLI Reference
 
 `	ext
-optimus init        Bootstrap .optimus/ workspace (rules, roles, skills) in current directory
+optimus init        Bootstrap .optimus/ workspace (roles/, agents/, skills) in current directory
 optimus serve       Start the pure Node.js MCP server daemon (stdio transport)
 optimus version     Print version
 optimus help        Show help

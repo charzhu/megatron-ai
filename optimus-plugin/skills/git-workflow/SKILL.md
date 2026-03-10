@@ -27,6 +27,7 @@ Local `git` commands are acceptable for branch management, staging, committing, 
 - Branch: `git checkout -b feature/issue-<ID>-short-desc`
 - Commit (Conventional Commits + Issue ref): `git commit -m "feat: Implement T1/T2 instantiation, closes #29"`
 - Push: `git push -u origin <branch-name>`
+- **MANDATORY: After push, always switch back to the user's original branch** (usually `master`): `git checkout master`. Never leave the user on a feature branch without explicit permission.
 
 **Never commit directly to `master`** for standard feature work unless explicitly overridden by the User (PM).
 

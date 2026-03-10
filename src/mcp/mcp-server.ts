@@ -632,7 +632,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
     }
 
     const t1Dir = path.join(workspace_path, ".optimus", "agents");
-    const t2Dir = path.join(__dirname, "..", "..", "optimus-plugin", "roles");
+    const t2Dir = path.join(__dirname, "..", "roles");
 
     let roster = "📋 **Spartan Swarm Active Roster**\n\n";
 

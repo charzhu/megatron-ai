@@ -101,7 +101,7 @@ export async function delegateTaskSingle(roleArg: string, taskPath: string, outp
     }
     
     const t1Path = path.join(t1Dir, `${role}.md`);
-    const t2Path = path.join(__dirname, '..', '..', 'optimus-plugin', 'roles', `${role}.md`);
+    const t2Path = path.join(__dirname, '..', 'roles', `${role}.md`);
 
     let activeEngine = parsedRole.engine || 'claude-code';
     let activeModel = parsedRole.model;

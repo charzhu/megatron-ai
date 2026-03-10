@@ -25,8 +25,8 @@ When the user asks to assign/delegate a task to a specific agent, follow the **3
 
 1. **Camp Inspection**: Call `roster_check` with `workspace_path` to retrieve registered personnel. Never skip this step.
 2. **Manpower Assessment**: Match the task to the roster:
-   - **T1 (Local Project Experts)**: Domain-specific agents in `.optimus/agents/` — first choice for project knowledge tasks.
-   - **T2 (Global Regulars)**: General agents like `chief-architect` — for universal pattern/architecture tasks.
+   - **T1 (Local Session Agents)**: Stateful local instances mapped in `.optimus/agents/`.
+   - **T2 (Project Default Roles)**: Standard project repository templates in `.optimus/roles/` — first choice for project domain knowledge.
    - **T3 (Dynamic Outsourcing)**: Invent a descriptive role name (e.g., `webgl-shader-guru`) for niche tasks — the engine auto-generates a zero-shot worker.
 3. **Deployment**: Announce your choice, then call `delegate_task` with `role`, `task_description`, and `output_path`.
 
@@ -53,9 +53,9 @@ All code changes follow the **"Issue First" protocol**:
 
 ## Agent Roles & Spartan Swarm
 
-Instead of relying on hardcoded roles, you MUST use the `roster_check` tool to discover available T1 (local) and T2 (global) expert roles.
-- T1 (Local Experts): Pre-configured in the project workspace (e.g. `.optimus/agents/`). Always prefer these first.
-- T2 (Global Experts): Standard templates available globally.
+Instead of relying on hardcoded roles, you MUST use the `roster_check` tool to discover available T1 (local state instances) and T2 (project template) expert roles.
+- T1 (Local Instances): Persistent session state actors located in `.optimus/agents/`.
+- T2 (Project defaults): Shared repository templates natively loaded from `.optimus/roles/`. Always prefer these first.
 - T3 (Dynamic Outsourcing): If you need a specialized expert not found in T1/T2 (e.g., `security-auditor`, `db-admin`), invent a descriptive role name and pass it to the tools. The agent engine will dynamically generate a zero-shot worker for the role.
 
 ## Tool Failure & Autonomous Self-Healing
