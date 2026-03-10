@@ -85,6 +85,19 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
   return {
     tools: [
         {
+          name: "append_memory",
+          description: "Write experience, architectural decisions, and important project facts into the continuous memory system to evolve the project context.",
+          inputSchema: {
+            type: "object",
+            properties: {
+              category: { type: "string", description: "The category of the memory (e.g. 'architecture-decision', 'bug-fix', 'workflow')" },
+              tags: { type: "array", items: { type: "string" }, description: "A list of tags for selective loading" },
+              content: { type: "string", description: "The actual memory content to solidify" }
+            },
+            required: ["category", "tags", "content"]
+          }
+        },
+        {
           name: "github_update_issue",
           description: "Updates an existing issue in a GitHub repository (e.g. to close it or add comments).",
           inputSchema: {
@@ -269,6 +282,65 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
         },
       ],
     };
+        } else if (request.params.name === "append_memory") {
+      let { category, tags, content } = request.params.arguments as any;
+      const workspacePath = process.env.OPTIMUS_WORKSPACE_ROOT || process.cwd();
+      const memoryDir = path.resolve(workspacePath, '.optimus', 'memory');
+      const memoryFile = path.join(memoryDir, 'continuous-memory.md');
+
+      if (!fs.existsSync(memoryDir)) {
+        fs.mkdirSync(memoryDir, { recursive: true });
+      }
+
+      // Memory Lock for concurrency within the MCP server process
+      if (!(global as any).memoryLock) {
+        (global as any).memoryLock = Promise.resolve();
+      }
+
+      try {
+        await (global as any).memoryLock; // Wait for any pending write
+
+        // Create new write promise
+        const writePromise = new Promise<void>((resolve, reject) => {
+          try {
+            const timestamp = new Date().toISOString();
+            const memoryId = 'mem_' + Date.now() + '_' + Math.floor(Math.random() * 1000);
+            
+            const freshEntry = [
+              '---',
+              'id: ' + memoryId,
+              'category: ' + (category || 'uncategorized'),
+              'tags: [' + (tags ? tags.join(', ') : '') + ']',
+              'created: ' + timestamp,
+              '---',
+              content,
+              '\n'
+            ].join('\n');
+
+            fs.appendFileSync(memoryFile, freshEntry, 'utf8');
+            resolve();
+          } catch (err) {
+            reject(err);
+          }
+        });
+        
+        (global as any).memoryLock = writePromise;
+        await writePromise;
+        
+        return {
+          content: [
+            {
+              type: "text",
+              text: `✅ Experience solidifed to memory!\nTags: ${tags.join(', ')}\nMemory appended to: ${memoryFile}`
+            }
+          ]
+        };
+      } catch (err: any) {
+        return {
+           content: [{ type: "text", text: `Failed to append memory: ${err.message}` }],
+           isError: true
+        };
+      }
     } else if (request.params.name === "github_update_issue") {
       const { owner, repo, issue_number, state, body, agent_role, session_id } = request.params.arguments as any;
       const token = process.env.GITHUB_TOKEN || process.env.GH_TOKEN;
