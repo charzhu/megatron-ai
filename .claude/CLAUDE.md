@@ -45,11 +45,11 @@ When the user requests an architectural review or multi-expert critique:
 
 All code changes follow the **"Issue First" protocol**:
 
-1. Identify/create a GitHub Issue (`#ID`) before any code work
+1. Create a GitHub Issue (`#ID`) via MCP tool `github_create_issue` before any code work
 2. Branch: `feature/issue-<ID>-short-desc` (never commit directly to `main`)
 3. Commit with Conventional Commits + `closes #<ID>` or `fixes #<ID>`
-4. Push branch, create PR via MCP tools (prefer MCP over `gh` CLI)
-5. Update local blackboard in `.optimus/`
+4. Push branch via `git push`, then create PR via MCP tool `github_create_pr` (**never use `gh` CLI**)
+5. Merge via MCP tool `github_merge_pr`. Update local blackboard in `.optimus/`
 
 ## Agent Roles & Spartan Swarm
 
