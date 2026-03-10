@@ -115,9 +115,9 @@ To bypass the limitations of Stateful CLI Coding Agents (which are designed for 
 #### The Spartan Registry: Expert Definition & Routing (专家定义与路由调度)
 In the MCP Facade paradigm, the Master Agent commands the Swarm by roles (e.g., `["security", "db-tyrant"]`), but it doesn't need to know *how* those experts are built. The Node.js MCP Controller uses a **Three-Tier Cascade Assembly (三层级联装配策略)** to construct the expert's ultimate System Prompt. Rather than a simple mutual exclusion (fallback), the tiers can optionally merge to form a deeply contextualized worker:
 
-1. **T3 - Zero-Shot Dynamic Base (临时动员兵 - 底层兜底)**: The Controller always generates a baseline identity string: `"You are a specialized expert: <role>. Analyze objectively from your domain's perspective."` This guarantees that even completely made-up roles (e.g., `graphql-performance-specialist`) will snap into the correct behavioral frame.
-2. **T2 - Project Default Role Templates (斯巴达正规军 - 核心纪律)**: The Controller checks the workspace's `.optimus/roles/<role>.md` directory. These are **read-only default templates** hydrated into the project on `optimus init`, enabling Git-tracked, team-shareable best practices (e.g., OWASP top 10 for `security`). T2 templates are never modified at runtime by the orchestrator.
-3. **T1 - Local Session Agents (本地领域专家 - 顶层覆写)**: The Controller checks the workspace for `.optimus/agents/<role>.md`. If found, these local agent definitions are appended last (carrying the highest LLM attention weight). **T1 agents are stateful**: when executed, `worker-spawner.ts` natively intercepts and persists the agent's `session_id`, `engine`, and `model` configuration using **YAML frontmatter** at the top of the Markdown file:
+1. **T3 - Computational Resource Pool (物理算力池: Engine + Model)**: T3 represents the raw, zero-shot AI capabilities available to the Swarm. It defines the combinations of Execution Engines (e.g., Claude Code, Copilot CLI) and Models (e.g., Claude 3.7 Sonnet, GPT-4o). When a completely made-up role is called (e.g., `graphql-performance-specialist`), the Controller falls back to T3 by assigning a default engine/model pair from `.optimus/registry/available-agents.json` and injecting a dynamically generated zero-shot prompt.
+2. **T2 - Role Templates (标准模板: T3 + Role Instruction)**: The Controller checks the workspace's `.optimus/roles/<role>.md` directory. T2 binds specific personality instructions, workflows, and preferred engines/models to form a standard **Role**. These are **read-only default templates** hydrated into the project on `optimus init`, enabling Git-tracked, team-shareable best practices.
+3. **T1 - Local Session Agents (实体特工: T2 + Memory/Session)**: The Controller checks the workspace for `.optimus/agents/<role>.md`. T1 elevates a pristine Role (T2) into an active, stateful worker by persisting memory and context. **T1 agents are stateful**: when executed, `worker-spawner.ts` natively intercepts and persists the agent's `session_id`, `engine`, and `model` configuration using **YAML frontmatter** at the top of the Markdown file:
 
    ```yaml
    ---
@@ -131,7 +131,12 @@ In the MCP Facade paradigm, the Master Agent commands the Swarm by roles (e.g., 
 
 **(Important Note)**: While the actual filesystem readout logic (Cascade Resolution) resides natively inside the MCP `worker-spawner.ts` code to maintain deterministic fallback behavior, it is strongly driven by the **Master Agent's Skill prompts** (e.g., instructing the LLM that it CAN dynamically invent new roles to trigger T3 generation). This ensures standard tooling API semantics while offering complex routing behavior.
 
-**The Assembly Outcome**: The final Worker Prompt is fundamentally a concatenation: `[T3 Role Injection] + [T2 Role Templates] + [T1 Agent Overrides]`. This allows a locally defined `.optimus/agents/security.md` (T1) to be extremely short (just mentioning a specific local auth bug caveat), while still inheriting the comprehensive security guidance from the T2 template in `.optimus/roles/security.md`.
+**The Assembly Outcome**: The final Worker Prompt is basically a math equation:
+- **T3** = Engine + Model
+- **T2** = T3 + Role Context
+- **T1** = T2 + Memory (Session State + Overrides)
+
+This allows a locally defined `.optimus/agents/security.md` (T1) to be extremely short, simply persisting the `session_id`, while delegating the intelligence to the engine (T3) and inheriting role instructions if needed.
 
 #### Swarm Autonomous Evolution (自主进化与动态招募机制)
 Crucially, the entire Spartan Registry is **not statically hardcoded by humans**. It is a dynamic ecosystem driven entirely by the Master Agent's autonomy. In the beginning, a project may exist with ZERO predefined roles—everything starts as a generic T3. 
