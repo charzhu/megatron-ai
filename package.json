@@ -33,5 +33,8 @@
     "marked": "^17.0.4",
     "strip-ansi": "^7.2.0"
   },
-  "main": "optimus-plugin/dist/mcp-server.js"
+  "main": "optimus-plugin/dist/mcp-server.js",
+  "bin": {
+    "optimus": "./optimus-plugin/bin/cli.js"
+  }
 }
