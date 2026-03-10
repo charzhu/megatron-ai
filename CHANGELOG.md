@@ -1,6 +1,10 @@
 ﻿# Changelog
 
 ## [Unreleased]
+- **Major Architectural Update: Redefined the Agent instantiation model (T1, T2, T3) via `PROPOSAL_UNIFY_AGENTS_PERSONAS.md`.**
+  - **T3 (Base LLM)**: Baseline model capability. Strictly stateless.
+  - **T2 (Role)**: Renamed from Persona to Role. System-wide curated templates defining rules and principles. Resides in `optimus-plugin/roles/`.
+  - **T1 (Agent)**: The stateful instantiation of a Role within a project context. Inherits T2 and adds persistent Project Memory so role context is never blank (Fixes Issue #29).
 
 ## [0.0.8] - 2026-03-08
 - **Enhancement: Planner Consensus Voting Threshold**: `_computeIntentFromPlanners()` now requires `min(2, numPlanners)` agreeing votes before routing to `action` or `skip`. Single-planner setups behave as before; with 2+ planners, at least 2 must agree, preventing a single aggressive planner from overriding the majority.
