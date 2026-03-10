@@ -4,147 +4,110 @@
   
   [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
   [![Framework: Model Context Protocol](https://img.shields.io/badge/MCP-Native-brightgreen.svg)](#)
-  [![npm](https://img.shields.io/npm/v/@cloga/optimus-swarm-mcp.svg)](https://www.npmjs.com/package/@cloga/optimus-swarm-mcp)
 </div>
 
 ---
 
 ##  What is Optimus Code?
 
-Optimus Code is a powerful **Multi-Agent Orchestration Engine** built on the Model Context Protocol (MCP). It transforms isolated LLM clients (like *Claude Code*, *GitHub Copilot CLI*, and *DeepSeek*) into a synchronized swarm of background "workers" that can **collaborate**, **debate**, and **execute** complex software engineering tasks autonomously.
+Optimus Code is a powerful **Multi-Agent Orchestration Engine** built natively on the Model Context Protocol (MCP). It acts as a background daemon (Orchestrator) that transforms isolated IDEs (like *Claude Code*, *Cursor*, *Windsurf*) into a synchronized swarm of background workers that can **collaborate**, **debate**, and **execute** complex software engineering tasks autonomously.
+
+> **Architecture Shift:** Optimus is a **pure MCP Server Plugin**, meaning it is 100% editor-agnostic. No VS Code extension required. It separates your **Data** (roles, skills, and memory in .optimus/) from the **Engine** (npx stream execution), ensuring zero-bloat.
 
 ---
 
 ##  Next-Generation Features
 
 ###  The Spartan Swarm Protocol
-Tired of one AI getting stuck in a loop or writing insecure code? Optimus features **Council Review (Concurrent Map-Reduce Paradigms)**. 
-Submit a complex proposal, and the Orchestrator will simultaneously spawn a Security Architect, a Performance Expert, and a QA Engineer to review your design from multiple angles, completely isolated from each other's context windows.
+Tired of one AI getting stuck in a loop or writing insecure code? Optimus features **Council Review (Concurrent Map-Reduce Paradigms)**.
+Submit a complex proposal, and the Orchestrator will simultaneously spawn a *Chief Architect*, a *PM*, and a *QA Engineer* to review your design from multiple angles, completely isolated from each other's context windows to prevent hallucination bleed.
 
 ###  Hybrid SDLC (Software Development Life Cycle)
 Optimus marries the speed of local computation with the tracking power of the cloud:
-- **Local AI Blackboard**: Agents use hidden \.optimus/\ markdown files to draft, debate, and store memory fast.
-- **Native GitHub Integration**: Utilizing pure Node.js MCP Tools, the built-in *Product Manager (PM)* Agent can automatically create GitHub Epics, while the *Dev Agent* writes the code, submits PRs, and the PM merges thembringing 100% human-readable traceability to AI ops.
+- **Local AI Blackboard**: Agents use hidden \.optimus/\ markdown files and task queues to draft, debate, and store long-term memory fast.
+- **Native GitHub Integration**: Powered by pure Node.js MCP Tools, the built-in *PM* Agent can automatically create GitHub Epics to secure tracking IDs, while the *Dev* writes code, submits PRs, and links them backbringing 100% human-readable traceability to AI operations.
 
-###  Pluggable Persona Adapters
-Easily add your own AI agents, skillsets, and local toolchains by dropping simple markdown definitions into the unified registry. Define a Persona, hand it a specialized \delegate_task\ skill, and let the orchestrator route the work.
-
-###  Persistent Sidebar Interface
-Built perfectly into the official VS Code UI Toolkit. Ask your prompt once, and watch the multi-agent brains globally gather data and stream synthesized plans back to you simultaneously.
+###  Dynamic Role-Based Skill Binding
+Easily add your own AI agents and tooling by dropping simple markdown definitions into your workspace. By editing the YAML frontmatter of a Persona (e.g., adding \skills: [git-workflow, delegate_task]\), the MCP daemon dynamically grants new tool-use capabilities to specific agents on the fly.
 
 ---
 
-##  How "Auto Mode" Works
+##  Getting Started: Zero-Install Deployment (Recommended)
 
-Every complex task flows through our unified two-stage pipeline:
+Thanks to standard NPM architecture, you don't even need to globally install the code. Use standard 
+px hooks to keep your project lightweight while always running the latest version!
 
-1. ** Council Planning**: Up to 3 selected planner agents run in parallel. They draft independent architectural designs into local markdown files.
-2. ** Executor Action**: One heavy-duty executor agent receives the synthesized plan from the Council, writes the code, handles git branching, and uses MCP to push a GitHub PR.
+### Step 1: Initialize the "Soul" (Workspace Config)
+Navigate to your target project directory and run the initialization script:
+`ash
+npx -y github:cloga/optimus-code#main init
+`
+*Auto-Injection Magic:* This will create a local .optimus/ config folder holding your team's prompts, roles, and skills. It will also auto-detect your tools and transparently inject the PM system instructions directly into CLAUDE.md or .github/copilot-instructions.md.
 
----
-
-##  Getting Started
-
-### Option 1: Standalone MCP Plugin (Recommended)
-
-Works with **Claude Code**, **Cursor**, or any MCP-compatible client.
-
-#### Step 1: Install globally
-
-**From GitHub (current):**
-```bash
-npm install -g github:cloga/optimus-code
-```
-
-**From npm (coming soon):**
-```bash
-npm install -g @cloga/optimus-swarm-mcp
-```
-
-#### Step 2: Initialize your workspace
-
-Navigate to your project directory and run:
-
-```bash
-cd your-project
-optimus init
-```
-
-This creates a `.optimus/` directory with:
-- `personas/` — Starter agent personas (architect, pm, dev, qa-engineer)
-- `config/system-instructions.md` — Master workflow rules
-- `tasks/`, `reports/`, `reviews/`, `memory/` — Working directories
-
-#### Step 3: Register the MCP server with your client
+### Step 2: Mount the "Body" (MCP Server)
+Now, hook the Orchestrator Engine to your favorite AI terminal or IDE!
 
 **For Claude Code:**
-```bash
-claude mcp add optimus-facade -- npx @cloga/optimus-swarm-mcp serve
-```
+`ash
+claude mcp add optimus-swarm npx -y github:cloga/optimus-code#main serve
+`
 
-**For Cursor:**
-Add to `.cursor/mcp.json`:
-```json
+**For Cursor / Windsurf / Roo Cline:**
+Add this directly to your MCP Configuration settings (e.g., \.cursor/mcp.json\):
+`json
 {
   "mcpServers": {
-    "optimus-facade": {
+    "optimus-swarm": {
       "command": "npx",
-      "args": ["@cloga/optimus-swarm-mcp", "serve"]
+      "args": ["-y", "github:cloga/optimus-code#main", "serve"]
     }
   }
 }
-```
+`
 
-#### Step 4: Set up environment
-
-Create a `.env` file in your project root with your GitHub token for issue/PR tracking:
-
-```bash
+### Step 3: Set up GitHub Environment (Optional but Recommended)
+For Issue tracking and PR magic, create a .env file in your project root with your GitHub PAT:
+`ash
 GITHUB_TOKEN=ghp_your_token_here
-```
-
-#### Step 5: Start orchestrating!
-
-Open your AI client and try:
-- *"Dispatch a council with architect and qa-engineer to review my authentication design"*
-- *"Create a GitHub Issue to track migrating our CSS to Tailwind"*
+`
 
 ---
 
-### Option 2: VS Code Extension (Legacy)
+##  Alternative: Global Installation
 
-For the integrated VS Code sidebar experience:
+If you prefer to have the binaries installed locally without npx fetching every time:
 
-1. **Clone & Install**:
-   ```bash
-   git clone https://github.com/cloga/optimus-code.git
-   cd optimus-code
-   npm install
-   ```
-2. **Environment Setup**: Configure `.env` with `GITHUB_TOKEN` for native PR tracking.
-3. **Launch**: Press <kbd>F5</kbd> in VS Code to start the Extension Development Host.
-4. **Deploy the Swarm**: Open the **Optimus Code Activity Bar**, type a complex request, and watch the council get to work!
+`ash
+# 1. Install globally
+npm install -g cloga/optimus-code#main
+
+# 2. Init specific workspace
+optimus init
+
+# 3. Add to your MCP client
+claude mcp add optimus-swarm optimus serve
+`
 
 ---
 
 ## CLI Reference
 
-```
-optimus init        Bootstrap .optimus/ workspace in current directory
-optimus serve       Start MCP server (stdio transport)
+`	ext
+optimus init        Bootstrap .optimus/ workspace (rules, roles, skills) in current directory
+optimus serve       Start the pure Node.js MCP server daemon (stdio transport)
 optimus version     Print version
 optimus help        Show help
-```
+`
 
 ---
 
 ##  Try it Yourself! (Test Prompts)
 
-Copy these into the Optimus chat window to test the multi-agent engine:
+Once your MCP server is mounted, type these into your AI prompt window:
 
-- **The Council Test**: *"Design a distributed rate-limiting system for a highly trafficked API using Redis. Let the security and performance agents debate the implementation."*
-- **The SDLC Flow**: *"Create an Epic on GitHub to track migrating our CSS to Tailwind, then open a local PR for the initial config file."*
-- **Agentic File Reading**: *"Analyze the current workspace. Look into the \src/mcp/\ directory and summarize the native Node tools."*
+- **The Architect's Swarm**: *"Use the dispatch_council tool to summon the Chief Architect and QA Engineer to review our PROPOSAL.md."*
+- **Task Delegation**: *"Use the delegate_task tool to assign the PM to create an Issue tracking the migration to Tailwind CSS."*
+- **Roster & Capabilities Check**: *"Run roster_check to see what agents we have available for this project."*
 
 ---
 
