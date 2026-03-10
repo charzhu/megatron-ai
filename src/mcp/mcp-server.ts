@@ -3,6 +3,8 @@ import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js"
 import {
   CallToolRequestSchema,
   ListToolsRequestSchema,
+  ListResourcesRequestSchema,
+  ReadResourceRequestSchema,
   ErrorCode,
   McpError,
 } from "@modelcontextprotocol/sdk/types.js";
@@ -24,10 +26,59 @@ const server = new Server(
   },
   {
     capabilities: {
+      resources: {},
       tools: {},
     },
   }
 );
+
+// 1.5 Register Resources
+server.setRequestHandler(ListResourcesRequestSchema, async () => {
+  return {
+    resources: [
+      {
+        uri: "optimus://system/instructions",
+        name: "Optimus System Instructions",
+        description: "Master workflow protocols and agnostic system instructions for Optimus agents.",
+        mimeType: "text/markdown"
+      }
+    ]
+  };
+});
+
+server.setRequestHandler(ReadResourceRequestSchema, async (request) => {
+  if (request.params.uri === "optimus://system/instructions") {
+    // Resolve workspace path securely
+    const workspacePath = process.env.OPTIMUS_WORKSPACE_ROOT || process.cwd();
+    const instructionsPath = path.resolve(workspacePath, '.optimus', 'config', 'system-instructions.md');
+    
+    // Security check: Ensure it doesn't escape workspace
+    if (!instructionsPath.startsWith(path.resolve(workspacePath))) {
+       throw new McpError(ErrorCode.InvalidRequest, `Path traversal detected`);
+    }
+
+    try {
+      if (fs.existsSync(instructionsPath)) {
+        const content = fs.readFileSync(instructionsPath, 'utf8');
+        return {
+          contents: [
+            {
+              uri: request.params.uri,
+              mimeType: "text/markdown",
+              text: content
+            }
+          ]
+        };
+      } else {
+        // Fallback for transition
+        throw new McpError(ErrorCode.InvalidRequest, `The system-instructions.md file does not exist at ${instructionsPath}`);
+      }
+    } catch (e: any) {
+      throw new McpError(ErrorCode.InternalError, `Failed to read instructions: ${e.message}`);
+    }
+  }
+  throw new McpError(ErrorCode.InvalidRequest, `Resource not found: ${request.params.uri}`);
+});
 
 // 2. Register tools
 server.setRequestHandler(ListToolsRequestSchema, async () => {
