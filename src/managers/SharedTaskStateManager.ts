@@ -776,7 +776,7 @@ export class SharedTaskStateManager {
             const workspaceFolders = vscode.workspace.workspaceFolders;
             if (!workspaceFolders || workspaceFolders.length === 0) { return null; }
             const rootPath = workspaceFolders[0].uri.fsPath;
-            const rulesPath = path.join(rootPath, '.optimus', 'config', 'rules.md');
+            const rulesPath = path.join(rootPath, '.optimus', 'config', 'system-instructions.md');
             
             let rulesContent = "";
             if (fs.existsSync(rulesPath)) {

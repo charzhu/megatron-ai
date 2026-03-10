@@ -35,4 +35,4 @@ Core architecture: VS Code extension with "Council for Planning, Dictator for Ex
 - CI/CD: `.github/workflows/publish.yml`
 
 <!-- updated 2026-03-08 -->
-该项目当前正确的扩展构建流程是 `npm run compile` -> `tsc --noEmit` + `node esbuild.js`，目标产物应为单文件 `out/extension.js`，不应保留旧的 `tsc` 分目录 JS 输出。
+The current correct build pipeline for this extension is `npm run compile` -> `tsc --noEmit` + `node esbuild.js`. The target output must be a single file `out/extension.js`. The old `tsc` separated JS output directories should not be retained.

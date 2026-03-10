@@ -5521,7 +5521,7 @@ Executor outcome: ${outcome}
         return null;
       }
       const rootPath = workspaceFolders[0].uri.fsPath;
-      const rulesPath = path2.join(rootPath, ".optimus", "config", "rules.md");
+      const rulesPath = path2.join(rootPath, ".optimus", "config", "system-instructions.md");
       let rulesContent = "";
       if (fs2.existsSync(rulesPath)) {
         rulesContent += fs2.readFileSync(rulesPath, "utf8") + "\n\n";
