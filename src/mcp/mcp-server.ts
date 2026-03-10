@@ -48,8 +48,39 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
           required: ["owner", "repo", "title", "body"]
         }
       },
-      {
-        name: "github_sync_board",
+        {
+          name: "github_create_pr",
+          description: "Creates a new pull request in a GitHub repository.",
+          inputSchema: {
+            type: "object",
+            properties: {
+              owner: { type: "string" },
+              repo: { type: "string" },
+              title: { type: "string" },
+              head: { type: "string", description: "The name of the branch where your changes are implemented." },
+              base: { type: "string", description: "The name of the branch you want the changes pulled into." },
+              body: { type: "string" }
+            },
+            required: ["owner", "repo", "title", "head", "base"]
+          }
+        },
+        {
+          name: "github_merge_pr",
+          description: "Merges a pull request in a GitHub repository.",
+          inputSchema: {
+            type: "object",
+            properties: {
+              owner: { type: "string" },
+              repo: { type: "string" },
+              pull_number: { type: "number" },
+              commit_title: { type: "string" },
+              merge_method: { type: "string", enum: ["merge", "squash", "rebase"] }
+            },
+            required: ["owner", "repo", "pull_number"]
+          }
+        },,
+        {
+          name: "github_sync_board",
         description: "Fetches open issues from a GitHub repository and dumps them into the local blackboard.",
         inputSchema: {
           type: "object",
@@ -193,7 +224,55 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
       const data: any = await resp.json();
       return { content: [{ type: "text", text: `Issue created: ${data.html_url}` }] };
     } catch (e: any) { throw new McpError(ErrorCode.InternalError, String(e)); }
-  } else if (request.params.name === "github_sync_board") {
+  } else if (request.params.name === "github_create_pr") {
+      const { owner, repo, title, head, base, body } = request.params.arguments as any;
+      const token = process.env.GITHUB_TOKEN || process.env.GH_TOKEN;
+      if (!token) throw new McpError(ErrorCode.InvalidRequest, "GITHUB_TOKEN env is not set");
+      try {
+        const resp = await fetch(`https://api.github.com/repos/${owner}/${repo}/pulls`, {
+          method: "POST",
+          headers: {
+            "Authorization": `Bearer ${token}`,
+            "Accept": "application/vnd.github.v3+json",
+            "Content-Type": "application/json",
+            "User-Agent": "Optimus-Agent"
+          },
+          body: JSON.stringify({ title, head, base, body: body || '' })
+        });
+        if (!resp.ok) {
+          throw new Error('GitHub API Error: ' + await resp.text());
+        }
+        const data = (await resp.json()) as any;
+        return { content: [{ type: "text", text: `Pull request created successfully! PR Number: ${data.number}\nURL: ${data.html_url}` }] };
+      } catch (err: any) {
+        return { content: [{ type: "text", text: `Failed to create PR: ${err.message}` }], isError: true };
+      }
+    } else if (request.params.name === "github_merge_pr") {
+      const { owner, repo, pull_number, commit_title, merge_method } = request.params.arguments as any;
+      const token = process.env.GITHUB_TOKEN || process.env.GH_TOKEN;
+      if (!token) throw new McpError(ErrorCode.InvalidRequest, "GITHUB_TOKEN env is not set");
+      try {
+        const payload: any = { merge_method: merge_method || 'merge' };
+        if (commit_title) payload.commit_title = commit_title;
+        const resp = await fetch(`https://api.github.com/repos/${owner}/${repo}/pulls/${pull_number}/merge`, {
+          method: "PUT",
+          headers: {
+            "Authorization": `Bearer ${token}`,
+            "Accept": "application/vnd.github.v3+json",
+            "Content-Type": "application/json",
+            "User-Agent": "Optimus-Agent"
+          },
+          body: JSON.stringify(payload)
+        });
+        if (!resp.ok) {
+          throw new Error('GitHub API Error: ' + await resp.text());
+        }
+        const data = (await resp.json()) as any;
+        return { content: [{ type: "text", text: `Pull request #${pull_number} merged successfully: ${data.message}` }] };
+      } catch (err: any) {
+        return { content: [{ type: "text", text: `Failed to merge PR: ${err.message}` }], isError: true };
+      }
+    } else if (request.params.name === "github_sync_board") {
     const { owner, repo, workspace_path } = request.params.arguments as any;
     const token = process.env.GITHUB_TOKEN || process.env.GH_TOKEN;
     if (!token) throw new McpError(ErrorCode.InvalidRequest, "GITHUB_TOKEN env is not set");
@@ -274,17 +353,22 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
       content: [{ type: "text", text: roster }]
     };
   } else if (request.params.name === "delegate_task") {
-    const { role, task_description, output_path, workspace_path } = request.params.arguments as any;
-    
-    if (!role || !task_description || !output_path || !workspace_path) {
-      throw new McpError(ErrorCode.InvalidParams, "Invalid arguments: requires role, task_description, output_path, and workspace_path");
+    const { role, task_description, output_path } = request.params.arguments as any;
+    let workspace_path = (request.params.arguments as any).workspace_path;
+
+    if (!role || !task_description || !output_path) {
+      throw new McpError(ErrorCode.InvalidParams, "Invalid arguments: requires role, task_description, output_path");
     }
 
-    const sessionId = crypto.randomUUID();
+    if (!workspace_path) {
+       // fallback to project root based on output_path or cwd
+       workspace_path = process.cwd();
+       if (output_path.includes("optimus-code")) {
+         workspace_path = output_path.split("optimus-code")[0] + "optimus-code";
+       }
+    }
     
-    // Use the explicit workspace_path to guarantee all artifacts land inside .optimus/.
-    // Previously, workspace was inferred from output_path which broke when callers supplied
-    // relative paths like "./qa_report.md" (path.resolve(dirname, "..") would escape the project).
+    const sessionId = crypto.randomUUID();
     const workspacePath = workspace_path;
 
     // Canonicalize output_path: if it does not already live under this workspace's .optimus/,
