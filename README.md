@@ -49,8 +49,14 @@ Every complex task flows through our unified two-stage pipeline:
 
 Works with **Claude Code**, **Cursor**, or any MCP-compatible client.
 
-#### Step 1: Install globally via npm
+#### Step 1: Install globally
 
+**From GitHub (current):**
+```bash
+npm install -g github:cloga/optimus-code
+```
+
+**From npm (coming soon):**
 ```bash
 npm install -g @cloga/optimus-swarm-mcp
 ```
