@@ -11,7 +11,8 @@
     "build": "node esbuild.plugin.js",
     "build:production": "node esbuild.plugin.js --production",
     "prepublishOnly": "npm run build:production",
-    "postinstall": "node scripts/postinstall.js"
+    "postinstall": "node scripts/postinstall.js",
+    "prepare": "npm run build:production"
   },
   "files": [
     "dist/",
@@ -23,7 +24,13 @@
     ".mcp.json",
     ".claude-plugin/"
   ],
-  "keywords": ["claude-code", "mcp", "multi-agent", "swarm", "orchestrator"],
+  "keywords": [
+    "claude-code",
+    "mcp",
+    "multi-agent",
+    "swarm",
+    "orchestrator"
+  ],
   "license": "MIT",
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.27.1",
