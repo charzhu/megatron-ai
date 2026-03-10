@@ -39,11 +39,23 @@ module.exports = function init() {
 
   console.log('\n🤖 Optimus Swarm — Initializing workspace...\n');
 
+  // 0. Perform V3 Architecture Migrations
+  const legacyPersonasDir = path.join(optimusDir, 'personas');
+  const newAgentsDir = path.join(optimusDir, 'agents');
+  if (fs.existsSync(legacyPersonasDir) && !fs.existsSync(newAgentsDir)) {
+    try {
+      fs.renameSync(legacyPersonasDir, newAgentsDir);
+      console.log('  🔄 Migrated legacy .optimus/personas/ to .optimus/agents/');
+    } catch(e) {
+      console.error('  ⚠️ Failed to migrate legacy personas folder:', e.message);
+    }
+  }
+
   // 1. Create required subdirectories
-  // Most personas/agents are auto-generated at runtime via the T3→T1 Cascade.
+  // Most agents are auto-generated at runtime via the T3→T2→T1 Cascade.
   // Only the PM (Master Agent) is pre-installed — it bootstraps the entire
   // workflow and cannot be dynamically generated since it's the entry point.
-  const dirs = ['personas', 'config', 'skills', 'agents', 'tasks', 'reports', 'reviews', 'memory', 'state'];
+  const dirs = ['config', 'skills', 'agents', 'tasks', 'reports', 'reviews', 'memory', 'state'];
   for (const dir of dirs) {
     const dirPath = path.join(optimusDir, dir);
     if (!fs.existsSync(dirPath)) {
@@ -59,11 +71,11 @@ module.exports = function init() {
     copyDirRecursive(configSrc, path.join(optimusDir, 'config'));
   }
 
-  // 2.5 Install bootstrap personas (PM is mandatory — it's the Master Agent)
-  const bootstrapPersonas = path.join(scaffoldDir, 'personas');
-  if (fs.existsSync(bootstrapPersonas)) {
-    console.log('\n👔 Installing bootstrap persona (PM - Master Agent)...');
-    copyDirRecursive(bootstrapPersonas, path.join(optimusDir, 'personas'));
+  // 2.5 Install bootstrap agents (PM is mandatory — it's the Master Agent)
+  const bootstrapAgents = path.join(scaffoldDir, 'roles');
+  if (fs.existsSync(bootstrapAgents)) {
+    console.log('\n👔 Installing bootstrap Agent (PM - Master Agent)...');
+    copyDirRecursive(bootstrapAgents, path.join(optimusDir, 'agents'));
   }
 
   // 3. Copy plugin skills — these are the CORE deliverable.

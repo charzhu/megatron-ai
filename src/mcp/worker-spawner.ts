@@ -5,20 +5,29 @@ import { GitHubCopilotAdapter } from "../adapters/GitHubCopilotAdapter";
 /**
  * Executes a single task delegation synchronously.
  */
-export async function delegateTaskSingle(role: string, taskPath: string, outputPath: string, sessionId: string, workspacePath: string): Promise<string> {
-    const t1Path = path.join(workspacePath, '.optimus', 'personas', `${role}.md`);
-    const t2Path = path.join(__dirname, '..', '..', 'optimus-plugin', 'agents', `${role}.md`);
+export async function delegateTaskSingle(roleArg: string, taskPath: string, outputPath: string, sessionId: string, workspacePath: string): Promise<string> {
+    const role = path.basename(roleArg); // Prevent path traversal
+    
+    // Auto-migrate legacy folder `.optimus/personas` to `.optimus/agents`
+    const legacyT1Dir = path.join(workspacePath, '.optimus', 'personas');
+    const t1Dir = path.join(workspacePath, '.optimus', 'agents');
+    if (fs.existsSync(legacyT1Dir) && !fs.existsSync(t1Dir)) {
+        try { fs.renameSync(legacyT1Dir, t1Dir); } catch(e) {}
+    }
+    
+    const t1Path = path.join(t1Dir, `${role}.md`);
+    const t2Path = path.join(__dirname, '..', '..', 'optimus-plugin', 'roles', `${role}.md`);
 
     let resolvedTier = 'T3 (Zero-Shot Outsource)';
-    let personaProof = 'No dedicated persona file found. Using generic specialized prompt.';
+    let personaProof = 'No dedicated role template found in T2 or T1. Using T3 generic prompt.';
     let shouldLocalize = false;
 
     if (fs.existsSync(t1Path)) {
-      resolvedTier = `T1 (Local Project Expert -> ${role}.md)`;
-      personaProof = `Found local project override: ${t1Path}`;
+      resolvedTier = `T1 (Agent Instance -> ${role}.md)`;
+      personaProof = `Found local project agent state: ${t1Path}`;
     } else if (fs.existsSync(t2Path)) {
-      resolvedTier = `T2 (Global Spartan Regular -> ${role}.md)`;
-      personaProof = `Found globally promoted plugin rules: ${t2Path}`;
+      resolvedTier = `T2 (Role Template -> ${role}.md)`;
+      personaProof = `Found globally promoted Role template: ${t2Path}`;
       shouldLocalize = true;
     }
 
@@ -26,12 +35,22 @@ export async function delegateTaskSingle(role: string, taskPath: string, outputP
     console.error(`[Orchestrator] Selected Stratum: ${resolvedTier}`);
 
     if (shouldLocalize) {
-      const t1Dir = path.dirname(t1Path);
       if (!fs.existsSync(t1Dir)) fs.mkdirSync(t1Dir, { recursive: true });
       try {
-        fs.writeFileSync(t1Path, fs.readFileSync(t2Path, 'utf8'));
-      } catch (e) {
-        // ignore if not found
+        const t2Content = fs.readFileSync(t2Path, 'utf8');
+        // Atomic create-exclusive to prevent concurrent overwrite
+        const fd = fs.openSync(t1Path, 'wx');
+        const defaultMemory = `\n\n## Project Memory\n*Agent T1 Instantiated on ${new Date().toISOString()}*\n- (No memory appended yet)\n`;
+        fs.writeFileSync(fd, t2Content + defaultMemory, 'utf8');
+        fs.closeSync(fd);
+        console.error(`[Orchestrator] Promoted T2 to T1: ${t1Path}`);
+      } catch (e: any) {
+        if (e.code === 'EEXIST') {
+          console.error(`[Orchestrator] T1 promotion skipped (already done by another worker).`);
+        } else {
+          console.error(`[Orchestrator] T1 promotion failed:`, e);
+          resolvedTier = 'T3 (Zero-Shot Outsource) [T2 read failed]';
+        }
       }
     }
 
