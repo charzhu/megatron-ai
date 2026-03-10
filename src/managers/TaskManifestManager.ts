@@ -4,7 +4,7 @@ import * as path from 'path';
 export interface TaskRecord {
     taskId: string;
     type: 'delegate_task' | 'dispatch_council';
-    status: 'pending' | 'running' | 'completed' | 'failed';
+    status: 'pending' | 'running' | 'completed' | 'partial' | 'verified' | 'failed';
     role?: string;
     roles?: string[];
     task_description?: string;
@@ -13,6 +13,7 @@ export interface TaskRecord {
     output_path?: string;
     pid?: number;
     error_message?: string;
+    github_issue_number?: number;
     startTime: number;
     heartbeatTime: number;
     workspacePath: string;
