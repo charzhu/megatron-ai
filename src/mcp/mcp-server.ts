@@ -647,14 +647,29 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
   throw new McpError(ErrorCode.MethodNotFound, `Unknown tool: ${request.params.name}`);
 });
 
-// 4. Start standard stdio transport
-async function main() {
-  const transport = new StdioServerTransport();
-  await server.connect(transport);
-  console.error("Optimus Spartan Swarm MCP server running on stdio");
-}
+// 4. CLI entry point: either run as MCP server or as async task runner
+if (process.argv.includes("--run-task")) {
+  const idx = process.argv.indexOf("--run-task");
+  const taskId = process.argv[idx + 1];
+  const workspacePath = process.argv[idx + 2];
+  if (!taskId || !workspacePath) {
+    console.error("[Runner] Usage: --run-task <taskId> <workspacePath>");
+    process.exit(1);
+  }
+  runAsyncWorker(taskId, workspacePath).catch((err) => {
+    console.error("[Runner] Fatal:", err);
+    process.exit(1);
+  });
+} else {
+  // Standard MCP stdio transport
+  async function main() {
+    const transport = new StdioServerTransport();
+    await server.connect(transport);
+    console.error("Optimus Spartan Swarm MCP server running on stdio");
+  }
 
-main().catch((error) => {
-  console.error("Server error:", error);
-  process.exit(1);
-});
+  main().catch((error) => {
+    console.error("Server error:", error);
+    process.exit(1);
+  });
+}
