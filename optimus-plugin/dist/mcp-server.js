@@ -1781,6 +1781,31 @@ function ensureT2Role(workspacePath, role, engine, model, masterInfo) {
     }
     return null;
   }
+  const pluginRolePaths = [
+    import_path.default.join(__dirname, "..", "..", "roles", `${safeRole}.md`),
+    // from dist/
+    import_path.default.join(__dirname, "..", "..", "..", "optimus-plugin", "roles", `${safeRole}.md`)
+    // from src/mcp/
+  ];
+  for (const pluginPath of pluginRolePaths) {
+    try {
+      if (import_fs.default.existsSync(pluginPath)) {
+        const pluginContent = import_fs.default.readFileSync(pluginPath, "utf8");
+        let finalContent = pluginContent;
+        const updates = {};
+        if (eng) updates.engine = eng;
+        if (mod) updates.model = mod;
+        updates.precipitated = (/* @__PURE__ */ new Date()).toISOString();
+        if (Object.keys(updates).length > 0) {
+          finalContent = updateFrontmatter(pluginContent, updates);
+        }
+        import_fs.default.writeFileSync(t2Path, finalContent, "utf8");
+        console.error(`[Precipitation] T3 role '${safeRole}' promoted to T2 from plugin template at ${t2Path}`);
+        return t2Path;
+      }
+    } catch {
+    }
+  }
   const template = `---
 role: ${safeRole}
 tier: T2

@@ -166,7 +166,34 @@ function ensureT2Role(workspacePath: string, role: string, engine: string, model
         return null; // Not a new creation
     }
 
-    // T2 does not exist — create from Master info
+    // T2 does not exist — check for pre-installed plugin role template first
+    // Plugin roles ship in optimus-plugin/roles/ and provide rich persona definitions.
+    // This avoids generating thin one-liner T2s for well-known roles like architect, pm, qa-engineer.
+    const pluginRolePaths = [
+        path.join(__dirname, '..', '..', 'roles', `${safeRole}.md`),         // from dist/
+        path.join(__dirname, '..', '..', '..', 'optimus-plugin', 'roles', `${safeRole}.md`), // from src/mcp/
+    ];
+    for (const pluginPath of pluginRolePaths) {
+        try {
+            if (fs.existsSync(pluginPath)) {
+                const pluginContent = fs.readFileSync(pluginPath, 'utf8');
+                // Update engine/model from Master info before writing
+                let finalContent = pluginContent;
+                const updates: Record<string, string> = {};
+                if (eng) updates.engine = eng;
+                if (mod) updates.model = mod;
+                updates.precipitated = new Date().toISOString();
+                if (Object.keys(updates).length > 0) {
+                    finalContent = updateFrontmatter(pluginContent, updates);
+                }
+                fs.writeFileSync(t2Path, finalContent, 'utf8');
+                console.error(`[Precipitation] T3 role '${safeRole}' promoted to T2 from plugin template at ${t2Path}`);
+                return t2Path;
+            }
+        } catch {}
+    }
+
+    // No plugin template found — create minimal T2 from Master-provided description
     const template = `---
 role: ${safeRole}
 tier: T2

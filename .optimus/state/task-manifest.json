@@ -795,5 +795,23 @@
     "startTime": 1773245706365,
     "heartbeatTime": 1773245766843,
     "pid": 149448
+  },
+  "council_1773246307474_nwy861": {
+    "taskId": "council_1773246307474_nwy861",
+    "type": "dispatch_council",
+    "roles": [
+      "pm",
+      "developer-experience-expert",
+      "prompt-engineering-lead",
+      "copywriter",
+      "architect"
+    ],
+    "proposal_path": ".optimus/skills/skill-registrar/SKILL.md",
+    "output_path": "C:\\Users\\lochen\\optimus-code\\.optimus\\reviews\\council_1773246307474_nwy861",
+    "workspacePath": "C:\\Users\\lochen\\optimus-code",
+    "status": "degraded",
+    "startTime": 1773246307475,
+    "heartbeatTime": 1773246367957,
+    "pid": 34936
   }
 }

@@ -28,12 +28,12 @@
   },
   "developer-experience-expert": {
     "role": "developer-experience-expert",
-    "invocations": 1,
-    "successes": 1,
+    "invocations": 2,
+    "successes": 2,
     "failures": 0,
-    "lastUsed": "2026-03-11T02:56:24.262Z",
+    "lastUsed": "2026-03-11T16:25:09.001Z",
     "engine": "claude-code",
-    "model": "gemini-3.0-pro"
+    "model": "gemini-3-pro-preview"
   },
   "claude-code-opus-461m": {
     "role": "claude-code-opus-461m",
@@ -82,12 +82,12 @@
   },
   "prompt-engineering-lead": {
     "role": "prompt-engineering-lead",
-    "invocations": 6,
-    "successes": 1,
+    "invocations": 7,
+    "successes": 2,
     "failures": 5,
-    "lastUsed": "2026-03-11T14:32:56.045Z",
-    "engine": "github-copilot",
-    "model": "gemini-3.0-pro"
+    "lastUsed": "2026-03-11T16:25:09.004Z",
+    "engine": "claude-code",
+    "model": "gemini-3-pro-preview"
   },
   "terminal-test-agent": {
     "role": "terminal-test-agent",
@@ -186,5 +186,23 @@
     "failures": 0,
     "lastUsed": "2026-03-11T16:16:31.833Z",
     "engine": "claude-code"
+  },
+  "copywriter": {
+    "role": "copywriter",
+    "invocations": 1,
+    "successes": 1,
+    "failures": 0,
+    "lastUsed": "2026-03-11T16:25:09.006Z",
+    "engine": "claude-code",
+    "model": "gemini-3-pro-preview"
+  },
+  "architect": {
+    "role": "architect",
+    "invocations": 1,
+    "successes": 1,
+    "failures": 0,
+    "lastUsed": "2026-03-11T16:25:40.779Z",
+    "engine": "claude-code",
+    "model": "gemini-3-pro-preview"
   }
 }

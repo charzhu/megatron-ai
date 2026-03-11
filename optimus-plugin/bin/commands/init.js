@@ -71,10 +71,15 @@ module.exports = function init() {
     copyDirRecursive(configSrc, path.join(optimusDir, 'config'));
   }
 
-  // 2.5 No bootstrap roles/agents are pre-installed.
-  // The system defaults to PM (Master Agent) behavior when no roles exist.
-  // All roles are created dynamically via T3→T2→T1 cascade at runtime,
-  // or manually by the user. The fallback is hardcoded in worker-spawner.
+  // 2.5 Copy plugin roles as starter T2 templates.
+  // These provide rich persona definitions for common roles (architect, pm, qa-engineer, etc.)
+  // so that council reviews and delegations have meaningful agent context from day one.
+  // Roles are only copied if they don't already exist (won't overwrite user customizations).
+  const rolesSrc = path.join(pluginRoot, 'roles');
+  if (fs.existsSync(rolesSrc)) {
+    console.log('\n👥 Installing starter role templates (T2 personas)...');
+    copyDirRecursive(rolesSrc, path.join(optimusDir, 'roles'));
+  }
 
   // 3. Copy plugin skills — these are the CORE deliverable.
   // Skills teach the AI how to use MCP tools (dispatch_council, delegate_task, etc.)
