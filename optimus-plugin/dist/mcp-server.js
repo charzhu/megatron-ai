@@ -1598,6 +1598,9 @@ var ClaudeCodeAdapter = class extends PersistentAgentAdapter {
       try {
         let mcpContent = fs7.readFileSync(localMcpPath, "utf8");
         mcpContent = mcpContent.replace(/\$\{workspaceFolder\}/g, cwd.replace(/\\/g, "/"));
+        mcpContent = mcpContent.replace(/\$\{env:(\w+)\}/g, (_, varName) => {
+          return (process.env[varName] || "").replace(/\\/g, "/");
+        });
         const localMcp = JSON.parse(mcpContent);
         const claudeMcp = { mcpServers: localMcp.servers || localMcp.mcpServers || {} };
         const proxyMcpPath = path7.join(cwd, ".optimus", ".claude-mcp.json");

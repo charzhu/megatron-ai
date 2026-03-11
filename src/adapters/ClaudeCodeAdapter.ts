@@ -66,6 +66,10 @@ export class ClaudeCodeAdapter extends PersistentAgentAdapter {
                 let mcpContent = fs.readFileSync(localMcpPath, 'utf8');
                 // Replace VS Code specific macros with absolute paths so Claude can execute them
                 mcpContent = mcpContent.replace(/\$\{workspaceFolder\}/g, cwd.replace(/\\/g, '/'));
+                // Replace ${env:VAR} patterns with actual environment variable values
+                mcpContent = mcpContent.replace(/\$\{env:(\w+)\}/g, (_: string, varName: string) => {
+                    return (process.env[varName] || '').replace(/\\/g, '/');
+                });
                 const localMcp = JSON.parse(mcpContent);
                 // Normalize "servers" -> "mcpServers" for Claude
                 const claudeMcp = { mcpServers: localMcp.servers || localMcp.mcpServers || {} };
