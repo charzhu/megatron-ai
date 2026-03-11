@@ -105,7 +105,7 @@ function trackT3Usage(workspacePath: string, role: string, success: boolean, eng
  * Precipitate a T3 role to T2 immediately on first use if no T2 exists.
  * This ensures every T3 dynamic role gets a persistent template.
  */
-function checkAndPrecipitate(workspacePath: string, role: string, engine: string, model?: string): string | null {
+function checkAndPrecipitate(workspacePath: string, role: string, engine: string, model?: string, taskDescription?: string): string | null {
     const safeRole = sanitizeRoleName(role);
 
     const t2Dir = path.join(workspacePath, '.optimus', 'roles');
@@ -119,10 +119,15 @@ function checkAndPrecipitate(workspacePath: string, role: string, engine: string
         .map(word => word.charAt(0).toUpperCase() + word.slice(1))
         .join(' ');
 
+    // Extract a short description from the task that created this role
+    const descLine = taskDescription
+        ? taskDescription.split('\n').filter(l => l.trim()).slice(0, 2).join(' ').substring(0, 200)
+        : `${formattedRole} expert`;
+
     const template = `---
 role: ${safeRole}
 tier: T2
-description: "Auto-precipitated from T3 on first use"
+description: "${descLine.replace(/"/g, "'")}"
 engine: ${engine}
 model: ${model || ''}
 precipitated: ${new Date().toISOString()}
@@ -132,6 +137,9 @@ precipitated: ${new Date().toISOString()}
 
 You are a **${formattedRole}** expert operating within the Optimus Spartan Swarm.
 This role was automatically promoted from T3 (dynamic outsourcing) to T2 (project default).
+
+## Original Task Context
+${taskDescription ? taskDescription.substring(0, 500) : 'No task description provided.'}
 
 Apply industry best practices, solve complex problems, and deliver professional-grade results within your specialized domain of expertise.
 `;
@@ -470,7 +478,7 @@ Please provide your complete execution result below.`;
         // --- T3 Usage Tracking & Auto-Precipitation ---
         if (isT3) {
             trackT3Usage(workspacePath, role, true, activeEngine, activeModel);
-            const precipitated = checkAndPrecipitate(workspacePath, role, activeEngine, activeModel);
+            const precipitated = checkAndPrecipitate(workspacePath, role, activeEngine, activeModel, taskText);
             if (precipitated) {
                 return `✅ **Task Delegation Successful**\n\n**Agent Identity Resolved**: ${resolvedTier}\n**Engine**: ${activeEngine}\n**Session ID**: ${adapter.lastSessionId || 'Ephemeral'}\n\n**System Note**: ${personaProof}\n\n🎉 **Precipitation**: T3 role \`${role}\` has been auto-promoted to T2! Template created at \`${precipitated}\`.\n\nAgent has finished execution. Check standard output at \`${outputPath}\`.`;
             }

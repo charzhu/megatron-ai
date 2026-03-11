@@ -1282,17 +1282,18 @@ function trackT3Usage(workspacePath, role, success, engine, model) {
   }).catch(() => {
   });
 }
-function checkAndPrecipitate(workspacePath, role, engine, model) {
+function checkAndPrecipitate(workspacePath, role, engine, model, taskDescription) {
   const safeRole = sanitizeRoleName(role);
   const t2Dir = import_path.default.join(workspacePath, ".optimus", "roles");
   const t2Path = import_path.default.join(t2Dir, `${safeRole}.md`);
   if (import_fs.default.existsSync(t2Path)) return null;
   if (!import_fs.default.existsSync(t2Dir)) import_fs.default.mkdirSync(t2Dir, { recursive: true });
   const formattedRole = safeRole.split(/[-_]+/).map((word) => word.charAt(0).toUpperCase() + word.slice(1)).join(" ");
+  const descLine = taskDescription ? taskDescription.split("\n").filter((l) => l.trim()).slice(0, 2).join(" ").substring(0, 200) : `${formattedRole} expert`;
   const template = `---
 role: ${safeRole}
 tier: T2
-description: "Auto-precipitated from T3 on first use"
+description: "${descLine.replace(/"/g, "'")}"
 engine: ${engine}
 model: ${model || ""}
 precipitated: ${(/* @__PURE__ */ new Date()).toISOString()}
@@ -1302,6 +1303,9 @@ precipitated: ${(/* @__PURE__ */ new Date()).toISOString()}
 
 You are a **${formattedRole}** expert operating within the Optimus Spartan Swarm.
 This role was automatically promoted from T3 (dynamic outsourcing) to T2 (project default).
+
+## Original Task Context
+${taskDescription ? taskDescription.substring(0, 500) : "No task description provided."}
 
 Apply industry best practices, solve complex problems, and deliver professional-grade results within your specialized domain of expertise.
 `;
@@ -1602,7 +1606,7 @@ role: ${role}
     import_fs.default.writeFileSync(outputPath, response, "utf8");
     if (isT3) {
       trackT3Usage(workspacePath, role, true, activeEngine, activeModel);
-      const precipitated = checkAndPrecipitate(workspacePath, role, activeEngine, activeModel);
+      const precipitated = checkAndPrecipitate(workspacePath, role, activeEngine, activeModel, taskText);
       if (precipitated) {
         return `\u2705 **Task Delegation Successful**
 
