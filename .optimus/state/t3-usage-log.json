@@ -1,11 +1,12 @@
 {
   "dev": {
     "role": "dev",
-    "invocations": 1,
+    "invocations": 2,
     "successes": 1,
-    "failures": 0,
-    "lastUsed": "2026-03-11T01:29:01.234Z",
-    "engine": "claude-code"
+    "failures": 1,
+    "lastUsed": "2026-03-11T14:21:48.511Z",
+    "engine": "github-copilot",
+    "model": "gemini-3.0-pro"
   },
   "distributed-systems-expert": {
     "role": "distributed-systems-expert",
@@ -63,29 +64,29 @@
   },
   "mcp-schema-architect": {
     "role": "mcp-schema-architect",
-    "invocations": 1,
+    "invocations": 3,
     "successes": 1,
-    "failures": 0,
-    "lastUsed": "2026-03-11T03:19:59.878Z",
-    "engine": "claude-code",
+    "failures": 2,
+    "lastUsed": "2026-03-11T14:25:19.379Z",
+    "engine": "github-copilot",
     "model": "gemini-3.0-pro"
   },
   "runtime-validation-expert": {
     "role": "runtime-validation-expert",
-    "invocations": 1,
+    "invocations": 3,
     "successes": 1,
-    "failures": 0,
-    "lastUsed": "2026-03-11T03:20:00.912Z",
-    "engine": "claude-code",
+    "failures": 2,
+    "lastUsed": "2026-03-11T14:25:20.745Z",
+    "engine": "github-copilot",
     "model": "gemini-3.0-pro"
   },
   "prompt-engineering-lead": {
     "role": "prompt-engineering-lead",
-    "invocations": 1,
+    "invocations": 6,
     "successes": 1,
-    "failures": 0,
-    "lastUsed": "2026-03-11T03:20:02.634Z",
-    "engine": "claude-code",
+    "failures": 5,
+    "lastUsed": "2026-03-11T14:32:56.045Z",
+    "engine": "github-copilot",
     "model": "gemini-3.0-pro"
   },
   "terminal-test-agent": {
@@ -99,29 +100,29 @@
   },
   "autonomous-loop-visionary": {
     "role": "autonomous-loop-visionary",
-    "invocations": 1,
+    "invocations": 2,
     "successes": 1,
-    "failures": 0,
-    "lastUsed": "2026-03-11T03:49:00.896Z",
-    "engine": "claude-code",
+    "failures": 1,
+    "lastUsed": "2026-03-11T14:23:19.666Z",
+    "engine": "github-copilot",
     "model": "gemini-3.0-pro"
   },
   "meta-system-architect": {
     "role": "meta-system-architect",
-    "invocations": 1,
+    "invocations": 2,
     "successes": 1,
-    "failures": 0,
-    "lastUsed": "2026-03-11T03:49:06.198Z",
-    "engine": "claude-code",
+    "failures": 1,
+    "lastUsed": "2026-03-11T14:23:16.754Z",
+    "engine": "github-copilot",
     "model": "gemini-3.0-pro"
   },
   "framework-evolution-expert": {
     "role": "framework-evolution-expert",
-    "invocations": 1,
+    "invocations": 2,
     "successes": 1,
-    "failures": 0,
-    "lastUsed": "2026-03-11T03:49:23.814Z",
-    "engine": "claude-code",
+    "failures": 1,
+    "lastUsed": "2026-03-11T14:23:18.235Z",
+    "engine": "github-copilot",
     "model": "gemini-3.0-pro"
   },
   "ado-integration-specialist": {
@@ -149,6 +150,24 @@
     "failures": 0,
     "lastUsed": "2026-03-11T06:50:57.947Z",
     "engine": "claude-code",
+    "model": "gemini-3.0-pro"
+  },
+  "chief-architect": {
+    "role": "chief-architect",
+    "invocations": 2,
+    "successes": 0,
+    "failures": 2,
+    "lastUsed": "2026-03-11T14:25:19.408Z",
+    "engine": "github-copilot",
+    "model": "gemini-3.0-pro"
+  },
+  "security": {
+    "role": "security",
+    "invocations": 2,
+    "successes": 0,
+    "failures": 2,
+    "lastUsed": "2026-03-11T14:25:20.768Z",
+    "engine": "github-copilot",
     "model": "gemini-3.0-pro"
   }
 }

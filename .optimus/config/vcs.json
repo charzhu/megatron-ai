@@ -1,0 +1,8 @@
+{
+  "provider": "github",
+  "github": {
+    "auth": "env:GITHUB_TOKEN",
+    "owner": "cloga",
+    "repo": "optimus-code"
+  }
+}

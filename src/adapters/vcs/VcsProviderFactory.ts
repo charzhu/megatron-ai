@@ -141,7 +141,7 @@ export class VcsProviderFactory {
             }).trim();
 
             // Parse HTTPS URL: https://github.com/owner/repo.git
-            const httpsMatch = remoteUrl.match(/github\\.com[/:]([^/]+)\\/([^/.]+)/);
+            const httpsMatch = remoteUrl.match(/github\.com[\/:]+([^\/]+)\/([^\/.]+)/);
             if (httpsMatch) {
                 return {
                     owner: httpsMatch[1],
@@ -174,7 +174,7 @@ export class VcsProviderFactory {
             // Parse Azure DevOps URL patterns:
             // https://dev.azure.com/organization/project/_git/repo
             // https://organization.visualstudio.com/project/_git/repo
-            let match = remoteUrl.match(/dev\\.azure\\.com[/:]([^/]+)\\/([^/_]+)/);
+            let match = remoteUrl.match(/dev\.azure\.com[\/:]([^\/]+)\/([^\/_]+)/);
             if (match) {
                 return {
                     organization: match[1],
@@ -182,7 +182,7 @@ export class VcsProviderFactory {
                 };
             }
 
-            match = remoteUrl.match(/([^.]+)\\.visualstudio\\.com[/:]([^/_]+)/);
+            match = remoteUrl.match(/([^.]+)\.visualstudio\.com[\/:]([^\/_]+)/);
             if (match) {
                 return {
                     organization: match[1],

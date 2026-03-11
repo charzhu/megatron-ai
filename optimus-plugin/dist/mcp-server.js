@@ -5,6 +5,13 @@ var __getOwnPropDesc = Object.getOwnPropertyDescriptor;
 var __getOwnPropNames = Object.getOwnPropertyNames;
 var __getProtoOf = Object.getPrototypeOf;
 var __hasOwnProp = Object.prototype.hasOwnProperty;
+var __esm = (fn, res) => function __init() {
+  return fn && (res = (0, fn[__getOwnPropNames(fn)[0]])(fn = 0)), res;
+};
+var __export = (target, all) => {
+  for (var name in all)
+    __defProp(target, name, { get: all[name], enumerable: true });
+};
 var __copyProps = (to, from, except, desc) => {
   if (from && typeof from === "object" || typeof from === "function") {
     for (let key of __getOwnPropNames(from))
@@ -21,6 +28,443 @@ var __toESM = (mod, isNodeMode, target) => (target = mod != null ? __create(__ge
   isNodeMode || !mod || !mod.__esModule ? __defProp(target, "default", { value: mod, enumerable: true }) : target,
   mod
 ));
+
+// ../src/adapters/vcs/GitHubProvider.ts
+var GitHubProvider_exports = {};
+__export(GitHubProvider_exports, {
+  GitHubProvider: () => GitHubProvider
+});
+var GitHubProvider;
+var init_GitHubProvider = __esm({
+  "../src/adapters/vcs/GitHubProvider.ts"() {
+    "use strict";
+    GitHubProvider = class {
+      owner;
+      repo;
+      constructor(owner, repo) {
+        this.owner = owner;
+        this.repo = repo;
+      }
+      async createWorkItem(title, body, labels, workItemType) {
+        const token = this.getToken();
+        if (!token) {
+          throw new Error("GitHub token not found in environment variables");
+        }
+        const taggedTitle = title.startsWith("[Optimus]") ? title : `[Optimus] ${title}`;
+        const issueLabels = Array.isArray(labels) ? [...labels] : [];
+        if (!issueLabels.includes("optimus-bot")) {
+          issueLabels.push("optimus-bot");
+        }
+        try {
+          const response = await fetch(`https://api.github.com/repos/${this.owner}/${this.repo}/issues`, {
+            method: "POST",
+            headers: {
+              "Authorization": `Bearer ${token}`,
+              "Accept": "application/vnd.github.v3+json",
+              "Content-Type": "application/json",
+              "User-Agent": "Optimus-Agent"
+            },
+            body: JSON.stringify({
+              title: taggedTitle,
+              body,
+              labels: issueLabels
+            })
+          });
+          if (!response.ok) {
+            throw new Error(`GitHub API error: ${response.status} ${await response.text()}`);
+          }
+          const data = await response.json();
+          return {
+            id: data.id.toString(),
+            number: data.number,
+            url: data.html_url,
+            title: data.title
+          };
+        } catch (error) {
+          throw new Error(`Failed to create GitHub issue: ${error.message}`);
+        }
+      }
+      async createPullRequest(title, body, head, base) {
+        const token = this.getToken();
+        if (!token) {
+          throw new Error("GitHub token not found in environment variables");
+        }
+        const taggedTitle = title.startsWith("[Optimus]") ? title : `[Optimus] ${title}`;
+        try {
+          const response = await fetch(`https://api.github.com/repos/${this.owner}/${this.repo}/pulls`, {
+            method: "POST",
+            headers: {
+              "Authorization": `Bearer ${token}`,
+              "Accept": "application/vnd.github.v3+json",
+              "Content-Type": "application/json",
+              "User-Agent": "Optimus-Agent"
+            },
+            body: JSON.stringify({
+              title: taggedTitle,
+              head,
+              base,
+              body: body || ""
+            })
+          });
+          if (!response.ok) {
+            throw new Error(`GitHub API error: ${response.status} ${await response.text()}`);
+          }
+          const data = await response.json();
+          try {
+            await fetch(`https://api.github.com/repos/${this.owner}/${this.repo}/issues/${data.number}/labels`, {
+              method: "POST",
+              headers: {
+                "Authorization": `Bearer ${token}`,
+                "Accept": "application/vnd.github.v3+json",
+                "Content-Type": "application/json",
+                "User-Agent": "Optimus-Agent"
+              },
+              body: JSON.stringify({ labels: ["optimus-bot"] })
+            });
+          } catch {
+          }
+          return {
+            id: data.id.toString(),
+            number: data.number,
+            url: data.html_url,
+            title: data.title
+          };
+        } catch (error) {
+          throw new Error(`Failed to create GitHub pull request: ${error.message}`);
+        }
+      }
+      async mergePullRequest(pullRequestId, commitTitle, mergeMethod = "merge") {
+        const token = this.getToken();
+        if (!token) {
+          throw new Error("GitHub token not found in environment variables");
+        }
+        const prNumber = typeof pullRequestId === "string" ? parseInt(pullRequestId) : pullRequestId;
+        try {
+          const payload = { merge_method: mergeMethod };
+          if (commitTitle) {
+            payload.commit_title = commitTitle;
+          }
+          const response = await fetch(`https://api.github.com/repos/${this.owner}/${this.repo}/pulls/${prNumber}/merge`, {
+            method: "PUT",
+            headers: {
+              "Authorization": `Bearer ${token}`,
+              "Accept": "application/vnd.github.v3+json",
+              "Content-Type": "application/json",
+              "User-Agent": "Optimus-Agent"
+            },
+            body: JSON.stringify(payload)
+          });
+          return response.ok;
+        } catch {
+          return false;
+        }
+      }
+      async addComment(itemType, itemId, comment) {
+        const token = this.getToken();
+        if (!token) {
+          throw new Error("GitHub token not found in environment variables");
+        }
+        const id = typeof itemId === "string" ? parseInt(itemId) : itemId;
+        try {
+          const response = await fetch(`https://api.github.com/repos/${this.owner}/${this.repo}/issues/${id}/comments`, {
+            method: "POST",
+            headers: {
+              "Authorization": `Bearer ${token}`,
+              "Accept": "application/vnd.github.v3+json",
+              "Content-Type": "application/json",
+              "User-Agent": "Optimus-Agent"
+            },
+            body: JSON.stringify({ body: comment })
+          });
+          if (!response.ok) {
+            throw new Error(`GitHub API error: ${response.status} ${await response.text()}`);
+          }
+          const data = await response.json();
+          return {
+            id: data.id.toString(),
+            url: data.html_url
+          };
+        } catch (error) {
+          throw new Error(`Failed to add GitHub comment: ${error.message}`);
+        }
+      }
+      getProviderName() {
+        return "github";
+      }
+      getToken() {
+        return process.env.GITHUB_TOKEN || process.env.GH_TOKEN;
+      }
+    };
+  }
+});
+
+// ../src/adapters/vcs/AdoProvider.ts
+var AdoProvider_exports = {};
+__export(AdoProvider_exports, {
+  AdoProvider: () => AdoProvider
+});
+var AdoProvider;
+var init_AdoProvider = __esm({
+  "../src/adapters/vcs/AdoProvider.ts"() {
+    "use strict";
+    AdoProvider = class {
+      organization;
+      project;
+      constructor(organization, project) {
+        this.organization = organization;
+        this.project = project;
+      }
+      async createWorkItem(title, body, labels, workItemType = "User Story") {
+        const token = this.getToken();
+        if (!token) {
+          throw new Error("ADO PAT token not found in environment variables");
+        }
+        try {
+          const patchDocument = [
+            {
+              op: "add",
+              path: "/fields/System.Title",
+              value: title
+            },
+            {
+              op: "add",
+              path: "/fields/System.Description",
+              value: body
+            }
+          ];
+          if (labels && labels.length > 0) {
+            patchDocument.push({
+              op: "add",
+              path: "/fields/System.Tags",
+              value: labels.join(";")
+            });
+          }
+          const response = await fetch(
+            `https://dev.azure.com/${this.organization}/${this.project}/_apis/wit/workitems/$${workItemType}?api-version=7.0`,
+            {
+              method: "POST",
+              headers: {
+                "Authorization": `Basic ${Buffer.from(`:${token}`).toString("base64")}`,
+                "Content-Type": "application/json-patch+json",
+                "Accept": "application/json",
+                "User-Agent": "Optimus-Agent"
+              },
+              body: JSON.stringify(patchDocument)
+            }
+          );
+          if (!response.ok) {
+            throw new Error(`ADO API error: ${response.status} ${await response.text()}`);
+          }
+          const data = await response.json();
+          return {
+            id: data.id.toString(),
+            number: data.id,
+            // ADO uses ID as the work item number
+            url: data._links.html.href,
+            title: data.fields["System.Title"]
+          };
+        } catch (error) {
+          throw new Error(`Failed to create ADO work item: ${error.message}`);
+        }
+      }
+      async createPullRequest(title, body, head, base) {
+        const token = this.getToken();
+        if (!token) {
+          throw new Error("ADO PAT token not found in environment variables");
+        }
+        try {
+          const repoResponse = await fetch(
+            `https://dev.azure.com/${this.organization}/${this.project}/_apis/git/repositories?api-version=7.0`,
+            {
+              headers: {
+                "Authorization": `Basic ${Buffer.from(`:${token}`).toString("base64")}`,
+                "Accept": "application/json",
+                "User-Agent": "Optimus-Agent"
+              }
+            }
+          );
+          if (!repoResponse.ok) {
+            throw new Error(`Failed to get repository info: ${repoResponse.status}`);
+          }
+          const repos = await repoResponse.json();
+          if (!repos.value || repos.value.length === 0) {
+            throw new Error("No repositories found in the project");
+          }
+          const repositoryId = repos.value[0].id;
+          const pullRequestData = {
+            sourceRefName: `refs/heads/${head}`,
+            targetRefName: `refs/heads/${base}`,
+            title,
+            description: body || "",
+            reviewers: []
+          };
+          const response = await fetch(
+            `https://dev.azure.com/${this.organization}/${this.project}/_apis/git/repositories/${repositoryId}/pullrequests?api-version=7.0`,
+            {
+              method: "POST",
+              headers: {
+                "Authorization": `Basic ${Buffer.from(`:${token}`).toString("base64")}`,
+                "Content-Type": "application/json",
+                "Accept": "application/json",
+                "User-Agent": "Optimus-Agent"
+              },
+              body: JSON.stringify(pullRequestData)
+            }
+          );
+          if (!response.ok) {
+            throw new Error(`ADO API error: ${response.status} ${await response.text()}`);
+          }
+          const data = await response.json();
+          return {
+            id: data.pullRequestId.toString(),
+            number: data.pullRequestId,
+            url: data._links.web.href,
+            title: data.title
+          };
+        } catch (error) {
+          throw new Error(`Failed to create ADO pull request: ${error.message}`);
+        }
+      }
+      async mergePullRequest(pullRequestId, commitTitle, mergeMethod = "merge") {
+        const token = this.getToken();
+        if (!token) {
+          throw new Error("ADO PAT token not found in environment variables");
+        }
+        try {
+          const repoResponse = await fetch(
+            `https://dev.azure.com/${this.organization}/${this.project}/_apis/git/repositories?api-version=7.0`,
+            {
+              headers: {
+                "Authorization": `Basic ${Buffer.from(`:${token}`).toString("base64")}`,
+                "Accept": "application/json",
+                "User-Agent": "Optimus-Agent"
+              }
+            }
+          );
+          if (!repoResponse.ok) {
+            return false;
+          }
+          const repos = await repoResponse.json();
+          if (!repos.value || repos.value.length === 0) {
+            return false;
+          }
+          const repositoryId = repos.value[0].id;
+          const prId = typeof pullRequestId === "string" ? parseInt(pullRequestId) : pullRequestId;
+          const mergeData = {
+            status: "completed",
+            completionOptions: {
+              mergeStrategy: mergeMethod === "squash" ? "squashMerge" : "noFastForward",
+              deleteSourceBranch: false
+            }
+          };
+          if (commitTitle) {
+            mergeData.completionOptions["mergeCommitMessage"] = commitTitle;
+          }
+          const response = await fetch(
+            `https://dev.azure.com/${this.organization}/${this.project}/_apis/git/repositories/${repositoryId}/pullrequests/${prId}?api-version=7.0`,
+            {
+              method: "PATCH",
+              headers: {
+                "Authorization": `Basic ${Buffer.from(`:${token}`).toString("base64")}`,
+                "Content-Type": "application/json",
+                "Accept": "application/json",
+                "User-Agent": "Optimus-Agent"
+              },
+              body: JSON.stringify(mergeData)
+            }
+          );
+          return response.ok;
+        } catch {
+          return false;
+        }
+      }
+      async addComment(itemType, itemId, comment) {
+        const token = this.getToken();
+        if (!token) {
+          throw new Error("ADO PAT token not found in environment variables");
+        }
+        const id = typeof itemId === "string" ? parseInt(itemId) : itemId;
+        try {
+          if (itemType === "workitem") {
+            const response = await fetch(
+              `https://dev.azure.com/${this.organization}/${this.project}/_apis/wit/workItems/${id}/comments?api-version=7.0`,
+              {
+                method: "POST",
+                headers: {
+                  "Authorization": `Basic ${Buffer.from(`:${token}`).toString("base64")}`,
+                  "Content-Type": "application/json",
+                  "Accept": "application/json",
+                  "User-Agent": "Optimus-Agent"
+                },
+                body: JSON.stringify({ text: comment })
+              }
+            );
+            if (!response.ok) {
+              throw new Error(`ADO API error: ${response.status} ${await response.text()}`);
+            }
+            const data = await response.json();
+            return {
+              id: data.id.toString(),
+              url: data.url || `https://dev.azure.com/${this.organization}/${this.project}/_workitems/edit/${id}`
+            };
+          } else {
+            const repoResponse = await fetch(
+              `https://dev.azure.com/${this.organization}/${this.project}/_apis/git/repositories?api-version=7.0`,
+              {
+                headers: {
+                  "Authorization": `Basic ${Buffer.from(`:${token}`).toString("base64")}`,
+                  "Accept": "application/json",
+                  "User-Agent": "Optimus-Agent"
+                }
+              }
+            );
+            if (!repoResponse.ok) {
+              throw new Error("Failed to get repository info");
+            }
+            const repos = await repoResponse.json();
+            const repositoryId = repos.value[0].id;
+            const response = await fetch(
+              `https://dev.azure.com/${this.organization}/${this.project}/_apis/git/repositories/${repositoryId}/pullRequests/${id}/threads?api-version=7.0`,
+              {
+                method: "POST",
+                headers: {
+                  "Authorization": `Basic ${Buffer.from(`:${token}`).toString("base64")}`,
+                  "Content-Type": "application/json",
+                  "Accept": "application/json",
+                  "User-Agent": "Optimus-Agent"
+                },
+                body: JSON.stringify({
+                  comments: [{
+                    parentCommentId: 0,
+                    content: comment,
+                    commentType: "text"
+                  }],
+                  status: "active"
+                })
+              }
+            );
+            if (!response.ok) {
+              throw new Error(`ADO API error: ${response.status} ${await response.text()}`);
+            }
+            const data = await response.json();
+            return {
+              id: data.id.toString(),
+              url: `https://dev.azure.com/${this.organization}/${this.project}/_git/pullrequest/${id}`
+            };
+          }
+        } catch (error) {
+          throw new Error(`Failed to add ADO comment: ${error.message}`);
+        }
+      }
+      getProviderName() {
+        return "azure-devops";
+      }
+      getToken() {
+        return process.env.ADO_PAT || process.env.AZURE_DEVOPS_PAT;
+      }
+    };
+  }
+});
 
 // ../src/mcp/mcp-server.ts
 var import_server = require("@modelcontextprotocol/sdk/server/index.js");
@@ -490,7 +934,7 @@ ${outputBlock}
     const record = typeof result === "object" && result !== null ? result : void 0;
     const content = this.getStructuredResultText(record, result);
     const lines = this.countMeaningfulLines(content);
-    const path6 = this.getStructuredResultPath(record);
+    const path7 = this.getStructuredResultPath(record);
     const lineRange = this.getStructuredResultLineRange(record);
     const preview = lines.length > 0 ? `preview=${this.sanitizeStructuredSummaryValue(lines[0], 80)}` : void 0;
     if (/delegate_task/.test(normalizedName)) {
@@ -524,30 +968,30 @@ ${outputBlock}
     }
     if (/grep|search/.test(normalizedName)) {
       if (lines.length === 0) {
-        return this.buildStructuredSummary([path6, "matches=0"]);
+        return this.buildStructuredSummary([path7, "matches=0"]);
       }
-      return this.buildStructuredSummary([path6, `matches=${lines.length}`, preview]);
+      return this.buildStructuredSummary([path7, `matches=${lines.length}`, preview]);
     }
     if (/edit|write|create|update|patch|save|insert/.test(normalizedName)) {
       if (lines.length === 0) {
-        return this.buildStructuredSummary([path6, lineRange, "status=updated"]);
+        return this.buildStructuredSummary([path7, lineRange, "status=updated"]);
       }
-      return this.buildStructuredSummary([path6, lineRange, `lines=${lines.length}`, preview]);
+      return this.buildStructuredSummary([path7, lineRange, `lines=${lines.length}`, preview]);
     }
     if (/read|view/.test(normalizedName)) {
       if (lines.length === 0) {
-        return this.buildStructuredSummary([path6, lineRange, "lines=0"]);
+        return this.buildStructuredSummary([path7, lineRange, "lines=0"]);
       }
-      return this.buildStructuredSummary([path6, lineRange, `lines=${lines.length}`, preview]);
+      return this.buildStructuredSummary([path7, lineRange, `lines=${lines.length}`, preview]);
     }
     if (/glob|list|ls|dir/.test(normalizedName)) {
       if (lines.length === 0) {
-        return this.buildStructuredSummary([path6, "items=0"]);
+        return this.buildStructuredSummary([path7, "items=0"]);
       }
       if (this.looksLikePathList(lines)) {
-        return this.buildStructuredSummary([path6, `items=${lines.length}`, `first=${this.sanitizeStructuredSummaryValue(lines[0], 80)}`]);
+        return this.buildStructuredSummary([path7, `items=${lines.length}`, `first=${this.sanitizeStructuredSummaryValue(lines[0], 80)}`]);
       }
-      return this.buildStructuredSummary([path6, `lines=${lines.length}`, preview]);
+      return this.buildStructuredSummary([path7, `lines=${lines.length}`, preview]);
     }
     return this.summarizeStructuredToolResult(result);
   }
@@ -1138,19 +1582,19 @@ var ClaudeCodeAdapter = class extends PersistentAgentAdapter {
   getSpawnCommand(mode) {
     const args = [];
     const cwd = PersistentAgentAdapter.getWorkspacePath();
-    const fs6 = require("fs");
-    const path6 = require("path");
+    const fs7 = require("fs");
+    const path7 = require("path");
     args.push("--add-dir", cwd);
-    const localMcpPath = path6.join(cwd, ".vscode", "mcp.json");
-    if (fs6.existsSync(localMcpPath)) {
+    const localMcpPath = path7.join(cwd, ".vscode", "mcp.json");
+    if (fs7.existsSync(localMcpPath)) {
       try {
-        let mcpContent = fs6.readFileSync(localMcpPath, "utf8");
+        let mcpContent = fs7.readFileSync(localMcpPath, "utf8");
         mcpContent = mcpContent.replace(/\$\{workspaceFolder\}/g, cwd.replace(/\\/g, "/"));
         const localMcp = JSON.parse(mcpContent);
         const claudeMcp = { mcpServers: localMcp.servers || localMcp.mcpServers || {} };
-        const proxyMcpPath = path6.join(cwd, ".optimus", ".claude-mcp.json");
-        fs6.mkdirSync(path6.dirname(proxyMcpPath), { recursive: true });
-        fs6.writeFileSync(proxyMcpPath, JSON.stringify(claudeMcp, null, 2));
+        const proxyMcpPath = path7.join(cwd, ".optimus", ".claude-mcp.json");
+        fs7.mkdirSync(path7.dirname(proxyMcpPath), { recursive: true });
+        fs7.writeFileSync(proxyMcpPath, JSON.stringify(claudeMcp, null, 2));
         args.push("--mcp-config", proxyMcpPath);
       } catch (e) {
       }
@@ -1678,6 +2122,37 @@ role: ${role}
       console.error(`[Orchestrator] T2\u2192T1: Created temp agent placeholder '${role}' at ${import_path.default.basename(t1TempPath)}`);
     }
     const response = await adapter.invoke(basePrompt, "agent");
+    const firstLines = response.slice(0, 500);
+    const errorPatterns = [
+      /^> \[LOG\] [Ee]rror:/m,
+      /^API Error: [45]\d\d/m,
+      /^error: option .* is invalid/m,
+      /^Error: No authentication/m,
+      /^Worker execution failed:/m
+    ];
+    const matchedError = errorPatterns.find((p) => p.test(firstLines));
+    if (matchedError) {
+      const tempFile = t1Path || import_path.default.join(workspacePath, ".optimus", "agents", `${role}_pending_${tempId}.md`);
+      if (import_fs.default.existsSync(tempFile) && tempFile.includes("pending_")) {
+        try {
+          import_fs.default.unlinkSync(tempFile);
+        } catch {
+        }
+      }
+      throw new Error(
+        `\u26A0\uFE0F **Delegation Failed (Engine Error)**: Role \`${role}\` on engine \`${activeEngine}\` returned an error.
+
+**Error output**:
+\`\`\`
+${firstLines.trim()}
+\`\`\`
+
+**Suggested actions**:
+- Re-delegate with a different engine (e.g., \`claude-code\` instead of \`github-copilot\`)
+- Check if the model name is valid for this engine
+- Verify CLI authentication (e.g., \`copilot login\`, \`claude auth\`)`
+      );
+    }
     const currentT1 = import_fs.default.existsSync(t1TempPath) ? t1TempPath : t1Path;
     if (currentT1 && import_fs.default.existsSync(currentT1)) {
       const currentStr = import_fs.default.readFileSync(currentT1, "utf8");
@@ -1900,7 +2375,21 @@ function verifyOutputPath(outputPath) {
   if (!outputPath) return "partial";
   try {
     const stat = import_fs2.default.statSync(outputPath);
-    if (stat.isFile() && stat.size > 0) return "verified";
+    if (stat.isFile()) {
+      if (stat.size === 0) return "partial";
+      const fd = import_fs2.default.openSync(outputPath, "r");
+      const buffer = Buffer.alloc(1024);
+      const bytesRead = import_fs2.default.readSync(fd, buffer, 0, 1024, 0);
+      import_fs2.default.closeSync(fd);
+      const content = buffer.slice(0, bytesRead).toString("utf8");
+      const lines = content.split("\n").slice(0, 5);
+      for (const line of lines) {
+        if (line.includes("API Error: 5") || line.includes("> [LOG] Error:") || line.includes("> [LOG] error:") || line.includes("Worker execution failed:") || line.startsWith("\u274C")) {
+          return "failed";
+        }
+      }
+      return "verified";
+    }
     if (stat.isDirectory()) {
       const files = import_fs2.default.readdirSync(outputPath);
       return files.length > 0 ? "verified" : "partial";
@@ -1958,7 +2447,8 @@ async function runAsyncWorker(taskId, workspacePath) {
       for (let i = 0; i < task.roles.length; i++) {
         const role = task.roles[i];
         const reviewFile = import_path2.default.join(reviewsPath, `${role}_review.md`);
-        if (import_fs2.default.existsSync(reviewFile)) {
+        const status = verifyOutputPath(reviewFile);
+        if (status === "verified") {
           synthesisContent += `## ${i + 1}. Review from ${role}
 
 `;
@@ -1972,7 +2462,7 @@ async function runAsyncWorker(taskId, workspacePath) {
           synthesisContent += `## ${i + 1}. Review from ${role}
 
 `;
-          synthesisContent += `*Worker failed to produce a review artifact.*
+          synthesisContent += `*Worker failed to produce a valid review artifact (Status: ${status}).*
 
 ---
 
@@ -2019,8 +2509,29 @@ ${synthesisContent}`;
         console.error(`[Runner] PM reduce phase failed (non-fatal): ${reduceErr.message}`);
       }
     }
-    const outputTarget = task.type === "dispatch_council" ? import_path2.default.join(task.output_path, "COUNCIL_SYNTHESIS.md") : task.output_path;
-    const verificationStatus = verifyOutputPath(outputTarget);
+    let verificationStatus = "partial";
+    if (task.type === "dispatch_council") {
+      let successCount = 0;
+      let failureCount = 0;
+      const reviewsPath = task.output_path;
+      for (const role of task.roles) {
+        const reviewFile = import_path2.default.join(reviewsPath, `${role}_review.md`);
+        const status = verifyOutputPath(reviewFile);
+        if (status === "verified") successCount++;
+        else failureCount++;
+      }
+      if (failureCount === 0) verificationStatus = "verified";
+      else if (successCount === 0) verificationStatus = "failed";
+      else verificationStatus = "degraded";
+      const synthesisPath = import_path2.default.join(task.output_path, "COUNCIL_SYNTHESIS.md");
+      if (verificationStatus !== "failed" && !import_fs2.default.existsSync(synthesisPath)) {
+        verificationStatus = "failed";
+      }
+    } else {
+      const status = verifyOutputPath(task.output_path);
+      if (status === "partial") verificationStatus = "partial";
+      else verificationStatus = status;
+    }
     TaskManifestManager.updateTask(workspacePath, taskId, { status: verificationStatus });
     console.error(`[Runner] Task ${taskId} finished with status: ${verificationStatus}.`);
     await updateTaskGitHubIssue(workspacePath, taskId, verificationStatus, task.output_path);
@@ -2040,7 +2551,7 @@ async function updateTaskGitHubIssue(workspacePath, taskId, status, outputPath, 
     if (!task?.github_issue_number) return;
     const remote = parseGitRemote(workspacePath);
     if (!remote) return;
-    const statusEmoji = status === "verified" ? "\u2705" : status === "partial" ? "\u26A0\uFE0F" : "\u274C";
+    const statusEmoji = status === "verified" ? "\u2705" : status === "degraded" ? "\u26A0\uFE0F" : "\u274C";
     let comment = `## ${statusEmoji} Task Completion Report
 
 `;
@@ -2060,8 +2571,162 @@ async function updateTaskGitHubIssue(workspacePath, taskId, status, outputPath, 
 }
 
 // ../src/mcp/mcp-server.ts
-var import_child_process2 = require("child_process");
+var import_child_process3 = require("child_process");
 var import_dotenv = __toESM(require("dotenv"));
+
+// ../src/adapters/vcs/VcsProviderFactory.ts
+var path5 = __toESM(require("path"));
+var fs5 = __toESM(require("fs"));
+var import_child_process2 = require("child_process");
+var VcsProviderFactory = class {
+  static cachedProvider = null;
+  static cachedConfigPath = null;
+  /**
+   * Get the appropriate VCS provider for the workspace
+   *
+   * @param workspacePath - Path to the workspace root
+   * @returns Promise resolving to the appropriate VCS provider
+   */
+  static async getProvider(workspacePath) {
+    const resolvedWorkspacePath = workspacePath || process.cwd();
+    const configPath = this.getConfigPath(resolvedWorkspacePath);
+    if (this.cachedProvider && this.cachedConfigPath === configPath) {
+      return this.cachedProvider;
+    }
+    const config = this.loadConfig(resolvedWorkspacePath);
+    let providerType = config.provider || "auto-detect";
+    if (providerType === "auto-detect") {
+      providerType = this.detectProviderFromGitRemote(resolvedWorkspacePath);
+    }
+    let provider;
+    if (providerType === "github") {
+      const { owner, repo } = this.getGitHubInfo(config, resolvedWorkspacePath);
+      const { GitHubProvider: GitHubProvider2 } = await Promise.resolve().then(() => (init_GitHubProvider(), GitHubProvider_exports));
+      provider = new GitHubProvider2(owner, repo);
+    } else if (providerType === "azure-devops") {
+      const { organization, project } = this.getAdoInfo(config, resolvedWorkspacePath);
+      const { AdoProvider: AdoProvider2 } = await Promise.resolve().then(() => (init_AdoProvider(), AdoProvider_exports));
+      provider = new AdoProvider2(organization, project);
+    } else {
+      throw new Error(`Unsupported or undetectable VCS provider: ${providerType}`);
+    }
+    this.cachedProvider = provider;
+    this.cachedConfigPath = configPath;
+    return provider;
+  }
+  /**
+   * Clear the cached provider (useful for testing or configuration changes)
+   */
+  static clearCache() {
+    this.cachedProvider = null;
+    this.cachedConfigPath = null;
+  }
+  static getConfigPath(workspacePath) {
+    return path5.join(workspacePath, ".optimus", "config", "vcs.json");
+  }
+  static loadConfig(workspacePath) {
+    const configPath = this.getConfigPath(workspacePath);
+    if (fs5.existsSync(configPath)) {
+      try {
+        const configContent = fs5.readFileSync(configPath, "utf8");
+        return JSON.parse(configContent);
+      } catch (error) {
+        console.error(`Warning: Failed to parse VCS config at ${configPath}:`, error);
+      }
+    }
+    return { provider: "auto-detect" };
+  }
+  static detectProviderFromGitRemote(workspacePath) {
+    try {
+      const remoteUrl = (0, import_child_process2.execSync)("git remote get-url origin", {
+        cwd: workspacePath,
+        encoding: "utf8"
+      }).trim();
+      if (remoteUrl.includes("github.com")) {
+        return "github";
+      }
+      if (remoteUrl.includes("dev.azure.com") || remoteUrl.includes("visualstudio.com")) {
+        return "azure-devops";
+      }
+      console.warn(`Unable to detect VCS provider from remote URL: ${remoteUrl}. Defaulting to GitHub.`);
+      return "github";
+    } catch (error) {
+      console.warn("Failed to detect git remote URL. Defaulting to GitHub.");
+      return "github";
+    }
+  }
+  static getGitHubInfo(config, workspacePath) {
+    if (config.github?.owner && config.github?.repo) {
+      return {
+        owner: config.github.owner,
+        repo: config.github.repo
+      };
+    }
+    try {
+      const remoteUrl = (0, import_child_process2.execSync)("git remote get-url origin", {
+        cwd: workspacePath,
+        encoding: "utf8"
+      }).trim();
+      const httpsMatch = remoteUrl.match(/github\.com[\/:]+([^\/]+)\/([^\/.]+)/);
+      if (httpsMatch) {
+        return {
+          owner: httpsMatch[1],
+          repo: httpsMatch[2]
+        };
+      }
+      throw new Error("Unable to parse GitHub repository info from remote URL");
+    } catch (error) {
+      throw new Error(`Failed to determine GitHub repository info: ${error.message}`);
+    }
+  }
+  static getAdoInfo(config, workspacePath) {
+    if (config.ado?.organization && config.ado?.project) {
+      return {
+        organization: config.ado.organization,
+        project: config.ado.project
+      };
+    }
+    try {
+      const remoteUrl = (0, import_child_process2.execSync)("git remote get-url origin", {
+        cwd: workspacePath,
+        encoding: "utf8"
+      }).trim();
+      let match = remoteUrl.match(/dev\.azure\.com[\/:]([^\/]+)\/([^\/_]+)/);
+      if (match) {
+        return {
+          organization: match[1],
+          project: match[2]
+        };
+      }
+      match = remoteUrl.match(/([^.]+)\.visualstudio\.com[\/:]([^\/_]+)/);
+      if (match) {
+        return {
+          organization: match[1],
+          project: match[2]
+        };
+      }
+      throw new Error("Unable to parse Azure DevOps repository info from remote URL");
+    } catch (error) {
+      throw new Error(`Failed to determine Azure DevOps repository info: ${error.message}`);
+    }
+  }
+  /**
+   * Create a provider configuration file in the workspace
+   *
+   * @param workspacePath - Path to the workspace root
+   * @param config - Configuration to save
+   */
+  static createConfig(workspacePath, config) {
+    const configPath = this.getConfigPath(workspacePath);
+    const configDir = path5.dirname(configPath);
+    if (!fs5.existsSync(configDir)) {
+      fs5.mkdirSync(configDir, { recursive: true });
+    }
+    fs5.writeFileSync(configPath, JSON.stringify(config, null, 2), "utf8");
+  }
+};
+
+// ../src/mcp/mcp-server.ts
 function reloadEnv() {
   if (process.env.DOTENV_PATH) {
     import_dotenv.default.config({ path: import_path3.default.resolve(process.env.DOTENV_PATH), override: true });
@@ -2390,6 +3055,64 @@ server.setRequestHandler(import_types.ListToolsRequestSchema, async () => {
           },
           required: ["taskId", "workspace_path"]
         }
+      },
+      {
+        name: "vcs_create_work_item",
+        description: "Create a work item (GitHub Issue or ADO Work Item) using the unified VCS provider.",
+        inputSchema: {
+          type: "object",
+          properties: {
+            title: { type: "string", description: "Work item title" },
+            body: { type: "string", description: "Work item description/body" },
+            labels: { type: "array", items: { type: "string" }, description: "Labels/tags to apply" },
+            work_item_type: { type: "string", description: "ADO work item type (Bug, User Story, Task). Ignored for GitHub." },
+            workspace_path: { type: "string", description: "Absolute path to the project workspace root." }
+          },
+          required: ["title", "body", "workspace_path"]
+        }
+      },
+      {
+        name: "vcs_create_pr",
+        description: "Create a pull request using the unified VCS provider.",
+        inputSchema: {
+          type: "object",
+          properties: {
+            title: { type: "string", description: "PR title" },
+            body: { type: "string", description: "PR description" },
+            head: { type: "string", description: "Source branch" },
+            base: { type: "string", description: "Target branch" },
+            workspace_path: { type: "string", description: "Absolute path to the project workspace root." }
+          },
+          required: ["title", "body", "head", "base", "workspace_path"]
+        }
+      },
+      {
+        name: "vcs_merge_pr",
+        description: "Merge a pull request using the unified VCS provider.",
+        inputSchema: {
+          type: "object",
+          properties: {
+            pull_request_id: { type: ["string", "number"], description: "PR ID or number" },
+            commit_title: { type: "string", description: "Merge commit title" },
+            merge_method: { type: "string", enum: ["merge", "squash", "rebase"], description: "Merge strategy" },
+            workspace_path: { type: "string", description: "Absolute path to the project workspace root." }
+          },
+          required: ["pull_request_id", "workspace_path"]
+        }
+      },
+      {
+        name: "vcs_add_comment",
+        description: "Add a comment to a work item or pull request using the unified VCS provider.",
+        inputSchema: {
+          type: "object",
+          properties: {
+            item_type: { type: "string", enum: ["workitem", "pullrequest"], description: "Type of item" },
+            item_id: { type: ["string", "number"], description: "Work item or PR ID/number" },
+            comment: { type: "string", description: "Comment text" },
+            workspace_path: { type: "string", description: "Absolute path to the project workspace root." }
+          },
+          required: ["item_type", "item_id", "comment", "workspace_path"]
+        }
       }
     ]
   };
@@ -2493,7 +3216,7 @@ ${truncDesc}`,
 **GitHub Issue**: ${issue.html_url}`;
       }
     }
-    const child = (0, import_child_process2.spawn)(process.execPath, [__filename, "--run-task", taskId, workspace_path], {
+    const child = (0, import_child_process3.spawn)(process.execPath, [__filename, "--run-task", taskId, workspace_path], {
       detached: true,
       stdio: "ignore",
       windowsHide: true
@@ -2543,7 +3266,7 @@ Use check_task_status tool periodically with this task ID to check its completio
 **GitHub Issue**: ${issue.html_url}`;
       }
     }
-    const child = (0, import_child_process2.spawn)(process.execPath, [__filename, "--run-task", taskId, workspace_path], {
+    const child = (0, import_child_process3.spawn)(process.execPath, [__filename, "--run-task", taskId, workspace_path], {
       detached: true,
       stdio: "ignore",
       windowsHide: true
@@ -2639,181 +3362,6 @@ Memory appended to: ${memoryFile}`
         content: [{ type: "text", text: `Failed to append memory: ${err.message}` }],
         isError: true
       };
-    }
-  } else if (request.params.name === "github_update_issue") {
-    reloadEnv();
-    const { owner, repo, issue_number, state, body, title, agent_role, session_id } = request.params.arguments;
-    const token = process.env.GITHUB_TOKEN || process.env.GH_TOKEN;
-    if (!token) throw new import_types.McpError(import_types.ErrorCode.InvalidRequest, "GITHUB_TOKEN env is not set");
-    try {
-      let finalBody = body;
-      if ((agent_role || session_id) && finalBody) {
-        finalBody += "\n\n---\n**\u{1F916} Agent System Metadata [Update]:**\n";
-        if (agent_role) finalBody += `- **Agent Role:** \`${agent_role}\`
-`;
-        if (session_id) finalBody += `- **Agent Session ID:** \`${session_id}\`
-`;
-      }
-      const payload = {};
-      if (state) payload.state = state;
-      if (title) payload.title = title;
-      if (finalBody) payload.body = finalBody;
-      const resp = await fetch(`https://api.github.com/repos/${owner}/${repo}/issues/${issue_number}`, {
-        method: "PATCH",
-        headers: {
-          "Authorization": `Bearer ${token}`,
-          "Accept": "application/vnd.github.v3+json",
-          "Content-Type": "application/json",
-          "User-Agent": "Optimus-Agent"
-        },
-        body: JSON.stringify(payload)
-      });
-      if (!resp.ok) {
-        throw new Error("GitHub API Error: " + await resp.text());
-      }
-      const data = await resp.json();
-      return { content: [{ type: "text", text: `Issue #${issue_number} updated successfully. State is now: ${data.state}` }] };
-    } catch (err) {
-      return { content: [{ type: "text", text: `Failed to update Issue: ${err.message}` }], isError: true };
-    }
-  } else if (request.params.name === "github_create_issue") {
-    const { owner, repo, title, body, labels, local_path, session_id } = request.params.arguments;
-    if (!local_path) {
-      throw new import_types.McpError(import_types.ErrorCode.InvalidParams, "Violated Issue First Protocol: local_path is mandatory to bind to a blackboard file (e.g. .optimus/tasks/task.md)");
-    }
-    reloadEnv();
-    const token = process.env.GITHUB_TOKEN || process.env.GH_TOKEN;
-    if (!token) throw new import_types.McpError(import_types.ErrorCode.InvalidRequest, "GITHUB_TOKEN env is not set");
-    const taggedTitle = title.startsWith("[Optimus]") ? title : `[Optimus] ${title}`;
-    const issueLabels = Array.isArray(labels) ? [...labels] : [];
-    if (!issueLabels.includes("optimus-bot")) issueLabels.push("optimus-bot");
-    let finalBody = body;
-    if (local_path || session_id) {
-      finalBody += "\n\n---\n**\u{1F916} Agent System Metadata:**\n";
-      if (local_path) finalBody += `- **Local Blackboard:** \`${local_path}\`
-`;
-      if (session_id) finalBody += `- **Agent Session ID:** \`${session_id}\`
-`;
-    }
-    try {
-      const resp = await fetch(`https://api.github.com/repos/${owner}/${repo}/issues`, {
-        method: "POST",
-        headers: {
-          "Authorization": `Bearer ${token}`,
-          "Accept": "application/vnd.github.v3+json",
-          "Content-Type": "application/json",
-          "User-Agent": "Optimus-Agent"
-        },
-        body: JSON.stringify({ title: taggedTitle, body: finalBody, labels: issueLabels })
-      });
-      if (!resp.ok) throw new Error(`GitHub API Error: ${resp.status}`);
-      const data = await resp.json();
-      return { content: [{ type: "text", text: `Issue created: ${data.html_url}` }] };
-    } catch (e) {
-      throw new import_types.McpError(import_types.ErrorCode.InternalError, String(e));
-    }
-  } else if (request.params.name === "github_create_pr") {
-    const { owner, repo, title, head, base, body } = request.params.arguments;
-    reloadEnv();
-    const token = process.env.GITHUB_TOKEN || process.env.GH_TOKEN;
-    if (!token) throw new import_types.McpError(import_types.ErrorCode.InvalidRequest, "GITHUB_TOKEN env is not set");
-    const taggedTitle = title.startsWith("[Optimus]") ? title : `[Optimus] ${title}`;
-    try {
-      const resp = await fetch(`https://api.github.com/repos/${owner}/${repo}/pulls`, {
-        method: "POST",
-        headers: {
-          "Authorization": `Bearer ${token}`,
-          "Accept": "application/vnd.github.v3+json",
-          "Content-Type": "application/json",
-          "User-Agent": "Optimus-Agent"
-        },
-        body: JSON.stringify({ title: taggedTitle, head, base, body: body || "" })
-      });
-      if (!resp.ok) {
-        throw new Error("GitHub API Error: " + await resp.text());
-      }
-      const data = await resp.json();
-      try {
-        await fetch(`https://api.github.com/repos/${owner}/${repo}/issues/${data.number}/labels`, {
-          method: "POST",
-          headers: {
-            "Authorization": `Bearer ${token}`,
-            "Accept": "application/vnd.github.v3+json",
-            "Content-Type": "application/json",
-            "User-Agent": "Optimus-Agent"
-          },
-          body: JSON.stringify({ labels: ["optimus-bot"] })
-        });
-      } catch (_) {
-      }
-      return { content: [{ type: "text", text: `Pull request created successfully! PR Number: ${data.number}
-URL: ${data.html_url}` }] };
-    } catch (err) {
-      return { content: [{ type: "text", text: `Failed to create PR: ${err.message}` }], isError: true };
-    }
-  } else if (request.params.name === "github_merge_pr") {
-    const { owner, repo, pull_number, commit_title, merge_method } = request.params.arguments;
-    reloadEnv();
-    const token = process.env.GITHUB_TOKEN || process.env.GH_TOKEN;
-    if (!token) throw new import_types.McpError(import_types.ErrorCode.InvalidRequest, "GITHUB_TOKEN env is not set");
-    try {
-      const payload = { merge_method: merge_method || "merge" };
-      if (commit_title) payload.commit_title = commit_title;
-      const resp = await fetch(`https://api.github.com/repos/${owner}/${repo}/pulls/${pull_number}/merge`, {
-        method: "PUT",
-        headers: {
-          "Authorization": `Bearer ${token}`,
-          "Accept": "application/vnd.github.v3+json",
-          "Content-Type": "application/json",
-          "User-Agent": "Optimus-Agent"
-        },
-        body: JSON.stringify(payload)
-      });
-      if (!resp.ok) {
-        throw new Error("GitHub API Error: " + await resp.text());
-      }
-      const data = await resp.json();
-      return { content: [{ type: "text", text: `Pull request #${pull_number} merged successfully: ${data.message}` }] };
-    } catch (err) {
-      return { content: [{ type: "text", text: `Failed to merge PR: ${err.message}` }], isError: true };
-    }
-  } else if (request.params.name === "github_sync_board") {
-    const { owner, repo, workspace_path } = request.params.arguments;
-    reloadEnv();
-    const token = process.env.GITHUB_TOKEN || process.env.GH_TOKEN;
-    if (!token) throw new import_types.McpError(import_types.ErrorCode.InvalidRequest, "GITHUB_TOKEN env is not set");
-    try {
-      const resp = await fetch(`https://api.github.com/repos/${owner}/${repo}/issues?state=open`, {
-        headers: {
-          "Authorization": `Bearer ${token}`,
-          "Accept": "application/vnd.github.v3+json",
-          "User-Agent": "Optimus-Agent"
-        }
-      });
-      if (!resp.ok) throw new Error(`GitHub API Error: ${resp.status}`);
-      const issues = await resp.json();
-      let markdown = `# Task Board
-
-`;
-      let count = 0;
-      for (const issue of issues) {
-        if (!issue.pull_request) {
-          count++;
-          markdown += `## [#${issue.number}] ${issue.title}
-`;
-          markdown += `- **URL**: ${issue.html_url}
-`;
-          markdown += `${issue.body ? issue.body.split("\n").map((l) => "> " + l).join("\n") : "> No description"}
-
-`;
-        }
-      }
-      const p = import_path3.default.join(workspace_path, ".optimus", "state", "TODO.md");
-      import_fs3.default.mkdirSync(import_path3.default.dirname(p), { recursive: true });
-      import_fs3.default.writeFileSync(p, markdown, "utf8");
-      return { content: [{ type: "text", text: `Synced ${count} issues to ${p}` }] };
-    } catch (e) {
-      throw new import_types.McpError(import_types.ErrorCode.InternalError, String(e));
     }
   } else if (request.params.name === "roster_check") {
     const { workspace_path } = request.params.arguments;
@@ -2962,6 +3510,87 @@ URL: ${data.html_url}` }] };
     return {
       content: [{ type: "text", text: result }]
     };
+  } else if (request.params.name === "vcs_create_work_item") {
+    const { title, body, labels, work_item_type, workspace_path } = request.params.arguments;
+    if (!title || !body || !workspace_path) {
+      throw new import_types.McpError(import_types.ErrorCode.InvalidParams, "Invalid arguments: requires title, body, and workspace_path");
+    }
+    try {
+      const vcsProvider = await VcsProviderFactory.getProvider(workspace_path);
+      const result = await vcsProvider.createWorkItem(title, body, labels, work_item_type);
+      return {
+        content: [{
+          type: "text",
+          text: `\u2705 Work item created successfully on ${vcsProvider.getProviderName()}
+
+**Title:** ${result.title}
+**ID:** ${result.id}${result.number ? `
+**Number:** ${result.number}` : ""}
+**URL:** ${result.url}`
+        }]
+      };
+    } catch (error) {
+      throw new import_types.McpError(import_types.ErrorCode.InternalError, `Failed to create work item: ${error.message}`);
+    }
+  } else if (request.params.name === "vcs_create_pr") {
+    const { title, body, head, base, workspace_path } = request.params.arguments;
+    if (!title || !body || !head || !base || !workspace_path) {
+      throw new import_types.McpError(import_types.ErrorCode.InvalidParams, "Invalid arguments: requires title, body, head, base, and workspace_path");
+    }
+    try {
+      const vcsProvider = await VcsProviderFactory.getProvider(workspace_path);
+      const result = await vcsProvider.createPullRequest(title, body, head, base);
+      return {
+        content: [{
+          type: "text",
+          text: `\u2705 Pull request created successfully on ${vcsProvider.getProviderName()}
+
+**Title:** ${result.title}
+**Number:** ${result.number}
+**ID:** ${result.id}
+**URL:** ${result.url}`
+        }]
+      };
+    } catch (error) {
+      throw new import_types.McpError(import_types.ErrorCode.InternalError, `Failed to create pull request: ${error.message}`);
+    }
+  } else if (request.params.name === "vcs_merge_pr") {
+    const { pull_request_id, commit_title, merge_method, workspace_path } = request.params.arguments;
+    if (!pull_request_id || !workspace_path) {
+      throw new import_types.McpError(import_types.ErrorCode.InvalidParams, "Invalid arguments: requires pull_request_id and workspace_path");
+    }
+    try {
+      const vcsProvider = await VcsProviderFactory.getProvider(workspace_path);
+      const success = await vcsProvider.mergePullRequest(pull_request_id, commit_title, merge_method);
+      return {
+        content: [{
+          type: "text",
+          text: success ? `\u2705 Pull request #${pull_request_id} merged successfully on ${vcsProvider.getProviderName()}` : `\u274C Failed to merge pull request #${pull_request_id} on ${vcsProvider.getProviderName()}`
+        }]
+      };
+    } catch (error) {
+      throw new import_types.McpError(import_types.ErrorCode.InternalError, `Failed to merge pull request: ${error.message}`);
+    }
+  } else if (request.params.name === "vcs_add_comment") {
+    const { item_type, item_id, comment, workspace_path } = request.params.arguments;
+    if (!item_type || !item_id || !comment || !workspace_path) {
+      throw new import_types.McpError(import_types.ErrorCode.InvalidParams, "Invalid arguments: requires item_type, item_id, comment, and workspace_path");
+    }
+    try {
+      const vcsProvider = await VcsProviderFactory.getProvider(workspace_path);
+      const result = await vcsProvider.addComment(item_type, item_id, comment);
+      return {
+        content: [{
+          type: "text",
+          text: `\u2705 Comment added successfully to ${item_type} #${item_id} on ${vcsProvider.getProviderName()}
+
+**Comment ID:** ${result.id}
+**URL:** ${result.url}`
+        }]
+      };
+    } catch (error) {
+      throw new import_types.McpError(import_types.ErrorCode.InternalError, `Failed to add comment: ${error.message}`);
+    }
   }
   throw new import_types.McpError(import_types.ErrorCode.MethodNotFound, `Unknown tool: ${request.params.name}`);
 });

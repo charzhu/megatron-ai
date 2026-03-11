@@ -3,12 +3,12 @@
   "engines": {
     "claude-code": {
       "path": "npx @anthropic-ai/claude-code",
-      "available_models": ["gemini-3.0-pro", "gpt-5.4", "claude-opus-4.6-1m"],
+      "available_models": ["gemini-3-pro-preview", "gpt-5.4", "claude-opus-4.6-1m"],
       "cli_flags": "--model"
     },
     "github-copilot": {
       "path": "github-copilot-cli",
-      "available_models": ["gemini-3.0-pro", "gpt-5.4", "claude-opus-4.6-1m"],
+      "available_models": ["gemini-3-pro-preview", "gpt-5.4", "claude-opus-4.6-1m"],
       "cli_flags": "-m"
     }
   }

@@ -32,6 +32,7 @@
     "iconv-lite": "^0.6.3",
     "lucide-react": "^0.577.0",
     "marked": "^17.0.4",
+    "node-fetch": "^3.3.2",
     "strip-ansi": "^7.2.0"
   },
   "main": "optimus-plugin/dist/mcp-server.js",

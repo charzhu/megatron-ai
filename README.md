@@ -108,11 +108,12 @@ Once the server is running, your AI assistant gains these tools:
 | `dispatch_council_async` | Same as above, non-blocking (preferred) |
 | `check_task_status` | Poll async task/council completion |
 | `append_memory` | Save learnings to persistent agent memory |
-| `github_create_issue` | Create a GitHub Issue (auto-tagged `[Optimus]` + `optimus-bot` label) |
-| `github_create_pr` | Create a Pull Request (auto-tagged) |
-| `github_merge_pr` | Merge a Pull Request |
-| `github_update_issue` | Update an existing GitHub Issue |
-| `github_sync_board` | Sync open issues to local TODO board |
+| `vcs_create_work_item` | Create a work item (GitHub Issue / ADO Work Item) via unified VCS abstraction |
+| `vcs_create_pr` | Create a Pull Request via unified VCS abstraction |
+| `vcs_merge_pr` | Merge a Pull Request via unified VCS abstraction |
+| `vcs_add_comment` | Add a comment to a work item or PR (requires `item_type`) |
+| `github_update_issue` | Update an existing GitHub Issue (legacy, still available) |
+| `github_sync_board` | Sync open issues to local TODO board (legacy, still available) |
 
 ### delegate_task Extended Parameters
 

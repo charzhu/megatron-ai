@@ -1,50 +1,72 @@
 ---
-name: standard_pr_workflow
-description: Executing standard Git branch creation, Pull Request generation, and Agile Issue tracking workflow.
-triggers:
-  - "PR"
-  - "pull request"
-  - "commit"
-  - "push code"
-  - "close issue"
+name: git-workflow
+description: Standard unified VCS (GitHub/ADO) branch creation, Pull Request generation, and Agile Issue tracking workflow.
 ---
 
-# Git Workflow & Pull Request Skill (Standard SDLC)
+# Unified VCS Workflow & Pull Request Skill
 
-You are operating under the strict **"Issue First" Hybrid SDLC Protocol**. It is an architectural violation to implement code and merge it straight to `master` without creating a PR or updating the tracking Issue.
+<purpose>
+Enforce the "Issue First" Hybrid SDLC Protocol. No code is merged to `master` without a tracking Issue and a formal Pull Request.
+</purpose>
 
-## The Standard Protocol
+<tools_required>
+- `vcs_create_work_item`
+- `vcs_create_pr`
+- `vcs_add_comment`
+- Terminal (for `git` commands)
+</tools_required>
 
-When asked to "commit the code", "create a PR", or handle "code changes", you MUST execute the following exact sequence:
+<rules>
+  <rule>NEVER use the `gh` CLI. Rely solely on the provided MCP tools and local `git`.</rule>
+  <rule>NEVER use the legacy `github_*` MCP tools. They are deprecated. ALWAYS use `vcs_*` equivalents.</rule>
+  <rule>NEVER commit directly to `master` or `main` for feature work.</rule>
+  <rule>ALWAYS switch back to the default branch (e.g., `master`) after pushing a feature branch.</rule>
+</rules>
 
-### 1. Identify or Create the Tracking Issue
-Every code change must relate to a GitHub Issue (e.g., `#29`).
-- If none exists, **use the MCP Tool `github_create_issue`** to create one. Pass `owner`, `repo`, `title`, `body`, and optionally `local_path`.
-- Do not proceed until you have an Issue Number.
+<instructions>
+Before acting on a user request to "commit code", "create a PR", or wrap up a feature, you MUST strictly follow these steps in order by thinking step-by-step:
 
-### 2. Branch, Commit & Push (local git only)
-Local `git` commands are acceptable for branch management, staging, committing, and pushing. These are purely local operations.
-- Branch: `git checkout -b feature/issue-<ID>-short-desc`
-- Commit (Conventional Commits + Issue ref): `git commit -m "feat: Implement T1/T2 instantiation, closes #29"`
-- Push: `git push -u origin <branch-name>`
-- **MANDATORY: After push, always switch back to the user's original branch** (usually `master`): `git checkout master`. Never leave the user on a feature branch without explicit permission.
+<step number="1" name="Identify or Create Tracking Issue">
+Before any commit, ensure there is a corresponding VCS work item (Issue). 
+If none exists, invoke the `vcs_create_work_item` tool with appropriate `title` and `body` parameters. 
+Capture the returned Issue ID (e.g., `#113`). Do not proceed without an Issue ID.
+</step>
 
-**Never commit directly to `master`** for standard feature work unless explicitly overridden by the User (PM).
+<step number="2" name="Local Branch and Commit">
+Using local terminal commands:
+1. Create and checkout a new branch: `git checkout -b feature/issue-<ID>-<short-description>`
+2. Stage modified files: `git add .` (ensure you review changes first to avoid dirty tree)
+3. Commit using Conventional Commits: `git commit -m "feat: <description>, fixes #<ID>"`
+4. Push to remote: `git push -u origin <branch-name>`
+</step>
 
-### 5. Create Pull Request (MUST use MCP Tool)
-Create the PR and assign the corresponding tracking metadata.
-- **You MUST use the MCP Tool `github_create_pr`** to create the Pull Request. **DO NOT** use `gh` CLI or manual terminal commands for this step. The system is configured with correct credentials internally.
-- Use your registered MCP tool calls explicitly passing `owner`, `repo`, `title`, `head`, `base` (usually 'master'), and `body`.
-- If the PR needs to be merged after checking, use the MCP Tool `github_merge_pr`.
+<step number="3" name="Create Pull Request">
+Invoke the `vcs_create_pr` tool with:
+- `title`: A clear PR title referencing the issue
+- `head`: Your feature branch name
+- `base`: `master` (or main)
+- `body`: `Fixes #<ID>` along with a brief description.
+</step>
 
-### 6. Update Blackboard / T1 Memory
-Once the PR is open, update the local Project Blackboard and/or the T1 Agent Memory `.optimus/agents/<your_role>.md` to record that the implementation is complete and pending review.
+<step number="4" name="Mandatory Workspace Reversion">
+Run `git checkout master` in the terminal to return the user's workspace to a clean default state. Never leave the workspace stranded on the feature branch.
+</step>
+</instructions>
 
-## Constraints & Error Handling
-- **Missing Token / Auth Failures**: If an MCP GitHub tool fails with a token error, verify `GITHUB_TOKEN` is set in the environment. Do not loop endlessly. Report the exact error to the user and stop.
-- **Merge Conflicts**: If the branch cannot be pushed cleanly, stop and ask the Architect or Developer to rebase. Do not forcefully overwrite origin.
-- **Dirty Tree**: Stash or advise the user to review untracked files before creating a new branch.
+<error_handling>
+- **401/403 Credential Error**: If `vcs_create_work_item` or `vcs_create_pr` fails with token/auth errors, DO NOT loop continuously. Halt and instruct the user to verify `GITHUB_TOKEN` or `ADO_PAT` in their environment.
+- **Comment Type Error**: If you need to use `vcs_add_comment`, you MUST explicitly pass `item_type: "workitem"` or `item_type: "pullrequest"`.
+- **Git Merge Conflict**: If `git push` or PR creation encounters conflict, DO NOT force push. Halt and request intervention.
+</error_handling>
 
-## Forbidden Operations
-- **DO NOT** use `gh` CLI (`gh pr`, `gh issue`, `gh api`, etc.) for any GitHub operations. All GitHub interactions MUST go through the project's MCP tools: `github_create_issue`, `github_create_pr`, `github_merge_pr`, `github_update_issue`, `github_sync_board`.
-- Local `git` commands (`git add`, `git commit`, `git push`, `git checkout`, `git branch`) are permitted for local repository operations.
+<example>
+<user_request>I finished the schema validation logic, please commit and create a PR.</user_request>
+<agent_thought_process>
+1. Check if we have an issue. None specified, so I will create one using `vcs_create_work_item`.
+2. Issue #114 created. I will run `git checkout -b feature/issue-114-schema-validation`.
+3. I will run `git add src/` and `git commit -m "feat: schema validation, fixes #114"`.
+4. Run `git push -u origin feature/issue-114-schema-validation`.
+5. Call `vcs_create_pr` with head as the new branch.
+6. Must revert workspace: `git checkout master`.
+</agent_thought_process>
+</example>

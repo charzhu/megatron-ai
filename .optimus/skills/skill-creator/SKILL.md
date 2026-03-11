@@ -1,91 +1,95 @@
 ---
 name: skill-creator
-description: Bootstrap skill that teaches agents how to create new SKILL.md files for the Optimus Spartan Swarm system.
+description: Generates high-quality, standardized SKILL.md files aligned with official specifications, ensuring strict MCP tool validation and robust XML-structured prompts.
 ---
 
-# Skill Creator (Bootstrap Skill)
+# Skill Creator (Meta-Skill)
 
-This skill activates when the Master Agent needs to create a new skill for a role that is missing required capabilities.
+This skill activates when the Master Agent needs to create a new skill for a role that is missing required capabilities, or to upgrade an existing skill.
 
-## What is a Skill?
+<instructions>
+You are executing the meta-skill `skill-creator`. Your goal is to write a highly specific, standardized instruction manual for other agents.
 
-A Skill is a **domain-specific instruction manual** stored as a Markdown file at:
-```
-.optimus/skills/<skill-name>/SKILL.md
-```
+## Step 0: Discover and Validate Tools (MANDATORY)
+BEFORE drafting any workflow, you MUST verify the exact MCP tool names and parameters available in the environment. 
+- Never hallucinate tool names or arguments.
+- Check the currently available tools to guarantee 100% accuracy before writing the instructions. Do not guess a tool exists.
 
-Skills teach AI agents **how to use specific MCP tools or follow specific workflows**. Without skills, agents have tools but no instruction manual.
+## Step 1: Draft the Skill using XML Standards
+Generate the skill using the exact XML and Markdown hybrid structure shown in the `<template>` block below. The resulting file should heavily feature structured tags to help target models parse context.
 
-## When to Create a Skill
-
-The Master Agent will delegate skill creation when:
-1. A `delegate_task` call is rejected due to `required_skills` pre-flight failure
-2. A new workflow pattern needs to be codified for reuse across agents
-3. An existing skill needs to be extended or replaced
-
-## How to Create a Skill
-
-### Step 1: Understand the Purpose
-Read the task context provided by the Master Agent. Understand:
-- **What tools** the skill should teach the agent to use
-- **What workflow** the skill should encode
-- **What guardrails** the skill should enforce (e.g., async-first, non-blocking)
-
-### Step 2: Write the SKILL.md File
-
-The file MUST follow this structure:
-
-```markdown
+<template>
 ---
-name: <skill-name>
-description: <one-line description of what this skill teaches>
+name: "<skill-name>"
+description: "<one-line actionable description of what this skill teaches>"
 ---
 
 # <Skill Title>
 
-<Brief description of when this skill activates.>
+<description>
+<Brief description of when and why this skill activates.>
+</description>
 
-## <Step-by-step instructions>
+<workflow>
+### Step 1: <Action Name>
+- **Tool**: `exact_mcp_tool_name`
+- **Parameters**: 
+  - `param_1`: <explanation of expected value>
+- **Action**: <Details on what the agent should do>
 
-### Step 1: <Action>
-<Detailed instructions with tool names and parameters>
-
-### Step 2: <Action>
+### Step 2: <Action Name>
 ...
+</workflow>
 
-## Anti-Patterns
-- <Things the agent must NOT do>
+<error_handling>
+- If `<exact_mcp_tool_name>` fails with `<Specific Error>`, THEN `<Action to recover>`.
+</error_handling>
 
-## Examples
-- <Concrete examples of correct usage>
-```
+<anti_patterns>
+- <Things the agent MUST NOT do>
+</anti_patterns>
+</template>
 
-### Step 3: Write the File to Disk
+## Step 2: Quality & Security Validation
+- **Path Validation**: The file MUST be written exactly to `.optimus/skills/<skill-name>/SKILL.md`. Ensure the parent directories exist before writing.
+- **Sanitization**: Ensure the skill name only contains lowercase alphanumeric characters, dashes, and underscores (e.g. `data-analysis`).
 
-Create the skill at the correct path:
-```
-.optimus/skills/<skill-name>/SKILL.md
-```
+## Reference Examples
+Use the following exemplar to shape your output quality and understand the expected format:
 
-Use the workspace's file system to write the content. Ensure the directory exists first.
+<example>
+---
+name: "git-workflow"
+description: "Issue-first GitHub workflow with proper PR creation and error handling."
+---
 
-### Step 4: Verify
+# GitHub Workflow
 
-Confirm the file exists and is valid Markdown with YAML frontmatter.
+<description>
+Triggered when code needs to be committed, pushed, and reviewed via a Pull Request.
+</description>
 
-## Quality Checklist
+<workflow>
+### Step 1: Create Tracking Issue
+- **Tool**: `vcs_create_work_item`
+- **Parameters**: 
+  - `title`: The issue title
+  - `body`: Description of the bug or feature
+- **Action**: Always create a tracking issue before modifying code to establish a blackboard for progress.
 
-A good skill file:
-- [ ] Has YAML frontmatter with `name` and `description`
-- [ ] Has clear step-by-step instructions (numbered steps)
-- [ ] References specific MCP tool names the agent should call
-- [ ] Includes anti-patterns (what NOT to do)
-- [ ] Is actionable — an agent reading it can immediately follow the instructions
-- [ ] Is concise — no walls of text, focuses on the essential workflow
-- [ ] Uses the correct path convention: `.optimus/skills/<name>/SKILL.md`
+### Step 2: Branch and Commit
+- **Action**: Checkout a new branch `feature/issue-<ID>`, make changes, and use Conventional Commits. Do not invoke tools for simple terminal git commands, use standard CLI access.
+</workflow>
 
-## Anti-Patterns
-- Do NOT create skills that duplicate existing ones — check `.optimus/skills/` first
-- Do NOT write vague or generic instructions — be specific about tool names and parameters
-- Do NOT create skills that reference tools the MCP server doesn't provide
-- Do NOT embed large code blocks — skills are instruction manuals, not code repositories
+<error_handling>
+- If `vcs_create_work_item` returns a validation error or 403 authorization error, verify credentials and stop execution. Do not proceed to commit.
+- If branch already exists, append a unique hash to the new branch name and retry.
+</error_handling>
+
+<anti_patterns>
+- Do not commit directly to `master` or `main`.
+- Do not use generic tool names like `github_issue`; use the exact MCP schemas.
+</anti_patterns>
+</example>
+
+</instructions>

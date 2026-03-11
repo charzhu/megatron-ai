@@ -545,6 +545,34 @@ Please provide your complete execution result below.`;
 
         const response = await adapter.invoke(basePrompt, 'agent');
 
+        // --- Fail-Fast: Detect CLI-level errors in output ---
+        // Some CLIs (e.g., Copilot) exit code 0 but output error text.
+        // Detect these immediately so the Master Agent can re-delegate.
+        const firstLines = response.slice(0, 500);
+        const errorPatterns = [
+            /^> \[LOG\] [Ee]rror:/m,
+            /^API Error: [45]\d\d/m,
+            /^error: option .* is invalid/m,
+            /^Error: No authentication/m,
+            /^Worker execution failed:/m,
+        ];
+        const matchedError = errorPatterns.find(p => p.test(firstLines));
+        if (matchedError) {
+            // Clean up temp T1 — don't leave zombies
+            const tempFile = t1Path || path.join(workspacePath, '.optimus', 'agents', `${role}_pending_${tempId}.md`);
+            if (fs.existsSync(tempFile) && tempFile.includes('pending_')) {
+                try { fs.unlinkSync(tempFile); } catch {}
+            }
+            throw new Error(
+                `⚠️ **Delegation Failed (Engine Error)**: Role \`${role}\` on engine \`${activeEngine}\` returned an error.\n\n` +
+                `**Error output**:\n\`\`\`\n${firstLines.trim()}\n\`\`\`\n\n` +
+                `**Suggested actions**:\n` +
+                `- Re-delegate with a different engine (e.g., \`claude-code\` instead of \`github-copilot\`)\n` +
+                `- Check if the model name is valid for this engine\n` +
+                `- Verify CLI authentication (e.g., \`copilot login\`, \`claude auth\`)`
+            );
+        }
+
         // --- Post-Execution: Backfill session_id and rename T1 to final name ---
         const currentT1 = fs.existsSync(t1TempPath) ? t1TempPath : t1Path;
         if (currentT1 && fs.existsSync(currentT1)) {

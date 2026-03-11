@@ -1,10 +1,13 @@
 {
+  "_comment": "Configure your VCS provider. Set provider to 'auto-detect', 'github', or 'azure-devops'.",
   "provider": "auto-detect",
   "github": {
+    "auth": "env:GITHUB_TOKEN",
     "owner": "",
     "repo": ""
   },
   "ado": {
+    "auth": "env:ADO_PAT",
     "organization": "",
     "project": ""
   }

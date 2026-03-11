@@ -9,7 +9,7 @@
    - **目的**：实现 Agent 之间的高频交互、打草稿、并发审查（Council Review），避免污染主聊天窗口的上下文，保证 AI 执行过程的极速与隔离。
 
 2. **云端级的宏观追踪 (GitHub Integration)**
-   - **机制**：通过 MCP 工具（`github_create_issue`, `github_sync_board` 等）将关键节点的数据同步到 GitHub。
+   - **机制**：通过 MCP 工具（`vcs_create_work_item`, `vcs_create_pr`, `vcs_add_comment` 等统一 VCS 抽象层）将关键节点的数据同步到 GitHub 或 Azure DevOps。
    - **目的**：将本地的 Agent 内部意图转化为人类可读的史诗级任务 (Epic)、子任务 (Task) 和代码变更 (Pull Request)。
 
 ## 核心五步工作流 (The 5-Phase Workflow)

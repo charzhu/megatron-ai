@@ -573,5 +573,166 @@
     "heartbeatTime": 1773213127294,
     "github_issue_number": 97,
     "pid": 205616
+  },
+  "task_1773237243164_kfexhe": {
+    "taskId": "task_1773237243164_kfexhe",
+    "type": "delegate_task",
+    "role": "qa-engineer",
+    "task_description": "## QA Task: Test the Fail-Fast Error Detection in worker-spawner.ts\n\nA new fail-fast check was added to `src/mcp/worker-spawner.ts` after `adapter.invoke()`. It detects CLI-level errors in output (auth failures, invalid models, API 500s) and throws immediately with actionable error messages instead of reporting \"Task Delegation Successful\".\n\n### Test Plan\n\n#### Test 1: Verify error patterns are correctly detected\nRead `src/mcp/worker-spawner.ts` and find the `errorPatterns` array (search for \"Fail-Fast\"). Verify that the following patterns would be matched:\n- `> [LOG] Error: No authentication information found.`\n- `API Error: 500 {\"error\":{\"message\":\"Cannot have more than 128 tools\"}}`\n- `error: option '--model <model>' argument 'gemini-3.0-pro' is invalid`\n- `Error: No authentication`\n- `Worker execution failed: timeout`\n\n#### Test 2: Verify the throw message is actionable\nCheck that the thrown error includes:\n- The role name and engine that failed\n- The actual error output (first 500 chars)\n- Suggested remediation actions\n\n#### Test 3: Verify zombie T1 cleanup\nCheck that when the error is detected:\n- Pending T1 temp files (`pending_*`) are deleted\n- Non-pending T1 files are NOT deleted (they may be valid from previous runs)\n\n#### Test 4: Verify happy path is unaffected\nCheck that a successful response (e.g., normal text output without error patterns) does NOT trigger the fail-fast and still flows through to the normal success path.\n\n#### Test 5: Edge cases\n- What if the agent's legitimate output contains the word \"Error\" (e.g., \"I fixed the Error handling code\")? Would that false-trigger?\n- What if the error is on line 50 (beyond the 500-char window)? Would it be missed?\n\n### Deliverable\nA QA report with pass/fail for each test, plus any bugs or improvements found.",
+    "output_path": ".optimus/reports/qa_failfast_test.md",
+    "workspacePath": "C:/Users/lochen/optimus-code",
+    "context_files": [
+      "src/mcp/worker-spawner.ts"
+    ],
+    "status": "verified",
+    "startTime": 1773237243166,
+    "heartbeatTime": 1773237303621,
+    "pid": 64188
+  },
+  "task_1773237349334_5puv7y": {
+    "taskId": "task_1773237349334_5puv7y",
+    "type": "delegate_task",
+    "role": "qa-engineer",
+    "task_description": "## QA Task: Review and Test the VCS Provider Implementation (Issue #105)\n\nThe `senior-tech-lead` has implemented a unified VCS Provider abstraction on branch `feature/issue-105-vcs-provider`. Review and test the implementation. The files are:\n- `src/adapters/vcs/IVcsProvider.ts` — unified interface\n- `src/adapters/vcs/GitHubProvider.ts` — GitHub REST API implementation\n- `src/adapters/vcs/AdoProvider.ts` — ADO REST API implementation\n- `src/adapters/vcs/VcsProviderFactory.ts` — Factory with auto-detect + lazy loading\n- Check `src/mcp/mcp-server.ts` for MCP tool registrations (vcs_create_work_item, vcs_create_pr, etc.)\n\n### Test Plan\n\n#### 1. Code Quality Review\n- Check TypeScript types: no `any` in public interfaces\n- Check error handling: auth failures produce clear messages (\"GITHUB_TOKEN not set\", \"ADO_PAT not set\")\n- Check no external npm dependencies used — only Node.js built-in `https`, `child_process`\n- Check import paths are correct and all files compile\n\n#### 2. Interface Compliance\n- Verify `GitHubProvider` implements all methods in `IVcsProvider`\n- Verify `AdoProvider` implements all methods in `IVcsProvider`\n- Check return types match interface signatures\n\n#### 3. Security Review\n- Auth tokens read from env vars, never hardcoded\n- No token leakage in error messages or logs\n- URLs are properly constructed (no injection risks in owner/repo/project names)\n\n#### 4. Factory Logic\n- Auto-detect from git remote URL works for both github.com and dev.azure.com patterns\n- Explicit config override from `.optimus/config/vcs.json` takes priority\n- Lazy loading via dynamic import works correctly\n\n#### 5. MCP Tool Registration\n- Check if `vcs_create_work_item`, `vcs_create_pr`, `vcs_merge_pr`, `vcs_add_comment` are registered in mcp-server.ts\n- Check parameter schemas are correct\n\n#### 6. Build Verification\n- Run `cd optimus-plugin && npm run build` to verify everything compiles\n- Fix any build errors you find (we already fixed regex escaping issues in VcsProviderFactory.ts)\n\n### Deliverable\n1. A QA report with pass/fail for each test area\n2. If all critical tests pass: \n   - Use `github_create_pr` MCP tool to create a PR from `feature/issue-105-vcs-provider` to `master` with title \"feat(vcs): Unified VCS Provider (GitHub + ADO), fixes #105\" and body \"Fixes #105\"\n   - Then use `github_merge_pr` MCP tool to merge the PR\n3. If critical bugs found: list them with file paths and line numbers",
+    "output_path": ".optimus/reports/qa_vcs_provider.md",
+    "workspacePath": "C:/Users/lochen/optimus-code",
+    "context_files": [
+      "src/adapters/vcs/IVcsProvider.ts",
+      "src/adapters/vcs/GitHubProvider.ts",
+      "src/adapters/vcs/AdoProvider.ts",
+      "src/adapters/vcs/VcsProviderFactory.ts",
+      "src/mcp/mcp-server.ts"
+    ],
+    "status": "failed",
+    "startTime": 1773237349336,
+    "heartbeatTime": 1773237349336,
+    "pid": 15580,
+    "error_message": "Task timed out or runner process died (reaped by Watchdog)."
+  },
+  "task_1773238189269_2neh0y": {
+    "taskId": "task_1773238189269_2neh0y",
+    "type": "delegate_task",
+    "role": "qa-engineer",
+    "task_description": "## QA Task: Full End-to-End Test of the VCS Provider Feature\n\nThe VCS Provider abstraction is on the remote branch `origin/feature/issue-105-vcs-provider` (commit `42e1f61`). You can read the source files directly from git:\n\n```\ngit show 42e1f61:src/adapters/vcs/IVcsProvider.ts\ngit show 42e1f61:src/adapters/vcs/GitHubProvider.ts\ngit show 42e1f61:src/adapters/vcs/AdoProvider.ts\ngit show 42e1f61:src/adapters/vcs/VcsProviderFactory.ts\ngit show 42e1f61:src/mcp/mcp-server.ts\n```\n\nThe local config is at `.optimus/config/vcs.json` (set to `auto-detect`).\n\n### Full Test Plan\n\n#### A. Code Review (read all 4 VCS files from git)\n\n1. **IVcsProvider.ts**\n   - Interface defines: createWorkItem, createPullRequest, mergePullRequest, addComment\n   - Return types are typed (no `any` in public signatures)\n   - Both providers must implement all methods\n\n2. **GitHubProvider.ts**\n   - Uses Node.js built-in `https` only (no axios, node-fetch, octokit)\n   - Auth reads from `process.env.GITHUB_TOKEN`\n   - Error on missing token is descriptive\n   - URL construction is safe (no injection via owner/repo)\n   - Handles HTTP error responses correctly\n\n3. **AdoProvider.ts**\n   - Uses Node.js built-in `https` only\n   - Auth reads from `process.env.ADO_PAT`\n   - Correct ADO REST API paths (`/_apis/wit/workitems/`, `/_apis/git/repositories/`)\n   - Handles ADO work item type parameter\n   - Base64 PAT encoding for ADO auth header\n   - Error on missing token is descriptive\n\n4. **VcsProviderFactory.ts**\n   - Reads `.optimus/config/vcs.json`\n   - Auto-detect parses `git remote get-url origin`\n   - Matches `github.com` → GitHubProvider\n   - Matches `dev.azure.com` and `visualstudio.com` → AdoProvider\n   - Config override (`\"provider\": \"github\"` or `\"provider\": \"ado\"`) takes priority over auto-detect\n   - Lazy-loads providers\n   - Regex patterns are correct (no double-escaping bugs)\n\n5. **MCP tool registration in mcp-server.ts**\n   - All 4 tools registered: vcs_create_work_item, vcs_create_pr, vcs_merge_pr, vcs_add_comment\n   - Parameter schemas are correct\n   - Error handling wraps in McpError\n\n#### B. Live Integration Test (GitHub only — we have GITHUB_TOKEN)\n\n1. **Test vcs_create_work_item**: Use the `vcs_create_work_item` MCP tool to create a test issue on `cloga/optimus-code` with title \"[QA Test] VCS Provider Integration Test\" and body \"Automated QA test for VCS Provider feature. Safe to close.\"\n2. **Verify**: Check the issue was created on GitHub\n3. **Test vcs_add_comment**: Add a comment \"QA test comment via VCS provider\" to the created issue\n4. **Cleanup**: Close the test issue\n\nIf any MCP tool is not yet available (because the branch isn't merged), skip live tests and note it.\n\n#### C. Security Review\n\n1. No tokens logged or exposed in error messages\n2. No hardcoded credentials\n3. URL parameters are sanitized\n4. ADO PAT is Base64-encoded correctly for Authorization header\n\n#### D. Edge Cases\n\n1. What happens if `.optimus/config/vcs.json` doesn't exist? (should fall back to auto-detect from git remote)\n2. What happens if git remote is not configured? (should throw clear error)\n3. What happens if GITHUB_TOKEN / ADO_PAT is not set? (should throw clear error before API call)\n4. What happens if owner/repo parsing fails? (should handle gracefully)\n\n### Deliverable\nA full QA test report with:\n- PASS/FAIL for each test item\n- Any bugs found (with file, line number, description)\n- Any security concerns\n- Overall recommendation: APPROVE / REJECT / APPROVE WITH FIXES",
+    "output_path": ".optimus/reports/qa_vcs_full_test.md",
+    "workspacePath": "C:/Users/lochen/optimus-code",
+    "context_files": [
+      ".optimus/config/vcs.json",
+      "src/utils/githubApi.ts"
+    ],
+    "status": "verified",
+    "startTime": 1773238189271,
+    "heartbeatTime": 1773238489784,
+    "pid": 50116
+  },
+  "task_1773238905531_z4whal": {
+    "taskId": "task_1773238905531_z4whal",
+    "type": "delegate_task",
+    "role": "dev",
+    "task_description": "Please implement the architectural prerequisites defined in Issue #113 (MCP Schema introspection tool, File mutex lock, Skill Name path sanitization). Check out branch feature/issue-113-meta-skill-prereqs, modify the src files, commit, push, and submit a PR fixing issue #113.",
+    "output_path": ".optimus/reports/dev_issue_113_report.md",
+    "workspacePath": "c:\\Users\\lochen\\optimus-code",
+    "context_files": [
+      ".optimus/tasks/task_issue_113.md",
+      ".optimus/reviews/council_1773236024088_0mduui/COUNCIL_SYNTHESIS.md"
+    ],
+    "status": "failed",
+    "startTime": 1773238905532,
+    "heartbeatTime": 1773238905532,
+    "pid": 180204,
+    "error_message": "Worker execution failed: ⚠️ **Delegation Failed (Engine Error)**: Role `dev` on engine `github-copilot` returned an error.\n\n**Error output**:\n```\n> [LOG] error: option '--model <model>' argument 'gemini-3.0-pro' is invalid. Allowed choices are claude-sonnet-4.6, claude-sonnet-4.5, claude-haiku-4.5, claude-opus-4.6, claude-opus-4.6-fast, claude-opus-4.5, claude-sonnet-4, gemini-3-pro-preview, gpt-5.4, gpt-5.3-codex, gpt-5.2-codex, gpt-5.2, gpt-5.1-codex-max, gpt-5.1-codex, gpt-5.1, gpt-5.1-codex-mini, gpt-5-mini, gpt-4.1.\n```\n\n**Suggested actions**:\n- Re-delegate with a different engine (e.g., `claude-code` instead of `github-copilot`)\n- Check if the model name is valid for this engine\n- Verify CLI authentication (e.g., `copilot login`, `claude auth`)"
+  },
+  "council_1773238993772_aeqnon": {
+    "taskId": "council_1773238993772_aeqnon",
+    "type": "dispatch_council",
+    "roles": [
+      "chief-architect",
+      "meta-system-architect",
+      "mcp-schema-architect",
+      "prompt-engineering-lead",
+      "framework-evolution-expert",
+      "runtime-validation-expert",
+      "security",
+      "autonomous-loop-visionary"
+    ],
+    "proposal_path": ".optimus/proposals/PROPOSAL_skill_creator_official_doc_alignment.md",
+    "output_path": "C:\\Users\\lochen\\optimus-code\\.optimus\\reviews\\council_1773238993772_aeqnon",
+    "workspacePath": "C:\\Users\\lochen\\optimus-code",
+    "status": "failed",
+    "startTime": 1773238993774,
+    "heartbeatTime": 1773238993774,
+    "pid": 94084,
+    "error_message": "ENOENT: no such file or directory, open 'C:\\Users\\lochen\\optimus-code\\.optimus\\reviews\\council_1773238993772_aeqnon\\COUNCIL_SYNTHESIS.md'"
+  },
+  "council_1773239116348_acmta9": {
+    "taskId": "council_1773239116348_acmta9",
+    "type": "dispatch_council",
+    "roles": [
+      "chief-architect",
+      "mcp-schema-architect",
+      "prompt-engineering-lead",
+      "runtime-validation-expert",
+      "security"
+    ],
+    "proposal_path": ".optimus/proposals/PROPOSAL_skill_creator_official_doc_alignment_v2.md",
+    "output_path": "C:\\Users\\lochen\\optimus-code\\.optimus\\reviews\\council_1773239116348_acmta9",
+    "workspacePath": "C:\\Users\\lochen\\optimus-code",
+    "status": "failed",
+    "startTime": 1773239116350,
+    "heartbeatTime": 1773239116350,
+    "pid": 41600,
+    "error_message": "ENOENT: no such file or directory, open 'C:\\Users\\lochen\\optimus-code\\.optimus\\reviews\\council_1773239116348_acmta9\\COUNCIL_SYNTHESIS.md'"
+  },
+  "task_1773239392021_3h2k1h": {
+    "taskId": "task_1773239392021_3h2k1h",
+    "type": "delegate_task",
+    "role": "prompt-engineering-lead",
+    "task_description": "We are recursively upgrading our meta-skills. Your task is to use the `skill-creator` skill principles to rewrite and improve the `skill-creator` SKILL.md file itself. Read the existing `.optimus/skills/skill-creator/SKILL.md`, refine its XML structure, enhance the Step 0 zero-hallucination rules, ensure the `<template>` and `<example>` blocks are flawless, and overwrite the file at `.optimus/skills/skill-creator/SKILL.md` directly. Document the exact structural enhancements you made in the required output report.",
+    "output_path": ".optimus/reports/skill_creator_self_improvement_report.md",
+    "workspacePath": "C:\\Users\\lochen\\optimus-code",
+    "context_files": [
+      ".optimus/skills/skill-creator/SKILL.md",
+      ".optimus/proposals/PROPOSAL_skill_creator_official_doc_alignment_v2.md"
+    ],
+    "status": "failed",
+    "startTime": 1773239392023,
+    "heartbeatTime": 1773239392023,
+    "pid": 175020,
+    "error_message": "Worker execution failed: ⚠️ **Delegation Failed (Engine Error)**: Role `prompt-engineering-lead` on engine `github-copilot` returned an error.\n\n**Error output**:\n```\n> [LOG] error: option '--model <model>' argument 'gemini-3.0-pro' is invalid. Allowed choices are claude-sonnet-4.6, claude-sonnet-4.5, claude-haiku-4.5, claude-opus-4.6, claude-opus-4.6-fast, claude-opus-4.5, claude-sonnet-4, gemini-3-pro-preview, gpt-5.4, gpt-5.3-codex, gpt-5.2-codex, gpt-5.2, gpt-5.1-codex-max, gpt-5.1-codex, gpt-5.1, gpt-5.1-codex-mini, gpt-5-mini, gpt-4.1.\n```\n\n**Suggested actions**:\n- Re-delegate with a different engine (e.g., `claude-code` instead of `github-copilot`)\n- Check if the model name is valid for this engine\n- Verify CLI authentication (e.g., `copilot login`, `claude auth`)"
+  },
+  "task_1773239453090_2ceh0v": {
+    "taskId": "task_1773239453090_2ceh0v",
+    "type": "delegate_task",
+    "role": "prompt-engineering-lead",
+    "task_description": "Read the new standard in .optimus/skills/skill-creator/SKILL.md, then iterate through agent-creator, council-review, delegate-task, git-workflow, and task-dashboard. Rewrite all 5 of their SKILL.md files to perfectly match the new XML format. Overwrite the files directly and output a summary report.",
+    "output_path": ".optimus/reports/bulk_skill_upgrade_report.md",
+    "workspacePath": "c:\\Users\\lochen\\optimus-code",
+    "context_files": [
+      ".optimus/tasks/task_bulk_skill_upgrade.md",
+      ".optimus/skills/skill-creator/SKILL.md"
+    ],
+    "status": "failed",
+    "startTime": 1773239453092,
+    "heartbeatTime": 1773239453092,
+    "pid": 81704,
+    "error_message": "Worker execution failed: ⚠️ **Delegation Failed (Engine Error)**: Role `prompt-engineering-lead` on engine `github-copilot` returned an error.\n\n**Error output**:\n```\n> [LOG] error: option '--model <model>' argument 'gemini-3.0-pro' is invalid. Allowed choices are claude-sonnet-4.6, claude-sonnet-4.5, claude-haiku-4.5, claude-opus-4.6, claude-opus-4.6-fast, claude-opus-4.5, claude-sonnet-4, gemini-3-pro-preview, gpt-5.4, gpt-5.3-codex, gpt-5.2-codex, gpt-5.2, gpt-5.1-codex-max, gpt-5.1-codex, gpt-5.1, gpt-5.1-codex-mini, gpt-5-mini, gpt-4.1.\n```\n\n**Suggested actions**:\n- Re-delegate with a different engine (e.g., `claude-code` instead of `github-copilot`)\n- Check if the model name is valid for this engine\n- Verify CLI authentication (e.g., `copilot login`, `claude auth`)"
+  },
+  "task_1773239572992_1l7e0r": {
+    "taskId": "task_1773239572992_1l7e0r",
+    "type": "delegate_task",
+    "role": "prompt-engineering-lead",
+    "task_description": "Read task_upgrade_git_workflow.md and re-write .optimus/skills/git-workflow/SKILL.md to leverage the new vcs_* tools using the required XML templates from skill-creator. Overwrite the SKILL.md file and write a final report.",
+    "output_path": ".optimus/reports/upgrade_git_workflow_report.md",
+    "workspacePath": "C:\\Users\\lochen\\optimus-code",
+    "context_files": [
+      ".optimus/tasks/task_upgrade_git_workflow.md",
+      ".optimus/skills/skill-creator/SKILL.md",
+      ".optimus/skills/git-workflow/SKILL.md"
+    ],
+    "status": "failed",
+    "startTime": 1773239572994,
+    "heartbeatTime": 1773239572994,
+    "pid": 110884,
+    "error_message": "Worker execution failed: ⚠️ **Delegation Failed (Engine Error)**: Role `prompt-engineering-lead` on engine `github-copilot` returned an error.\n\n**Error output**:\n```\n> [LOG] error: option '--model <model>' argument 'gemini-3.0-pro' is invalid. Allowed choices are claude-sonnet-4.6, claude-sonnet-4.5, claude-haiku-4.5, claude-opus-4.6, claude-opus-4.6-fast, claude-opus-4.5, claude-sonnet-4, gemini-3-pro-preview, gpt-5.4, gpt-5.3-codex, gpt-5.2-codex, gpt-5.2, gpt-5.1-codex-max, gpt-5.1-codex, gpt-5.1, gpt-5.1-codex-mini, gpt-5-mini, gpt-4.1.\n```\n\n**Suggested actions**:\n- Re-delegate with a different engine (e.g., `claude-code` instead of `github-copilot`)\n- Check if the model name is valid for this engine\n- Verify CLI authentication (e.g., `copilot login`, `claude auth`)"
   }
 }
