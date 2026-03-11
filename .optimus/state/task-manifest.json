@@ -122,5 +122,456 @@
     "heartbeatTime": 1773167336094,
     "github_issue_number": 56,
     "pid": 84100
+  },
+  "council_1773186505280_71qaqd": {
+    "taskId": "council_1773186505280_71qaqd",
+    "type": "dispatch_council",
+    "roles": [
+      "chief-architect",
+      "qa-engineer"
+    ],
+    "proposal_path": "C:\\Users\\lochen\\optimus-code\\.optimus\\proposals\\PROPOSAL_t1_t2_t3_taxonomy.md",
+    "output_path": "C:\\Users\\lochen\\optimus-code\\.optimus\\reviews\\council_1773186505280_71qaqd",
+    "workspacePath": "C:\\Users\\lochen\\optimus-code",
+    "status": "verified",
+    "startTime": 1773186505282,
+    "heartbeatTime": 1773186986415,
+    "github_issue_number": 59,
+    "pid": 39216
+  },
+  "task_1773186903853_pioggy": {
+    "taskId": "task_1773186903853_pioggy",
+    "type": "delegate_task",
+    "role": "tech-lead",
+    "task_description": "Comprehensively scan the entire repository (specifically the `src/`, `optimus-plugin/`, and `.optimus/` directories) for orphaned files, zombie code, unused config JSONs, or deprecated scripts that are no longer imported or used anywhere in the current architecture. Focus on finding untouched logic similar to the unused `available-models.json`. Provide a clear report of your findings in the output file, and if you are 100% confident they are dead code, you may execute terminal commands to delete them.",
+    "output_path": "C:\\Users\\lochen\\optimus-code\\.optimus\\reports\\tech-lead-zombie-scan.md",
+    "workspacePath": "C:\\Users\\lochen\\optimus-code",
+    "context_files": [],
+    "status": "verified",
+    "startTime": 1773186903855,
+    "heartbeatTime": 1773186903855,
+    "pid": 126884
+  },
+  "task_1773188165704_1n62lj": {
+    "taskId": "task_1773188165704_1n62lj",
+    "type": "delegate_task",
+    "role": "qa-engineer",
+    "task_description": "Write a quick poem about git bash on windows to verify the environment executes properly.",
+    "output_path": ".optimus/tasks/test_git_bash_fix.md",
+    "workspacePath": "C:\\Users\\lochen\\optimus-code",
+    "context_files": [
+      ".optimus/config/available-agents.json"
+    ],
+    "status": "verified",
+    "startTime": 1773188165706,
+    "heartbeatTime": 1773188165706,
+    "github_issue_number": 60,
+    "pid": 23164
+  },
+  "council_1773189503449_oncxg7": {
+    "taskId": "council_1773189503449_oncxg7",
+    "type": "dispatch_council",
+    "roles": [
+      "qa-engineer",
+      "chief-architect",
+      "pm"
+    ],
+    "proposal_path": "C:\\Users\\lochen\\optimus-code\\.optimus\\proposals\\PROPOSAL_t3_to_t2.md",
+    "output_path": "C:\\Users\\lochen\\optimus-code\\.optimus\\reviews\\council_1773189503449_oncxg7",
+    "workspacePath": "C:\\Users\\lochen\\optimus-code",
+    "status": "verified",
+    "startTime": 1773189503451,
+    "heartbeatTime": 1773189924495,
+    "github_issue_number": 62,
+    "pid": 70664
+  },
+  "task_1773191562870_rpikt1": {
+    "taskId": "task_1773191562870_rpikt1",
+    "type": "delegate_task",
+    "role": "qa-engineer",
+    "task_description": "## QA Test Assignment: Issue #63 — T3→T2 Precipitation System\n\nPlease perform a thorough code review and test plan for the T3→T2 Role Precipitation feature implemented in this commit. Focus on:\n\n### 1. T2 Frontmatter Engine/Model Binding\n- Verify `chief-architect.md` and `qa-engineer.md` have correct YAML frontmatter with `engine` and `model` fields\n- Verify `worker-spawner.ts` correctly reads frontmatter `engine`/`model` (around line 248-251) and passes to `getAdapterForEngine`\n- Check: what happens if frontmatter is malformed or missing engine/model? Does fallback to `claude-code` work?\n\n### 2. T3 Usage Tracking\n- Review `trackT3Usage()`, `loadT3UsageLog()`, `saveT3UsageLog()` functions\n- Verify the JSON structure in `t3-usage-log.json` is correct\n- Check: concurrent writes to t3-usage-log.json — any race conditions?\n- Check: what if `.optimus/state/` directory doesn't exist?\n\n### 3. Auto-Precipitation Logic\n- Review `checkAndPrecipitate()` function\n- Verify threshold (3 invocations) and success rate (80%) calculations\n- Check: does it correctly skip if T2 file already exists?\n- Check: is the generated T2 template valid markdown with correct frontmatter?\n- Check: what happens at exactly the boundary (e.g., 3 invocations, 2 successes = 66% — should NOT precipitate)\n\n### 4. roster_check Enhancement\n- Review the new T2 display logic that shows engine/model from frontmatter\n- Review the T3 usage stats section\n- Check: handles missing/empty t3-usage-log.json gracefully?\n\n### 5. Edge Cases\n- Role names with special characters or spaces\n- Empty or corrupted t3-usage-log.json\n- Simultaneous precipitation attempts for same role\n\nPlease provide a detailed QA report with PASS/FAIL for each area, any bugs found, and a final recommendation (APPROVE / REJECT / CONDITIONAL).",
+    "output_path": ".optimus/reports/qa_issue63_t3_precipitation.md",
+    "workspacePath": "C:\\Users\\lochen\\optimus-code",
+    "context_files": [
+      "src/mcp/worker-spawner.ts",
+      "src/mcp/mcp-server.ts",
+      ".optimus/roles/chief-architect.md",
+      ".optimus/roles/qa-engineer.md",
+      ".optimus/config/available-agents.json"
+    ],
+    "status": "verified",
+    "startTime": 1773191562872,
+    "heartbeatTime": 1773191803935,
+    "github_issue_number": 65,
+    "pid": 78364
+  },
+  "task_1773192456075_unw9ec": {
+    "taskId": "task_1773192456075_unw9ec",
+    "type": "delegate_task",
+    "role": "dev",
+    "task_description": "## Task: Fix Issue #67 — Clarify delegate-task skill to be async-first and non-blocking\n\nYou need to rewrite `optimus-plugin/skills/delegate-task/SKILL.md` to fix the following problems:\n\n### Problems to Fix:\n1. The skill says `delegate_task_async` is preferred but does not make it a hard default\n2. Step 3 says \"loop and check status via check_task_status until it is marked completed\" — this defeats the purpose of async. It should say to tell the user it's running and use check_task_status later, NOT block/loop\n3. There is a corrupted duplicate paragraph at the very end of the file (lines starting with \"**Action:** Use the MCP tool `delegate_task_async`...\" repeated with garbled characters like `\\role`, `\\task_description`)\n4. The roster_check tool name reference should be made resilient (say \"your available roster inspection tool\" or similar)\n\n### Required Changes:\n1. Add a \"Core Rule\" section at the top declaring async-first delegation as the default\n2. In Step 3 Deployment, change the behavior to:\n   - Use `delegate_task_async` as the DEFAULT (not just preferred)\n   - After dispatch, tell the user the task is running in background\n   - Use `check_task_status` ONLY when progress is needed, while continuing other work\n   - Do NOT block, loop, sleep, or wait\n3. Add a \"Non-Blocking Follow-Up\" section (Step 4) for post-dispatch behavior\n4. Add an \"Anti-Patterns\" section listing:\n   - Do NOT use synchronous delegate_task unless the user explicitly requests blocking\n   - Do NOT enter a wait/sleep loop after async dispatch\n   - Do NOT simulate or narrate worker output yourself\n5. Remove the corrupted duplicate block at the end\n6. Reference the council-review SKILL.md async pattern as a model (it already has good non-blocking language)\n\n### IMPORTANT:\n- Write the COMPLETE new file content to the output path\n- The file should be clean markdown with YAML frontmatter\n- Keep the 3-step pipeline structure (Camp Inspection, Manpower Assessment, Deployment) but fix the async guidance\n- Make sure formatting is clean with no garbled characters",
+    "output_path": ".optimus/results/dev_issue67_delegate_skill.md",
+    "workspacePath": "C:\\Users\\lochen\\optimus-code",
+    "context_files": [
+      "optimus-plugin/skills/delegate-task/SKILL.md",
+      "optimus-plugin/skills/council-review/SKILL.md"
+    ],
+    "status": "verified",
+    "startTime": 1773192456076,
+    "heartbeatTime": 1773192517059,
+    "github_issue_number": 68,
+    "pid": 163908
+  },
+  "council_1773196682290_ldooz6": {
+    "taskId": "council_1773196682290_ldooz6",
+    "type": "dispatch_council",
+    "roles": [
+      "chief-architect",
+      "security",
+      "qa-engineer"
+    ],
+    "proposal_path": "C:\\Users\\lochen\\optimus-code\\.optimus\\proposals\\PROPOSAL_self_evolving_architecture.md",
+    "output_path": "C:\\Users\\lochen\\optimus-code\\.optimus\\reviews\\council_1773196682290_ldooz6",
+    "workspacePath": "C:\\Users\\lochen\\optimus-code",
+    "status": "verified",
+    "startTime": 1773196682292,
+    "heartbeatTime": 1773197223391,
+    "github_issue_number": 69,
+    "pid": 25772
+  },
+  "council_1773197118716_qikoq7": {
+    "taskId": "council_1773197118716_qikoq7",
+    "type": "dispatch_council",
+    "roles": [
+      "chief-architect",
+      "security",
+      "qa-engineer",
+      "distributed-systems-expert",
+      "developer-experience-expert"
+    ],
+    "proposal_path": "C:\\Users\\lochen\\optimus-code\\.optimus\\proposals\\PROPOSAL_t1_preflight_evolution.md",
+    "output_path": "C:\\Users\\lochen\\optimus-code\\.optimus\\reviews\\council_1773197118716_qikoq7",
+    "workspacePath": "C:\\Users\\lochen\\optimus-code",
+    "status": "verified",
+    "startTime": 1773197118718,
+    "heartbeatTime": 1773197839774,
+    "github_issue_number": 70,
+    "pid": 45080
+  },
+  "task_1773197523497_y0gs04": {
+    "taskId": "task_1773197523497_y0gs04",
+    "type": "delegate_task",
+    "role": "skill-creator",
+    "task_description": "## Task: Create a \"task-dashboard\" skill\n\nYou are a skill creator. Read the `skill-creator` SKILL.md to understand the format and quality requirements.\n\n### What this skill should teach:\nThe \"task-dashboard\" skill teaches the Master Agent how to inspect the swarm's full operational state — running tasks, completed delegations, council reviews, agent status, and stale detection.\n\n### Data sources the skill should reference:\n1. `.optimus/state/task-manifest.json` — All delegate_task and dispatch_council records (status, role/roles, output_path, timestamps, github_issue_number)\n2. `.optimus/agents/<name>.md` frontmatter `status` field — `running` means currently executing, `idle` means available\n3. `.optimus/state/t3-usage-log.json` — Invocation counts and success rates per dynamic role\n4. `.optimus/agents/<name>.lock` — Lock files indicating active processes\n\n### Status meanings to document:\n- running: task executing in background\n- completed: process exited, output may exist\n- verified: output confirmed non-empty\n- partial: process exited but output missing\n- failed: task errored (check error_message)\n\n### The skill should teach how to:\n1. Read task-manifest.json and present a summary dashboard (running/completed/failed counts)\n2. Identify stale agents (status=running for >10 minutes)\n3. Show recent completions (last 5)\n4. Flag failed tasks with error messages\n5. Check individual tasks via `check_task_status` MCP tool\n6. Read T1 agent status from frontmatter\n\n### Anti-patterns to include:\n- Don't dump the entire manifest into chat — summarize\n- Don't poll in a loop — read once\n- Don't modify task-manifest — it's an audit log\n\n### Important:\n- Write the COMPLETE SKILL.md file content to your output path\n- Follow the format from skill-creator SKILL.md exactly (YAML frontmatter + steps + anti-patterns)\n- I've provided the existing v1 as a context file for reference, but write your own version from scratch",
+    "output_path": ".optimus/skills/task-dashboard-v2/SKILL.md",
+    "workspacePath": "C:\\Users\\lochen\\optimus-code",
+    "context_files": [
+      "optimus-plugin/skills/task-dashboard/SKILL.md",
+      "optimus-plugin/skills/skill-creator/SKILL.md"
+    ],
+    "status": "verified",
+    "startTime": 1773197523498,
+    "heartbeatTime": 1773197704494,
+    "github_issue_number": 71,
+    "pid": 174728
+  },
+  "council_1773198749698_h6qw2j": {
+    "taskId": "council_1773198749698_h6qw2j",
+    "type": "dispatch_council",
+    "roles": [
+      "claude-code-opus-4.61m",
+      "copilot-gemini-3-pro",
+      "copilot-gpt-5.4"
+    ],
+    "proposal_path": ".optimus/proposals/PROPOSAL_skill_creator_meta.md",
+    "output_path": "c:\\Users\\lochen\\optimus-code\\.optimus\\reviews\\council_1773198749698_h6qw2j",
+    "workspacePath": "c:/Users/lochen/optimus-code",
+    "status": "verified",
+    "startTime": 1773198749699,
+    "heartbeatTime": 1773198930668,
+    "github_issue_number": 73,
+    "pid": 17492
+  },
+  "council_1773198800384_l1d49b": {
+    "taskId": "council_1773198800384_l1d49b",
+    "type": "dispatch_council",
+    "roles": [
+      "claude-code-opus-4.61m",
+      "copilot-gemini-3-pro",
+      "copilot-gpt-5.4"
+    ],
+    "proposal_path": ".optimus/proposals/PROPOSAL_agent_creator_meta.md",
+    "output_path": "C:\\Users\\lochen\\optimus-code\\.optimus\\reviews\\council_1773198800384_l1d49b",
+    "workspacePath": "C:/Users/lochen/optimus-code",
+    "status": "verified",
+    "startTime": 1773198800385,
+    "heartbeatTime": 1773199044350,
+    "github_issue_number": 75,
+    "pid": 129344
+  },
+  "council_1773199000417_bjwb9z": {
+    "taskId": "council_1773199000417_bjwb9z",
+    "type": "dispatch_council",
+    "roles": [
+      "mcp-schema-architect",
+      "runtime-validation-expert",
+      "prompt-engineering-lead"
+    ],
+    "proposal_path": ".optimus/proposals/PROPOSAL_role_model_separation.md",
+    "output_path": "C:\\Users\\lochen\\optimus-code\\.optimus\\reviews\\council_1773199000417_bjwb9z",
+    "workspacePath": "C:/Users/lochen/optimus-code",
+    "status": "verified",
+    "startTime": 1773199000418,
+    "heartbeatTime": 1773199241401,
+    "github_issue_number": 77,
+    "pid": 118056
+  },
+  "task_1773199655857_twey8p": {
+    "taskId": "task_1773199655857_twey8p",
+    "type": "delegate_task",
+    "role": "terminal-test-agent",
+    "task_description": "Write a very short 2-line poem about clean terminal windows. This is a test to verify if background delegation tasks are inadvertently spawning visible pwsh windows in the VS Code UI.",
+    "output_path": ".optimus/tasks/terminal_test_output.md",
+    "workspacePath": "C:/Users/lochen/optimus-code",
+    "context_files": [],
+    "status": "verified",
+    "startTime": 1773199655859,
+    "heartbeatTime": 1773199837145,
+    "github_issue_number": 78,
+    "pid": 193680
+  },
+  "council_1773200143931_svnf59": {
+    "taskId": "council_1773200143931_svnf59",
+    "type": "dispatch_council",
+    "roles": [
+      "mcp-schema-architect",
+      "runtime-validation-expert",
+      "prompt-engineering-lead"
+    ],
+    "proposal_path": ".optimus/proposals/PROPOSAL_role_model_separation.md",
+    "output_path": "C:\\Users\\lochen\\optimus-code\\.optimus\\reviews\\council_1773200143931_svnf59",
+    "workspacePath": "C:/Users/lochen/optimus-code",
+    "status": "verified",
+    "startTime": 1773200143932,
+    "heartbeatTime": 1773200204887,
+    "github_issue_number": 79,
+    "pid": 51688
+  },
+  "task_1773200881373_gb2q10": {
+    "taskId": "task_1773200881373_gb2q10",
+    "type": "delegate_task",
+    "role": "meta-system-architect",
+    "task_description": "You are reviewing the **skill-creator** meta-skill (see context file: optimus-plugin/skills/skill-creator/SKILL.md). This skill is one of two foundational 'meta-skills' that enable the Optimus project to self-evolve. The other meta-skill is agent-creator (also in context for cross-reference).\n\nPlease provide a thorough architectural review covering:\n1. **Completeness**: Does this skill contain everything an agent needs to autonomously create high-quality new skills? What's missing?\n2. **Safety & Guardrails**: Can a rogue or confused agent use this skill to create harmful, recursive, or infinite-loop skills? What safeguards should be added?\n3. **Composability with agent-creator**: Does skill-creator properly reference or integrate with agent-creator? Can the system detect a missing skill, auto-invoke skill-creator, then retry the original task?\n4. **Prompt Quality**: Are the instructions precise enough for any frontier LLM (Claude, Gemini, GPT) to follow without ambiguity?\n5. **Concrete Improvements**: Provide specific code-level or markdown-level patches, not just abstract suggestions.\n\nConclude with: APPROVE / REJECT / APPROVE_WITH_CONDITIONS and list your conditions.",
+    "output_path": ".optimus/reviews/meta-skill-review/skill-creator_meta-system-architect.md",
+    "workspacePath": "C:/Users/lochen/optimus-code",
+    "context_files": [
+      "optimus-plugin/skills/skill-creator/SKILL.md",
+      "optimus-plugin/skills/agent-creator/SKILL.md"
+    ],
+    "status": "verified",
+    "startTime": 1773200881375,
+    "heartbeatTime": 1773200942371,
+    "github_issue_number": 81,
+    "pid": 64832
+  },
+  "task_1773200893435_k62c5c": {
+    "taskId": "task_1773200893435_k62c5c",
+    "type": "delegate_task",
+    "role": "framework-evolution-expert",
+    "task_description": "You are reviewing the **skill-creator** meta-skill (see context file: optimus-plugin/skills/skill-creator/SKILL.md). This skill is one of two foundational 'meta-skills' that enable the Optimus project to self-evolve. The other meta-skill is agent-creator (also in context for cross-reference).\n\nPlease provide a thorough review from a code generation & framework evolution perspective:\n1. **Template Quality**: Is the SKILL.md template structure rich enough to generate high-quality, unambiguous skills? Should there be more structured fields (e.g., required_tools, triggers, version)?\n2. **Generation Workflow**: The current flow is: Master detects missing skill → delegates to skill-creator role → agent writes SKILL.md. Is this sufficient? Should there be validation, testing, or dry-run steps?\n3. **Cross-Model Compatibility**: Will these instructions produce equally good results when executed by Claude, Gemini, and GPT? Any model-specific ambiguities?\n4. **Versioning & Evolution**: Skills will need updates over time. Should skill-creator support versioning, diffing, or migration?\n5. **Concrete Improvements**: Provide specific markdown patches or structural changes.\n\nConclude with: APPROVE / REJECT / APPROVE_WITH_CONDITIONS and list your conditions.",
+    "output_path": ".optimus/reviews/meta-skill-review/skill-creator_framework-evolution-expert.md",
+    "workspacePath": "C:/Users/lochen/optimus-code",
+    "context_files": [
+      "optimus-plugin/skills/skill-creator/SKILL.md",
+      "optimus-plugin/skills/agent-creator/SKILL.md"
+    ],
+    "status": "verified",
+    "startTime": 1773200893436,
+    "heartbeatTime": 1773200954375,
+    "github_issue_number": 82,
+    "pid": 60844
+  },
+  "task_1773200906452_g3qw56": {
+    "taskId": "task_1773200906452_g3qw56",
+    "type": "delegate_task",
+    "role": "autonomous-loop-visionary",
+    "task_description": "You are reviewing the **skill-creator** meta-skill (see context file: optimus-plugin/skills/skill-creator/SKILL.md). This skill is one of two foundational 'meta-skills' that enable the Optimus project to self-evolve. The other meta-skill is agent-creator (also in context for cross-reference).\n\nPlease provide a visionary review from an autonomous evolution perspective:\n1. **Closed-Loop Capability**: Can the current design support a fully autonomous loop: detect missing skill → generate skill → validate skill → deploy skill → retry original task? What's missing to close this loop?\n2. **Self-Healing**: If a generated skill is buggy or causes agent failures, is there a feedback mechanism to auto-fix or rollback?\n3. **Skill Discovery**: How does the system know WHAT skill to create? Is there enough signal from failed tasks to auto-derive the skill specification?\n4. **Ecosystem Growth**: As skills accumulate, how should the system prune obsolete ones, merge duplicates, or promote high-performing ones?\n5. **Meta-Recursion Safety**: skill-creator creates skills, including potentially a better version of itself. How do we ensure safe self-improvement without infinite recursion?\n\nConclude with: APPROVE / REJECT / APPROVE_WITH_CONDITIONS and list your conditions.",
+    "output_path": ".optimus/reviews/meta-skill-review/skill-creator_autonomous-loop-visionary.md",
+    "workspacePath": "C:/Users/lochen/optimus-code",
+    "context_files": [
+      "optimus-plugin/skills/skill-creator/SKILL.md",
+      "optimus-plugin/skills/agent-creator/SKILL.md"
+    ],
+    "status": "verified",
+    "startTime": 1773200906454,
+    "heartbeatTime": 1773200906454,
+    "github_issue_number": 83,
+    "pid": 130036
+  },
+  "task_1773200918118_ikp25a": {
+    "taskId": "task_1773200918118_ikp25a",
+    "type": "delegate_task",
+    "role": "meta-system-architect",
+    "task_description": "You are reviewing the **agent-creator** meta-skill (see context file: optimus-plugin/skills/agent-creator/SKILL.md). This skill teaches the Master Agent how to manage the full T3→T2→T1 agent lifecycle. The other meta-skill (skill-creator) is also in context for cross-reference.\n\nPlease provide a thorough architectural review covering:\n1. **T3→T2→T1 Lifecycle Completeness**: Does the documented hierarchy cover all edge cases? What about T1 retirement, T2 deprecation, or role merging?\n2. **Security & Isolation**: Can a malicious or confused agent create roles with escalated privileges? Are there guardrails against permission creep in auto-generated agents?\n3. **Engine/Model Binding**: The skill documents how to pin engines and models. Is this flexible enough? What about multi-model fallback chains or cost-aware routing?\n4. **Composability with skill-creator**: When a new agent is created, does the system ensure it has the right skills? Should agent-creator auto-invoke skill-creator to equip new roles?\n5. **Concrete Improvements**: Provide specific markdown-level patches or structural additions to the SKILL.md.\n\nConclude with: APPROVE / REJECT / APPROVE_WITH_CONDITIONS and list your conditions.",
+    "output_path": ".optimus/reviews/meta-skill-review/agent-creator_meta-system-architect.md",
+    "workspacePath": "C:/Users/lochen/optimus-code",
+    "context_files": [
+      "optimus-plugin/skills/agent-creator/SKILL.md",
+      "optimus-plugin/skills/skill-creator/SKILL.md"
+    ],
+    "status": "verified",
+    "startTime": 1773200918120,
+    "heartbeatTime": 1773200918120,
+    "github_issue_number": 84,
+    "pid": 37076
+  },
+  "task_1773200929204_ybb9w7": {
+    "taskId": "task_1773200929204_ybb9w7",
+    "type": "delegate_task",
+    "role": "framework-evolution-expert",
+    "task_description": "You are reviewing the **agent-creator** meta-skill (see context file: optimus-plugin/skills/agent-creator/SKILL.md). This skill teaches the Master Agent how to manage the full T3→T2→T1 agent lifecycle. The other meta-skill (skill-creator) is also in context for cross-reference.\n\nPlease provide a thorough review from a code generation & framework evolution perspective:\n1. **T2 Template Quality**: The current T2 role files are YAML frontmatter + markdown body. Is this structure rich enough? Should there be more structured fields like `capabilities`, `allowed_tools`, `max_budget`, `timeout`?\n2. **Role Description Engineering**: When Master provides `role_description`, it directly becomes the agent's persona. Is there a need for a more sophisticated persona synthesis pipeline?\n3. **Cross-Engine Compatibility**: The skill mentions `claude-code` and `copilot-cli` engines. Are the instructions engine-agnostic enough? What breaks when switching engines?\n4. **Team Composition Patterns**: Should agent-creator support higher-level abstractions like \"team templates\" — predefined groups of roles for common workflows (e.g., {architect, dev, qa} for feature work)?\n5. **Concrete Improvements**: Provide specific markdown patches or structural changes.\n\nConclude with: APPROVE / REJECT / APPROVE_WITH_CONDITIONS and list your conditions.",
+    "output_path": ".optimus/reviews/meta-skill-review/agent-creator_framework-evolution-expert.md",
+    "workspacePath": "C:/Users/lochen/optimus-code",
+    "context_files": [
+      "optimus-plugin/skills/agent-creator/SKILL.md",
+      "optimus-plugin/skills/skill-creator/SKILL.md"
+    ],
+    "status": "verified",
+    "startTime": 1773200929206,
+    "heartbeatTime": 1773200929206,
+    "github_issue_number": 85,
+    "pid": 149688
+  },
+  "task_1773200942651_vkddz9": {
+    "taskId": "task_1773200942651_vkddz9",
+    "type": "delegate_task",
+    "role": "autonomous-loop-visionary",
+    "task_description": "You are reviewing the **agent-creator** meta-skill (see context file: optimus-plugin/skills/agent-creator/SKILL.md). This skill teaches the Master Agent how to manage the full T3→T2→T1 agent lifecycle. The other meta-skill (skill-creator) is also in context for cross-reference.\n\nPlease provide a visionary review from an autonomous evolution perspective:\n1. **Auto-Scaling Workforce**: When the system detects it needs a new kind of expert (e.g., a task fails because no suitable role exists), can agent-creator autonomously bootstrap a new specialist? What's the detection → creation → deployment pipeline?\n2. **Agent Retirement & Pruning**: T3 roles that never get reused should die. T2 roles that consistently fail should be deprecated. T1 agents with stale sessions should be archived. Does the current design handle any of this?\n3. **Skill-Agent Co-Evolution**: When a new agent is created, it might need new skills. When a new skill is created, existing agents might benefit. Is there a mechanism for this bidirectional evolution?\n4. **Organizational Memory**: As the agent workforce evolves, should there be a team health dashboard, performance metrics, or evolution history?\n5. **Meta-Recursion Safety**: agent-creator can create agents that themselves use agent-creator. How do we prevent unbounded agent spawning?\n\nConclude with: APPROVE / REJECT / APPROVE_WITH_CONDITIONS and list your conditions.",
+    "output_path": ".optimus/reviews/meta-skill-review/agent-creator_autonomous-loop-visionary.md",
+    "workspacePath": "C:/Users/lochen/optimus-code",
+    "context_files": [
+      "optimus-plugin/skills/agent-creator/SKILL.md",
+      "optimus-plugin/skills/skill-creator/SKILL.md"
+    ],
+    "status": "verified",
+    "startTime": 1773200942652,
+    "heartbeatTime": 1773200942652,
+    "github_issue_number": 86,
+    "pid": 90548
+  },
+  "task_1773201353393_uclon2": {
+    "taskId": "task_1773201353393_uclon2",
+    "type": "delegate_task",
+    "role": "qa-engineer",
+    "task_description": "You are the QA engineer for PR #87 (branch: feature/issue-76-role-model-separation-and-tool-overflow).\n\nThis PR includes 4 major changes. Please verify each one thoroughly:\n\n## Test Plan\n\n### 1. Model-Name-as-Role Guard (mcp-server.ts)\n- [ ] Verify `validateRoleName()` regex correctly REJECTS: `claude-3-opus`, `gpt-5.4`, `gemini-3.0-pro`, `opus-4.6`, `sonnet-3.5`\n- [ ] Verify it correctly ACCEPTS: `security-architect`, `meta-system-architect`, `prompt-engineering-lead`, `qa-engineer`\n- [ ] Verify the McpError message is actionable and tells the caller to use `role_model` instead\n\n### 2. normalizeRoleSpecs() (mcp-server.ts)\n- [ ] Verify backward compatibility: plain string arrays `['architect', 'dev']` still work\n- [ ] Verify structured objects `[{role: 'architect', role_model: 'claude-opus-4-6-1m'}]` are correctly parsed\n- [ ] Verify mixed arrays (some strings, some objects) work\n- [ ] Verify invalid entries (null, number, object without `role`) throw McpError\n\n### 3. --strict-mcp-config (ClaudeCodeAdapter.ts)\n- [ ] Verify `--strict-mcp-config` is always pushed to args\n- [ ] Verify the inline `--mcp-config` JSON is valid and contains spartan-swarm with correct absolute paths\n- [ ] Verify no `fs` or `path` imports were left unused (we removed findProjectMcpConfigs)\n\n### 4. MasterInfo Data Chain\n- [ ] Verify `TaskRecord` interface includes `role_specs` and `master_info` fields\n- [ ] Verify `delegate_task_async` handler extracts role_description/engine/model and stores as `master_info`\n- [ ] Verify `council-runner.ts` reads `task.role_specs` and passes to `dispatchCouncilConcurrent()`\n- [ ] Verify `dispatchCouncilConcurrent()` correctly converts RoleSpec to MasterRoleInfo for each worker\n- [ ] Verify `spawnWorker()` enriches masterInfo.description when not provided\n- [ ] Verify T1 placeholder includes personaContext/description body, not just `# role-name`\n\n### 5. Regression Checks\n- [ ] Verify `dispatch_council` (sync) still works with the new normalizeRoleSpecs\n- [ ] Verify `delegate_task` (sync, non-async) path is NOT broken by these changes\n- [ ] Verify the build compiles cleanly: `cd optimus-plugin && npm run build`\n\nWrite a structured QA report with PASS/FAIL for each item. Conclude with: **APPROVED FOR MERGE** or **BLOCKED — requires fixes**.\n\nWorkspace root: C:/Users/lochen/optimus-code",
+    "output_path": ".optimus/reports/qa-report-pr87-role-model-guard.md",
+    "workspacePath": "C:/Users/lochen/optimus-code",
+    "context_files": [
+      "src/adapters/ClaudeCodeAdapter.ts",
+      "src/managers/TaskManifestManager.ts",
+      "src/mcp/mcp-server.ts",
+      "src/mcp/council-runner.ts",
+      "src/mcp/worker-spawner.ts"
+    ],
+    "status": "verified",
+    "startTime": 1773201353394,
+    "heartbeatTime": 1773201774435,
+    "github_issue_number": 88,
+    "pid": 162100
+  },
+  "council_1773207794674_e0qyrh": {
+    "taskId": "council_1773207794674_e0qyrh",
+    "type": "dispatch_council",
+    "roles": [
+      "chief-architect",
+      "pm",
+      "ado-integration-specialist"
+    ],
+    "proposal_path": "c:\\Users\\lochen\\optimus-code\\.optimus\\proposals\\PROPOSAL_ado_github_workflow.md",
+    "output_path": "c:\\Users\\lochen\\optimus-code\\.optimus\\reviews\\council_1773207794674_e0qyrh",
+    "workspacePath": "c:\\Users\\lochen\\optimus-code",
+    "status": "verified",
+    "startTime": 1773207794676,
+    "heartbeatTime": 1773208155789,
+    "github_issue_number": 89,
+    "pid": 186500
+  },
+  "council_1773209604903_cdr9qs": {
+    "taskId": "council_1773209604903_cdr9qs",
+    "type": "dispatch_council",
+    "roles": [
+      "chief-architect",
+      "systems-architect",
+      "security"
+    ],
+    "proposal_path": "c:\\Users\\lochen\\optimus-code\\.optimus\\proposals\\PROPOSAL_project_architecture_analysis.md",
+    "output_path": "c:\\Users\\lochen\\optimus-code\\.optimus\\reviews\\council_1773209604903_cdr9qs",
+    "workspacePath": "c:\\Users\\lochen\\optimus-code",
+    "status": "verified",
+    "startTime": 1773209604905,
+    "heartbeatTime": 1773210026000,
+    "github_issue_number": 90,
+    "pid": 62800
+  },
+  "council_1773210095506_xsliya": {
+    "taskId": "council_1773210095506_xsliya",
+    "type": "dispatch_council",
+    "roles": [
+      "pm",
+      "chief-architect",
+      "ui-designer"
+    ],
+    "proposal_path": "c:\\Users\\lochen\\optimus-code\\.optimus\\proposals\\PROPOSAL_ecommerce_epic.md",
+    "output_path": "c:\\Users\\lochen\\optimus-code\\.optimus\\reviews\\council_1773210095506_xsliya",
+    "workspacePath": "c:\\Users\\lochen\\optimus-code",
+    "status": "verified",
+    "startTime": 1773210095507,
+    "heartbeatTime": 1773210456542,
+    "github_issue_number": 91,
+    "pid": 93956
+  },
+  "council_1773210889388_kfrnxr": {
+    "taskId": "council_1773210889388_kfrnxr",
+    "type": "dispatch_council",
+    "roles": [
+      "ecommerce-lead-dev"
+    ],
+    "proposal_path": "c:\\Users\\lochen\\optimus-code\\.optimus\\tasks\\task_ecommerce_mvp.md",
+    "output_path": "c:\\Users\\lochen\\optimus-code\\.optimus\\reviews\\council_1773210889388_kfrnxr",
+    "workspacePath": "c:\\Users\\lochen\\optimus-code",
+    "status": "verified",
+    "startTime": 1773210889389,
+    "heartbeatTime": 1773211070400,
+    "github_issue_number": 93,
+    "pid": 143120
+  },
+  "council_1773211838436_42j0ol": {
+    "taskId": "council_1773211838436_42j0ol",
+    "type": "dispatch_council",
+    "roles": [
+      "ecommerce-lead-dev"
+    ],
+    "proposal_path": "c:\\Users\\lochen\\optimus-code\\.optimus\\tasks\\task_ecommerce_mvp.md",
+    "output_path": "c:\\Users\\lochen\\optimus-code\\.optimus\\reviews\\council_1773211838436_42j0ol",
+    "workspacePath": "c:\\Users\\lochen\\optimus-code",
+    "status": "verified",
+    "startTime": 1773211838437,
+    "heartbeatTime": 1773211899420,
+    "github_issue_number": 94,
+    "pid": 148512
+  },
+  "task_1773212286104_zyf86m": {
+    "taskId": "task_1773212286104_zyf86m",
+    "type": "delegate_task",
+    "role": "qa-engineer",
+    "task_description": "Please test the changes in PR #96 located on branch `feature/issue-95-strict-mcp`. We replaced the `--ignore-mcp-servers` blacklist approach with the `--strict-mcp-config` whitelist flag in `src/adapters/ClaudeCodeAdapter.ts` to solve the Anthropic 128 Tool Limit crash. Please verify the build can compile correctly, unit tests pass if applicable, and the plugin loads correctly. Create any bug issues if necessary. Write your final report to `.optimus/results/qa_report_pr96.md`.",
+    "output_path": "c:\\Users\\lochen\\optimus-code\\.optimus\\results\\qa_report_pr96.md",
+    "workspacePath": "C:\\Users\\lochen\\optimus-code",
+    "context_files": [],
+    "status": "verified",
+    "startTime": 1773212286105,
+    "heartbeatTime": 1773213127294,
+    "github_issue_number": 97,
+    "pid": 205616
   }
 }

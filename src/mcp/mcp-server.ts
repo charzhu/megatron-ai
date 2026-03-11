@@ -118,6 +118,7 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
               repo: { type: "string", description: "Repository name" },
               issue_number: { type: "number", description: "The number of the issue to update" },
               state: { type: "string", enum: ["open", "closed"], description: "State of the issue" },
+              title: { type: "string", description: "New title for the issue" },
               body: { type: "string", description: "New body for the issue (overwrites existing)" },
               agent_role: { type: "string", description: "The role of the agent making this update" },
               session_id: { type: "string", description: "The session ID of the agent" }
@@ -434,8 +435,9 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
     const remote = parseGitRemote(workspace_path);
     if (remote) {
         const truncDesc = task_description.length > 300 ? task_description.substring(0, 300) + '...' : task_description;
+        const shortTitle = task_description.split('\n')[0].substring(0, 80).trim();
         const issue = await createGitHubIssue(remote.owner, remote.repo,
-            `[swarm-task] ${role}: ${taskId}`,
+            `[Task] ${role}: ${shortTitle}...`,
             `## Auto-generated Swarm Task Tracker\n\n**Task ID:** \`${taskId}\`\n**Role:** \`${role}\`\n**Output Path:** \`${output_path}\`\n\n### Task Description\n${truncDesc}`,
             ['swarm-task']
         );
@@ -470,8 +472,9 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
     let issueInfo = '';
     const remote = parseGitRemote(workspace_path);
     if (remote) {
+        const proposalName = require('path').basename(proposal_path, '.md').replace(/^PROPOSAL_/i, '').replace(/[_-]/g, ' ');
         const issue = await createGitHubIssue(remote.owner, remote.repo,
-            `[swarm-council] ${roles.join(', ')}: ${taskId}`,
+            `[Council] ${proposalName} (Review)`,
             `## Auto-generated Council Review Tracker\n\n**Council ID:** \`${taskId}\`\n**Roles:** ${roles.map((r: string) => `\`${r}\``).join(', ')}\n**Proposal:** \`${proposal_path}\`\n**Reviews Path:** \`${reviewsPath}\``,
             ['swarm-council']
         );
@@ -590,7 +593,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
       }
     } else if (request.params.name === "github_update_issue") {
       reloadEnv(); // Hot-reload .env for long-running MCP process
-      const { owner, repo, issue_number, state, body, agent_role, session_id } = request.params.arguments as any;
+      const { owner, repo, issue_number, state, body, title, agent_role, session_id } = request.params.arguments as any;
       const token = process.env.GITHUB_TOKEN || process.env.GH_TOKEN;
       if (!token) throw new McpError(ErrorCode.InvalidRequest, "GITHUB_TOKEN env is not set");
       
@@ -605,6 +608,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
 
         const payload: any = {};
         if (state) payload.state = state;
+        if (title) payload.title = title;
         if (finalBody) payload.body = finalBody;
 
         const resp = await fetch(`https://api.github.com/repos/${owner}/${repo}/issues/${issue_number}`, {

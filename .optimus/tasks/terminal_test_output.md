@@ -1,0 +1,1 @@
+API Error: 500 {"error":{"message":"Cannot have more than 128 tools per request.","type":"internal_server_error","log_file":"c:\\Users\\lochen\\optimus-code\\2026-03-11_11-04-44-498-debug.log"}}

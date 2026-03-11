@@ -1,0 +1,7 @@
+
+# Optimus Swarm generated artifacts
+# .optimus directories
+.optimus/reports/
+.optimus/reviews/
+.optimus/state/
+.optimus/memory/

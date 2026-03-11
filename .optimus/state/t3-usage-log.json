@@ -1,0 +1,154 @@
+{
+  "dev": {
+    "role": "dev",
+    "invocations": 1,
+    "successes": 1,
+    "failures": 0,
+    "lastUsed": "2026-03-11T01:29:01.234Z",
+    "engine": "claude-code"
+  },
+  "distributed-systems-expert": {
+    "role": "distributed-systems-expert",
+    "invocations": 1,
+    "successes": 1,
+    "failures": 0,
+    "lastUsed": "2026-03-11T02:54:45.596Z",
+    "engine": "claude-code",
+    "model": "gemini-3.0-pro"
+  },
+  "skill-creator": {
+    "role": "skill-creator",
+    "invocations": 1,
+    "successes": 1,
+    "failures": 0,
+    "lastUsed": "2026-03-11T02:55:24.132Z",
+    "engine": "claude-code",
+    "model": "gemini-3.0-pro"
+  },
+  "developer-experience-expert": {
+    "role": "developer-experience-expert",
+    "invocations": 1,
+    "successes": 1,
+    "failures": 0,
+    "lastUsed": "2026-03-11T02:56:24.262Z",
+    "engine": "claude-code",
+    "model": "gemini-3.0-pro"
+  },
+  "claude-code-opus-461m": {
+    "role": "claude-code-opus-461m",
+    "invocations": 1,
+    "successes": 1,
+    "failures": 0,
+    "lastUsed": "2026-03-11T03:15:55.412Z",
+    "engine": "claude-code",
+    "model": "gemini-3.0-pro"
+  },
+  "copilot-gemini-3-pro": {
+    "role": "copilot-gemini-3-pro",
+    "invocations": 1,
+    "successes": 1,
+    "failures": 0,
+    "lastUsed": "2026-03-11T03:15:55.417Z",
+    "engine": "claude-code",
+    "model": "gemini-3.0-pro"
+  },
+  "copilot-gpt-54": {
+    "role": "copilot-gpt-54",
+    "invocations": 1,
+    "successes": 1,
+    "failures": 0,
+    "lastUsed": "2026-03-11T03:15:56.100Z",
+    "engine": "claude-code",
+    "model": "gemini-3.0-pro"
+  },
+  "mcp-schema-architect": {
+    "role": "mcp-schema-architect",
+    "invocations": 1,
+    "successes": 1,
+    "failures": 0,
+    "lastUsed": "2026-03-11T03:19:59.878Z",
+    "engine": "claude-code",
+    "model": "gemini-3.0-pro"
+  },
+  "runtime-validation-expert": {
+    "role": "runtime-validation-expert",
+    "invocations": 1,
+    "successes": 1,
+    "failures": 0,
+    "lastUsed": "2026-03-11T03:20:00.912Z",
+    "engine": "claude-code",
+    "model": "gemini-3.0-pro"
+  },
+  "prompt-engineering-lead": {
+    "role": "prompt-engineering-lead",
+    "invocations": 1,
+    "successes": 1,
+    "failures": 0,
+    "lastUsed": "2026-03-11T03:20:02.634Z",
+    "engine": "claude-code",
+    "model": "gemini-3.0-pro"
+  },
+  "terminal-test-agent": {
+    "role": "terminal-test-agent",
+    "invocations": 1,
+    "successes": 1,
+    "failures": 0,
+    "lastUsed": "2026-03-11T03:30:48.566Z",
+    "engine": "claude-code",
+    "model": "gemini-3.0-pro"
+  },
+  "autonomous-loop-visionary": {
+    "role": "autonomous-loop-visionary",
+    "invocations": 1,
+    "successes": 1,
+    "failures": 0,
+    "lastUsed": "2026-03-11T03:49:00.896Z",
+    "engine": "claude-code",
+    "model": "gemini-3.0-pro"
+  },
+  "meta-system-architect": {
+    "role": "meta-system-architect",
+    "invocations": 1,
+    "successes": 1,
+    "failures": 0,
+    "lastUsed": "2026-03-11T03:49:06.198Z",
+    "engine": "claude-code",
+    "model": "gemini-3.0-pro"
+  },
+  "framework-evolution-expert": {
+    "role": "framework-evolution-expert",
+    "invocations": 1,
+    "successes": 1,
+    "failures": 0,
+    "lastUsed": "2026-03-11T03:49:23.814Z",
+    "engine": "claude-code",
+    "model": "gemini-3.0-pro"
+  },
+  "ado-integration-specialist": {
+    "role": "ado-integration-specialist",
+    "invocations": 1,
+    "successes": 1,
+    "failures": 0,
+    "lastUsed": "2026-03-11T05:46:40.547Z",
+    "engine": "claude-code",
+    "model": "gemini-3.0-pro"
+  },
+  "systems-architect": {
+    "role": "systems-architect",
+    "invocations": 1,
+    "successes": 1,
+    "failures": 0,
+    "lastUsed": "2026-03-11T06:16:52.572Z",
+    "engine": "claude-code",
+    "model": "gemini-3.0-pro"
+  },
+  "ecommerce-lead-dev": {
+    "role": "ecommerce-lead-dev",
+    "invocations": 2,
+    "successes": 2,
+    "failures": 0,
+    "lastUsed": "2026-03-11T06:50:57.947Z",
+    "engine": "claude-code",
+    "model": "gemini-3.0-pro"
+  }
+}

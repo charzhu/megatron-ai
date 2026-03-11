@@ -105,6 +105,11 @@ This repository contains **two intertwined codebases**:
 | **Host project** | Root (`src/`, `docs/`, `.optimus/`) | The Optimus orchestrator's own development workspace |
 | **Plugin package** | `optimus-plugin/` | The npm-publishable MCP server plugin that ships to end-users |
 
+## Development & Reload Constraints (Hard Rule)
+When making any code modifications to the Optimus project itself (e.g., `src/`, `optimus-plugin/`, or MCP server logic):
+1. **Agent MUST Build**: The agent must automatically run the build command (`cd optimus-plugin && npm run build`) after modifications.
+2. **Prompt User to Reload**: After a successful build, the agent **MUST explicitly and clearly prompt the user** to execute the "Developer: Reload Window" command in VS Code, as this is strictly required for the new MCP server binary to be loaded.
+
 ### Impact Rule: When making changes, ALWAYS evaluate whether the change should propagate to the plugin.
 
 | Change Type | Apply to `.optimus/` (host) | Also apply to `optimus-plugin/` (packaging) |
