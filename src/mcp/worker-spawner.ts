@@ -494,38 +494,42 @@ Please provide your complete execution result below.`;
     await lockManager.acquireLock(role);
     try {
         await ConcurrencyGovernor.acquire();
+
+        // --- Pre-Flight: Create T1 placeholder before task execution ---
+        // T1 is created BEFORE the task runs so we have a record even if the task crashes.
+        // session_id will be backfilled after completion.
+        const agentsDir = path.join(workspacePath, '.optimus', 'agents');
+        if (!fs.existsSync(agentsDir)) fs.mkdirSync(agentsDir, { recursive: true });
+
+        if (!fs.existsSync(t1Path)) {
+            const t1Template = fs.existsSync(t2Path)
+                ? fs.readFileSync(t2Path, 'utf8')
+                : `---\nrole: ${role}\n---\n\n# ${role}\n`;
+            const t1Instance = updateFrontmatter(t1Template, {
+                role: role,
+                base_tier: 'T1',
+                engine: activeEngine,
+                ...(activeModel ? { model: activeModel } : {}),
+                session_id: '',
+                status: 'running',
+                created_at: new Date().toISOString()
+            });
+            fs.writeFileSync(t1Path, t1Instance, 'utf8');
+            console.error(`[Orchestrator] T2→T1: Created agent placeholder '${role}' (awaiting session_id)`);
+        }
+
         const response = await adapter.invoke(basePrompt, 'agent');
 
-        // --- Core Protocol: Session Capture & T2→T1 Instantiation ---
-        if (adapter.lastSessionId) {
-            const agentsDir = path.join(workspacePath, '.optimus', 'agents');
-            if (!fs.existsSync(agentsDir)) fs.mkdirSync(agentsDir, { recursive: true });
-
-            if (fs.existsSync(t1Path)) {
-                // T1 already exists — update session_id
-                const currentStr = fs.readFileSync(t1Path, 'utf8');
-                const updated = updateFrontmatter(currentStr, {
-                    engine: activeEngine,
-                    session_id: adapter.lastSessionId
-                });
-                fs.writeFileSync(t1Path, updated, 'utf8');
-                console.error(`[Orchestrator] Updated session ID '${adapter.lastSessionId}' in ${t1Path}`);
-            } else {
-                // T1 does not exist — instantiate from T2 template (T2→T1 promotion)
-                const t1Template = fs.existsSync(t2Path)
-                    ? fs.readFileSync(t2Path, 'utf8')
-                    : `---\nrole: ${role}\n---\n\n# ${role}\n`;
-                const t1Instance = updateFrontmatter(t1Template, {
-                    role: role,
-                    base_tier: 'T1',
-                    engine: activeEngine,
-                    ...(activeModel ? { model: activeModel } : {}),
-                    session_id: adapter.lastSessionId,
-                    created_at: new Date().toISOString()
-                });
-                fs.writeFileSync(t1Path, t1Instance, 'utf8');
-                console.error(`[Orchestrator] T2→T1: Created agent instance '${role}' with session '${adapter.lastSessionId}'`);
+        // --- Post-Execution: Backfill session_id into T1 ---
+        if (fs.existsSync(t1Path)) {
+            const currentStr = fs.readFileSync(t1Path, 'utf8');
+            const updates: Record<string, string> = { status: 'idle' };
+            if (adapter.lastSessionId) {
+                updates.session_id = adapter.lastSessionId;
             }
+            const updated = updateFrontmatter(currentStr, updates);
+            fs.writeFileSync(t1Path, updated, 'utf8');
+            console.error(`[Orchestrator] T1 backfill: '${role}' session=${adapter.lastSessionId || 'none'}, status=idle`);
         }
 
         const dir = path.dirname(outputPath);
