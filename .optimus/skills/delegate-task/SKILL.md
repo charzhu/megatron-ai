@@ -107,3 +107,7 @@ The following behaviors are **strictly prohibited**:
 ## Failure Handling
 
 If `delegate_task_async` or `delegate_task` returns an error or the task fails, DO NOT give up. Immediately analyze the stdout/stderr trace, formulate a fix, and retry the delegation, or fall back to doing the work manually.
+
+## Synchronous Execution (Fallback ONLY)
+
+**CRITICAL RULE**: You MUST use the async tool (delegate_task_async) by default. The synchronous delegate_task tool is strictly placed at the very end of your priority list and should ONLY be used if the user **explicitly and specifically requests** blocking/synchronous execution. Otherwise, always default to async-first non-blocking delegation.

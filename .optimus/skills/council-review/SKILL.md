@@ -62,3 +62,7 @@ Commonly requested domain roles:
 Analyze the gathered reviews.
 - **If there are NO blockers**: Implement the suggestions and output the final `.optimus/TODO.md` file (the implementation backlog).
 - **If there are FATAL conflicts**: Create `.optimus/CONFLICTS.md` outlining the opposing viewpoints cleanly, pause, and ask the User to arbitrate.
+
+## Synchronous Execution (Fallback ONLY)
+
+**CRITICAL RULE**: You MUST use the async tool (dispatch_council_async) by default. The synchronous dispatch_council tool is strictly placed at the very end of your priority list and should ONLY be used if the user **explicitly and specifically requests** blocking/synchronous execution. Otherwise, always default to async-first non-blocking delegation.

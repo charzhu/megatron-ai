@@ -1495,20 +1495,30 @@ async function delegateTaskSingle(roleArg, taskPath, outputPath, _fallbackSessio
   if (!import_fs.default.existsSync(t2Dir)) {
     import_fs.default.mkdirSync(t2Dir, { recursive: true });
   }
-  const t1Path = import_path.default.join(t1Dir, `${role}.md`);
   const t2Path = import_path.default.join(t2Dir, `${role}.md`);
   let activeEngine = masterInfo?.engine || parsedRole.engine;
   let activeModel = masterInfo?.model || parsedRole.model;
   let activeSessionId = void 0;
   let t1Content = "";
+  let t1Path = "";
   let shouldLocalize = false;
   let resolvedTier = "T3 (Zero-Shot Outsource)";
   let personaProof = "No dedicated role template found in T2 or T1. Using T3 generic prompt.";
-  if (import_fs.default.existsSync(t1Path)) {
-    t1Content = import_fs.default.readFileSync(t1Path, "utf8");
-    resolvedTier = `T1 (Agent Instance -> ${role}.md)`;
-    personaProof = `Found local project agent state: ${t1Path}`;
-  } else if (import_fs.default.existsSync(t2Path)) {
+  if (import_fs.default.existsSync(t1Dir)) {
+    const t1Candidates = import_fs.default.readdirSync(t1Dir).filter((f) => f.startsWith(`${role}_`) && f.endsWith(".md"));
+    for (const candidate of t1Candidates) {
+      const candidatePath = import_path.default.join(t1Dir, candidate);
+      const candidateFm = parseFrontmatter(import_fs.default.readFileSync(candidatePath, "utf8"));
+      if (!activeEngine || candidateFm.frontmatter.engine === activeEngine) {
+        t1Path = candidatePath;
+        t1Content = import_fs.default.readFileSync(candidatePath, "utf8");
+        resolvedTier = `T1 (Agent Instance -> ${candidate})`;
+        personaProof = `Found local project agent state: ${t1Path}`;
+        break;
+      }
+    }
+  }
+  if (!t1Content && import_fs.default.existsSync(t2Path)) {
     t1Content = import_fs.default.readFileSync(t2Path, "utf8");
     shouldLocalize = true;
     resolvedTier = `T2 (Role Template -> ${role}.md)`;
@@ -1516,9 +1526,9 @@ async function delegateTaskSingle(roleArg, taskPath, outputPath, _fallbackSessio
   }
   if (t1Content) {
     const fm = parseFrontmatter(t1Content);
-    if (fm.frontmatter.engine) activeEngine = fm.frontmatter.engine;
+    if (fm.frontmatter.engine && !activeEngine) activeEngine = fm.frontmatter.engine;
     if (fm.frontmatter.session_id) activeSessionId = fm.frontmatter.session_id;
-    if (fm.frontmatter.model) activeModel = fm.frontmatter.model;
+    if (fm.frontmatter.model && !activeModel) activeModel = fm.frontmatter.model;
   }
   if (!activeEngine) {
     const configPath = import_path.default.join(workspacePath, ".optimus", "config", "available-agents.json");
@@ -1646,7 +1656,9 @@ Please provide your complete execution result below.`;
     await ConcurrencyGovernor.acquire();
     const agentsDir = import_path.default.join(workspacePath, ".optimus", "agents");
     if (!import_fs.default.existsSync(agentsDir)) import_fs.default.mkdirSync(agentsDir, { recursive: true });
-    if (!import_fs.default.existsSync(t1Path)) {
+    const tempId = Math.random().toString(36).slice(2, 10);
+    const t1TempPath = t1Path || import_path.default.join(agentsDir, `${role}_pending_${tempId}.md`);
+    if (!t1Path) {
       const t1Template = import_fs.default.existsSync(t2Path) ? import_fs.default.readFileSync(t2Path, "utf8") : `---
 role: ${role}
 ---
@@ -1662,19 +1674,29 @@ role: ${role}
         status: "running",
         created_at: (/* @__PURE__ */ new Date()).toISOString()
       });
-      import_fs.default.writeFileSync(t1Path, t1Instance, "utf8");
-      console.error(`[Orchestrator] T2\u2192T1: Created agent placeholder '${role}' (awaiting session_id)`);
+      import_fs.default.writeFileSync(t1TempPath, t1Instance, "utf8");
+      console.error(`[Orchestrator] T2\u2192T1: Created temp agent placeholder '${role}' at ${import_path.default.basename(t1TempPath)}`);
     }
     const response = await adapter.invoke(basePrompt, "agent");
-    if (import_fs.default.existsSync(t1Path)) {
-      const currentStr = import_fs.default.readFileSync(t1Path, "utf8");
+    const currentT1 = import_fs.default.existsSync(t1TempPath) ? t1TempPath : t1Path;
+    if (currentT1 && import_fs.default.existsSync(currentT1)) {
+      const currentStr = import_fs.default.readFileSync(currentT1, "utf8");
       const updates = { status: "idle" };
-      if (adapter.lastSessionId) {
-        updates.session_id = adapter.lastSessionId;
+      const newSessionId = adapter.lastSessionId;
+      if (newSessionId) {
+        updates.session_id = newSessionId;
       }
       const updated = updateFrontmatter(currentStr, updates);
-      import_fs.default.writeFileSync(t1Path, updated, "utf8");
-      console.error(`[Orchestrator] T1 backfill: '${role}' session=${adapter.lastSessionId || "none"}, status=idle`);
+      const sessionPrefix = (newSessionId || tempId).slice(0, 8);
+      const finalT1Path = import_path.default.join(agentsDir, `${role}_${sessionPrefix}.md`);
+      import_fs.default.writeFileSync(finalT1Path, updated, "utf8");
+      if (currentT1 !== finalT1Path && import_fs.default.existsSync(currentT1)) {
+        try {
+          import_fs.default.unlinkSync(currentT1);
+        } catch {
+        }
+      }
+      console.error(`[Orchestrator] T1 finalized: '${role}' \u2192 ${import_path.default.basename(finalT1Path)}, session=${newSessionId || "none"}, status=idle`);
     }
     const dir = import_path.default.dirname(outputPath);
     if (!import_fs.default.existsSync(dir)) import_fs.default.mkdirSync(dir, { recursive: true });

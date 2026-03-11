@@ -351,24 +351,38 @@ export async function delegateTaskSingle(roleArg: string, taskPath: string, outp
     // T2 roles are created ONLY via T3 precipitation or manual user creation.
     // No lazy-sync from plugin built-in roles.
 
-    const t1Path = path.join(t1Dir, `${role}.md`);
     const t2Path = path.join(t2Dir, `${role}.md`);
 
-    // Resolve engine/model priority: Master info > role spec > frontmatter > available-agents.json > fallback
+    // Resolve engine/model priority: Master info > role spec > available-agents.json > fallback
     let activeEngine = masterInfo?.engine || parsedRole.engine;
     let activeModel = masterInfo?.model || parsedRole.model;
     let activeSessionId: string | undefined = undefined;
 
     let t1Content = '';
+    let t1Path = '';  // Will be resolved dynamically based on role+engine match
     let shouldLocalize = false;
     let resolvedTier = 'T3 (Zero-Shot Outsource)';
     let personaProof = 'No dedicated role template found in T2 or T1. Using T3 generic prompt.';
 
-    if (fs.existsSync(t1Path)) {
-        t1Content = fs.readFileSync(t1Path, 'utf8');
-        resolvedTier = `T1 (Agent Instance -> ${role}.md)`;
-        personaProof = `Found local project agent state: ${t1Path}`;
-    } else if (fs.existsSync(t2Path)) {
+    // --- T1 Lookup: glob agents/{role}_*.md, find matching engine ---
+    if (fs.existsSync(t1Dir)) {
+        const t1Candidates = fs.readdirSync(t1Dir)
+            .filter(f => f.startsWith(`${role}_`) && f.endsWith('.md'));
+        for (const candidate of t1Candidates) {
+            const candidatePath = path.join(t1Dir, candidate);
+            const candidateFm = parseFrontmatter(fs.readFileSync(candidatePath, 'utf8'));
+            // Match by engine: if caller specified an engine, only match that; otherwise match any
+            if (!activeEngine || candidateFm.frontmatter.engine === activeEngine) {
+                t1Path = candidatePath;
+                t1Content = fs.readFileSync(candidatePath, 'utf8');
+                resolvedTier = `T1 (Agent Instance -> ${candidate})`;
+                personaProof = `Found local project agent state: ${t1Path}`;
+                break;
+            }
+        }
+    }
+
+    if (!t1Content && fs.existsSync(t2Path)) {
         t1Content = fs.readFileSync(t2Path, 'utf8');
         shouldLocalize = true;
         resolvedTier = `T2 (Role Template -> ${role}.md)`;
@@ -377,9 +391,10 @@ export async function delegateTaskSingle(roleArg: string, taskPath: string, outp
 
     if (t1Content) {
         const fm = parseFrontmatter(t1Content);
-        if (fm.frontmatter.engine) activeEngine = fm.frontmatter.engine;
+        // Frontmatter values are defaults; caller-supplied masterInfo takes priority
+        if (fm.frontmatter.engine && !activeEngine) activeEngine = fm.frontmatter.engine;
         if (fm.frontmatter.session_id) activeSessionId = fm.frontmatter.session_id;
-        if (fm.frontmatter.model) activeModel = fm.frontmatter.model;
+        if (fm.frontmatter.model && !activeModel) activeModel = fm.frontmatter.model;
     }
 
     // Fallback: if engine/model still unset, try reading available-agents.json
@@ -502,13 +517,16 @@ Please provide your complete execution result below.`;
     try {
         await ConcurrencyGovernor.acquire();
 
-        // --- Pre-Flight: Create T1 placeholder before task execution ---
-        // T1 is created BEFORE the task runs so we have a record even if the task crashes.
-        // session_id will be backfilled after completion.
+        // --- Pre-Flight: Create T1 temp placeholder before task execution ---
+        // session_id is unknown until after execution, so use a temp name.
+        // Post-execution will rename to {role}_{session_id_prefix}.md
         const agentsDir = path.join(workspacePath, '.optimus', 'agents');
         if (!fs.existsSync(agentsDir)) fs.mkdirSync(agentsDir, { recursive: true });
 
-        if (!fs.existsSync(t1Path)) {
+        const tempId = Math.random().toString(36).slice(2, 10);
+        const t1TempPath = t1Path || path.join(agentsDir, `${role}_pending_${tempId}.md`);
+        if (!t1Path) {
+            // No existing T1 instance found — create a new placeholder
             const t1Template = fs.existsSync(t2Path)
                 ? fs.readFileSync(t2Path, 'utf8')
                 : `---\nrole: ${role}\n---\n\n# ${role}\n`;
@@ -521,22 +539,32 @@ Please provide your complete execution result below.`;
                 status: 'running',
                 created_at: new Date().toISOString()
             });
-            fs.writeFileSync(t1Path, t1Instance, 'utf8');
-            console.error(`[Orchestrator] T2→T1: Created agent placeholder '${role}' (awaiting session_id)`);
+            fs.writeFileSync(t1TempPath, t1Instance, 'utf8');
+            console.error(`[Orchestrator] T2→T1: Created temp agent placeholder '${role}' at ${path.basename(t1TempPath)}`);
         }
 
         const response = await adapter.invoke(basePrompt, 'agent');
 
-        // --- Post-Execution: Backfill session_id into T1 ---
-        if (fs.existsSync(t1Path)) {
-            const currentStr = fs.readFileSync(t1Path, 'utf8');
+        // --- Post-Execution: Backfill session_id and rename T1 to final name ---
+        const currentT1 = fs.existsSync(t1TempPath) ? t1TempPath : t1Path;
+        if (currentT1 && fs.existsSync(currentT1)) {
+            const currentStr = fs.readFileSync(currentT1, 'utf8');
             const updates: Record<string, string> = { status: 'idle' };
-            if (adapter.lastSessionId) {
-                updates.session_id = adapter.lastSessionId;
+            const newSessionId = adapter.lastSessionId;
+            if (newSessionId) {
+                updates.session_id = newSessionId;
             }
             const updated = updateFrontmatter(currentStr, updates);
-            fs.writeFileSync(t1Path, updated, 'utf8');
-            console.error(`[Orchestrator] T1 backfill: '${role}' session=${adapter.lastSessionId || 'none'}, status=idle`);
+
+            // Rename to final name: {role}_{session_id_prefix}.md
+            const sessionPrefix = (newSessionId || tempId).slice(0, 8);
+            const finalT1Path = path.join(agentsDir, `${role}_${sessionPrefix}.md`);
+            fs.writeFileSync(finalT1Path, updated, 'utf8');
+            // Clean up temp/old file if path changed
+            if (currentT1 !== finalT1Path && fs.existsSync(currentT1)) {
+                try { fs.unlinkSync(currentT1); } catch {}
+            }
+            console.error(`[Orchestrator] T1 finalized: '${role}' → ${path.basename(finalT1Path)}, session=${newSessionId || 'none'}, status=idle`);
         }
 
         const dir = path.dirname(outputPath);
