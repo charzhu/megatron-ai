@@ -1,97 +1,105 @@
 ---
 name: agent-creator
-description: Meta-skill that teaches the Master Agent how to select, create, and evolve T2 roles and T1 agents in the Spartan Swarm hierarchy.
+description: Teaches the Master Agent how to build, select, and evolve the agent team. Use when creating new roles, selecting specialists for a task, or evolving existing role descriptions. Also use when delegate_task fails because a role has weak or missing context.
 ---
 
-# Agent Creator (Meta-Skill)
+# Agent Creator
 
-This skill teaches the Master Agent how to manage the T3→T2→T1 agent lifecycle. It is a bootstrap meta-skill — it enables the system to self-evolve its workforce.
+You are building and managing a team of specialized AI agents. Each new role you
+create becomes a persistent member of the project's workforce — its description
+directly shapes how well the agent performs. Invest in quality descriptions the
+same way you would invest in writing a good job posting.
 
-## The T3→T2→T1 Hierarchy
+## Core Process
 
-| Tier | Location | What It Is | Lifecycle |
-|------|----------|-----------|-----------|
-| T3 | (none — ephemeral) | Dynamic zero-shot worker. No file, no memory. | Created on-the-fly, disappears after use. |
-| T2 | `.optimus/roles/<name>.md` | Role template. Describes **what** the role does, which engine/model to use. | Created on first delegation. Master can update anytime. |
-| T1 | `.optimus/agents/<name>.md` | Instance snapshot. Copies from T2 + adds session state. | Created when task completes (session_id captured). Frozen after creation — only session_id updates. |
+**1. Inspect the Roster**
 
-### Key Invariants
-- **T2 ≥ T1**: Every T1 agent MUST have a corresponding T2 template.
-- **T1 is frozen**: Once created, T1 body content is never modified by the system. Only `session_id` is updated on subsequent runs.
-- **T2 is alive**: Master Agent can update T2 descriptions, engine bindings, and model settings to evolve the team.
+Before creating or selecting a role, always call `roster_check` to see who's
+already available. This returns T1 agents (with session history), T2 roles
+(reusable templates), and the engine/model pool.
 
-## How to Create or Update a Role
+**2. Select or Create the Role**
 
-### Step 1: Check the Roster
-Use `roster_check` with the workspace path. This returns:
-- T1 agents (local instances with session state)
-- T2 roles (project templates with engine/model bindings)
-- T3 engine pool (available engines and models from `available-agents.json`)
+Match the task to an existing role, or create a new one:
+- **Existing T1/T2**: Prefer roles that already have project context
+- **New role**: Invent a hyphenated name (e.g., `data-pipeline-engineer`) and
+  provide a rich description
 
-### Step 2: Decide the Role
+**3. Write the Role Description**
 
-Based on the user's request, determine:
-1. **role name**: A hyphenated, descriptive name (e.g., `security-auditor`, `frontend-dev`, `data-engineer`)
-2. **role_description**: A **rich, multi-line description** that will become the T2 role template body. This is critical — it directly shapes the agent's persona and capabilities. Include:
-   - One-sentence summary of the role
-   - 3-5 bullet points of core responsibilities
-   - Domain-specific constraints or quality standards
-   - Example: see below
-3. **role_engine**: Which engine from `available-agents.json` (e.g., `claude-code`)
-4. **role_model**: Which model from the engine's `available_models` list (e.g., `claude-opus-4.6-1m`). If unsure, omit to use the default.
+This is the most important step. The `role_description` you provide becomes the
+agent's entire persona. Follow this structure:
 
-> **WARNING**: If you provide a single-sentence `role_description`, the generated T2 template will be nearly useless — the agent will lack context about its responsibilities and constraints. Always invest 3-5 lines minimum.
+```
+{role title} responsible for {domain}.
 
-### Step 3: Delegate with Role Info
+Core Responsibilities:
+- {specific action with concrete deliverable}
+- {specific action with concrete deliverable}
+- {specific action with concrete deliverable}
+- {specific action with concrete deliverable}
 
-Pass all structured info in the `delegate_task` or `delegate_task_async` call:
+Quality Standards:
+- {what "done well" looks like}
+- {constraints or boundaries}
+```
+
+**Example** — compare the quality difference:
+
+```
+❌ Bad:  "A developer who writes code"
+✅ Good: "Backend Developer specializing in Node.js API development.
+
+         Core Responsibilities:
+         - Implement REST and GraphQL endpoints following project conventions
+         - Write integration tests covering happy paths and error cases
+         - Ensure all database queries use parameterized inputs (SQL injection prevention)
+         - Follow Conventional Commits and create PRs via git-workflow skill
+
+         Quality Standards:
+         - All code must build cleanly before PR creation
+         - Error handling with actionable messages, not generic catches"
+```
+
+**4. Delegate with Full Context**
+
+Pass everything via `delegate_task_async`:
 
 ```json
 {
-  "role": "security-auditor",
-  "role_description": "Security Engineer who audits the codebase for vulnerabilities and enforces compliance.\n\nCore Responsibilities:\n- Audit code for OWASP Top 10 vulnerabilities and CWE patterns\n- Review secret management: ensure no PATs, API keys, or passwords are committed\n- Assess prompt injection risks in AI agent workflows\n- Analyze token scopes and advise on least-privilege access\n- Log all risk assessments in .optimus/reports/security_audit.md",
+  "role": "backend-dev",
+  "role_description": "<your rich description>",
   "role_engine": "claude-code",
-  "task_description": "Review the authentication module for OWASP Top 10 vulnerabilities...",
+  "task_description": "<the specific task>",
   "required_skills": ["git-workflow"],
-  "output_path": ".optimus/reports/security-audit.md",
-  "workspace_path": "/path/to/project"
+  "output_path": ".optimus/reports/<output>.md",
+  "workspace_path": "<project root>"
 }
 ```
 
-The system will automatically:
-- **Create T2** if `.optimus/roles/security-auditor.md` doesn't exist (using your `role_description` and `role_engine`/`role_model`)
-- **Update T2** if it exists but you provide new `role_description`/`role_engine`/`role_model` (team evolution)
-- **Create T1** after the task completes and a session_id is captured
+Omit `role_model` unless you have a specific reason — the system picks the best
+available model automatically.
 
-### Step 4: Evolve the Team
+## Role Naming
 
-After several delegations, review the roster again. You can:
-- Update a role's description to reflect evolved understanding of its purpose
-- Switch a role's engine/model if a better option becomes available
-- Let underperforming T3 roles die naturally (they never precipitate unless delegated)
+- Lowercase, hyphenated: `security-auditor`, not `SecurityAuditor`
+- Descriptive: `api-integration-specialist`, not `dev2`
+- Characters allowed: `[a-zA-Z0-9_-]`
 
-## Role Name Conventions
+## Evolution
 
-- Use lowercase hyphenated names: `security-auditor`, NOT `SecurityAuditor`
-- Be descriptive: `api-integration-specialist`, NOT `dev2`
-- Keep names unique per project
-- Names can only contain: `[a-zA-Z0-9_-]` (anything else is stripped for safety)
-
-## Engine Selection Guide
-
-When choosing `role_engine` and `role_model`, consider:
-- **claude-code**: Best for complex reasoning, code generation, architectural analysis
-- **copilot-cli**: Best for quick edits, boilerplate generation, refactoring
-- Check `available-agents.json` engines for `status: "demo"` — skip those, they're not implemented
-
-If unsure, **omit `role_engine` and `role_model`** — the system auto-resolves from `available-agents.json` (first non-demo engine + first model), or falls back to `claude-code`.
+Roles are living documents. After observing an agent's performance:
+- Re-delegate with an improved `role_description` to update the T2 template
+- Switch `role_engine` if a different engine performs better for that domain
+- Review the roster periodically to retire unused roles
 
 ## Anti-Patterns
 
-- Do NOT create roles with vague names like `helper` or `assistant` — be specific
-- Do NOT provide a single-sentence `role_description` — always include 3-5 bullet responsibilities. The description IS the agent's brain.
-- Do NOT assign tasks to non-existent roles without providing `role_description` — the T2 template will be nearly empty
-- Do NOT manually edit T1 agent files — they are managed by the system
-- Do NOT skip `roster_check` before delegating — you might create duplicate roles
-- Do NOT hardcode engine/model in task_description — use the dedicated `role_engine`/`role_model` fields
-- Do NOT pass a `role_model` that isn't listed in the engine's `available_models` in `available-agents.json` — the system will reject it with a Model Pre-Flight error
+- **Thin descriptions**: A one-sentence `role_description` produces a nearly
+  useless agent. Always provide 3-5 bullet responsibilities.
+- **Skipping roster_check**: You'll create duplicate roles or miss existing
+  specialists who already have project context.
+- **Invalid models**: Only use models listed in `available-agents.json`. The
+  system rejects unknown models with a pre-flight error.
+- **Editing T1 files**: Agent instance files (`.optimus/agents/`) are managed by
+  the system. Edit the T2 role template instead.
