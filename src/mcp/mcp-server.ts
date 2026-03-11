@@ -852,6 +852,33 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
     roster += "- If a role has no `engine`/`model` in frontmatter, the system auto-resolves from `available-agents.json`, or falls back to `claude-code`.\n";
     roster += "- T3 roles auto-precipitate to T2 immediately on first use.\n";
 
+    // Show available skills
+    const skillsDir = path.join(workspace_path, '.optimus', 'skills');
+    if (fs.existsSync(skillsDir)) {
+      const skillDirs = fs.readdirSync(skillsDir).filter(d => {
+        try { return fs.statSync(path.join(skillsDir, d)).isDirectory() && fs.existsSync(path.join(skillsDir, d, 'SKILL.md')); } catch { return false; }
+      });
+      if (skillDirs.length > 0) {
+        roster += "\n### 📚 Available Skills\n";
+        roster += "Use `required_skills` in `delegate_task` to equip agents with these skills:\n";
+        for (const skill of skillDirs) {
+          try {
+            const content = fs.readFileSync(path.join(skillsDir, skill, 'SKILL.md'), 'utf8');
+            const fmMatch = content.match(/^---\n([\s\S]*?)\n---/);
+            let desc = '';
+            if (fmMatch) {
+              const descLine = fmMatch[1].split('\n').find(l => l.startsWith('description:'));
+              if (descLine) desc = ' — ' + descLine.split(':').slice(1).join(':').trim().replace(/^['"]|['"]$/g, '');
+            }
+            const isMeta = skill === 'agent-creator' || skill === 'skill-creator';
+            roster += `- ${isMeta ? '🧬 ' : ''}\`${skill}\`${desc}\n`;
+          } catch {
+            roster += `- \`${skill}\`\n`;
+          }
+        }
+      }
+    }
+
     return {
       content: [{ type: "text", text: roster }]
     };

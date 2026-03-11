@@ -2872,6 +2872,37 @@ URL: ${data.html_url}` }] };
     roster += "- If no roles/agents exist, the system defaults to **PM (Master Agent)** behavior.\n";
     roster += "- If a role has no `engine`/`model` in frontmatter, the system auto-resolves from `available-agents.json`, or falls back to `claude-code`.\n";
     roster += "- T3 roles auto-precipitate to T2 immediately on first use.\n";
+    const skillsDir = import_path3.default.join(workspace_path, ".optimus", "skills");
+    if (import_fs3.default.existsSync(skillsDir)) {
+      const skillDirs = import_fs3.default.readdirSync(skillsDir).filter((d) => {
+        try {
+          return import_fs3.default.statSync(import_path3.default.join(skillsDir, d)).isDirectory() && import_fs3.default.existsSync(import_path3.default.join(skillsDir, d, "SKILL.md"));
+        } catch {
+          return false;
+        }
+      });
+      if (skillDirs.length > 0) {
+        roster += "\n### \u{1F4DA} Available Skills\n";
+        roster += "Use `required_skills` in `delegate_task` to equip agents with these skills:\n";
+        for (const skill of skillDirs) {
+          try {
+            const content = import_fs3.default.readFileSync(import_path3.default.join(skillsDir, skill, "SKILL.md"), "utf8");
+            const fmMatch = content.match(/^---\n([\s\S]*?)\n---/);
+            let desc = "";
+            if (fmMatch) {
+              const descLine = fmMatch[1].split("\n").find((l) => l.startsWith("description:"));
+              if (descLine) desc = " \u2014 " + descLine.split(":").slice(1).join(":").trim().replace(/^['"]|['"]$/g, "");
+            }
+            const isMeta = skill === "agent-creator" || skill === "skill-creator";
+            roster += `- ${isMeta ? "\u{1F9EC} " : ""}\`${skill}\`${desc}
+`;
+          } catch {
+            roster += `- \`${skill}\`
+`;
+          }
+        }
+      }
+    }
     return {
       content: [{ type: "text", text: roster }]
     };
