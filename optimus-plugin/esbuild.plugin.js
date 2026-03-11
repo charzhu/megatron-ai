@@ -11,13 +11,6 @@ const path = require('path');
 const production = process.argv.includes('--production');
 
 async function build() {
-  // Pre-build: sync official Anthropic skills from GitHub (non-fatal on failure)
-  try {
-    await require('./scripts/fetch-official-skills.js')();
-  } catch (e) {
-    console.warn('Official skills sync skipped:', e.message);
-  }
-
   const result = await esbuild.build({
     entryPoints: [path.resolve(__dirname, '..', 'src', 'mcp', 'mcp-server.ts')],
     bundle: true,
