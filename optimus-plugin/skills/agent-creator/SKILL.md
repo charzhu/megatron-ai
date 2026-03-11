@@ -32,9 +32,15 @@ Use `roster_check` with the workspace path. This returns:
 
 Based on the user's request, determine:
 1. **role name**: A hyphenated, descriptive name (e.g., `security-auditor`, `frontend-dev`, `data-engineer`)
-2. **role_description**: A clear sentence describing what this role does and its expertise
-3. **role_engine**: Which engine from `available-agents.json` (e.g., `claude-code`, `copilot-cli`)
-4. **role_model**: Which model (e.g., `claude-opus-4.6-1m`, `gpt-5.4`)
+2. **role_description**: A **rich, multi-line description** that will become the T2 role template body. This is critical — it directly shapes the agent's persona and capabilities. Include:
+   - One-sentence summary of the role
+   - 3-5 bullet points of core responsibilities
+   - Domain-specific constraints or quality standards
+   - Example: see below
+3. **role_engine**: Which engine from `available-agents.json` (e.g., `claude-code`)
+4. **role_model**: Which model from the engine's `available_models` list (e.g., `claude-opus-4.6-1m`). If unsure, omit to use the default.
+
+> **WARNING**: If you provide a single-sentence `role_description`, the generated T2 template will be nearly useless — the agent will lack context about its responsibilities and constraints. Always invest 3-5 lines minimum.
 
 ### Step 3: Delegate with Role Info
 
@@ -43,9 +49,8 @@ Pass all structured info in the `delegate_task` or `delegate_task_async` call:
 ```json
 {
   "role": "security-auditor",
-  "role_description": "Security auditing expert who reviews code for vulnerabilities, enforces compliance, and prevents data leakage",
+  "role_description": "Security Engineer who audits the codebase for vulnerabilities and enforces compliance.\n\nCore Responsibilities:\n- Audit code for OWASP Top 10 vulnerabilities and CWE patterns\n- Review secret management: ensure no PATs, API keys, or passwords are committed\n- Assess prompt injection risks in AI agent workflows\n- Analyze token scopes and advise on least-privilege access\n- Log all risk assessments in .optimus/reports/security_audit.md",
   "role_engine": "claude-code",
-  "role_model": "claude-opus-4.6-1m",
   "task_description": "Review the authentication module for OWASP Top 10 vulnerabilities...",
   "required_skills": ["git-workflow"],
   "output_path": ".optimus/reports/security-audit.md",
@@ -84,7 +89,9 @@ If unsure, **omit `role_engine` and `role_model`** — the system auto-resolves 
 ## Anti-Patterns
 
 - Do NOT create roles with vague names like `helper` or `assistant` — be specific
+- Do NOT provide a single-sentence `role_description` — always include 3-5 bullet responsibilities. The description IS the agent's brain.
 - Do NOT assign tasks to non-existent roles without providing `role_description` — the T2 template will be nearly empty
 - Do NOT manually edit T1 agent files — they are managed by the system
 - Do NOT skip `roster_check` before delegating — you might create duplicate roles
 - Do NOT hardcode engine/model in task_description — use the dedicated `role_engine`/`role_model` fields
+- Do NOT pass a `role_model` that isn't listed in the engine's `available_models` in `available-agents.json` — the system will reject it with a Model Pre-Flight error

@@ -1,12 +1,12 @@
 {
   "dev": {
     "role": "dev",
-    "invocations": 2,
-    "successes": 1,
+    "invocations": 3,
+    "successes": 2,
     "failures": 1,
-    "lastUsed": "2026-03-11T14:21:48.511Z",
-    "engine": "github-copilot",
-    "model": "gemini-3.0-pro"
+    "lastUsed": "2026-03-11T16:06:37.184Z",
+    "engine": "claude-code",
+    "model": "claude-sonnet-4"
   },
   "distributed-systems-expert": {
     "role": "distributed-systems-expert",
@@ -172,11 +172,11 @@
   },
   "pm": {
     "role": "pm",
-    "invocations": 2,
-    "successes": 0,
+    "invocations": 3,
+    "successes": 1,
     "failures": 2,
-    "lastUsed": "2026-03-11T15:12:29.541Z",
-    "engine": "github-copilot",
-    "model": "gemini-3-pro-preview"
+    "lastUsed": "2026-03-11T16:08:18.538Z",
+    "engine": "claude-code",
+    "model": "claude-sonnet-4"
   }
 }

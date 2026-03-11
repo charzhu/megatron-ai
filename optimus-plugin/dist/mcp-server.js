@@ -2001,6 +2001,29 @@ async function delegateTaskSingle(roleArg, taskPath, outputPath, _fallbackSessio
 No engine was specified in the caller arguments, local frontmatter, or T2 metadata. Please explicitly specify an engine or create the role with proper configurations first.`
     );
   }
+  if (activeModel) {
+    const modelConfigPath = import_path.default.join(workspacePath, ".optimus", "config", "available-agents.json");
+    try {
+      if (import_fs.default.existsSync(modelConfigPath)) {
+        const config = JSON.parse(import_fs.default.readFileSync(modelConfigPath, "utf8"));
+        const engineConfig = config.engines?.[activeEngine];
+        if (engineConfig?.available_models && Array.isArray(engineConfig.available_models)) {
+          const allowedModels = engineConfig.available_models;
+          if (!allowedModels.includes(activeModel)) {
+            throw new Error(
+              `\u26A0\uFE0F **Model Pre-Flight Failed**: Model \`${activeModel}\` is not in the allowed list for engine \`${activeEngine}\`.
+
+**Allowed models**: ${allowedModels.map((m) => `\`${m}\``).join(", ")}
+
+Please re-delegate with a valid \`role_model\` or omit it to use the default.`
+            );
+          }
+        }
+      }
+    } catch (e) {
+      if (e.message?.includes("Model Pre-Flight Failed")) throw e;
+    }
+  }
   let skillContent = "";
   if (masterInfo?.requiredSkills && masterInfo.requiredSkills.length > 0) {
     const { found, missing } = checkRequiredSkills(workspacePath, masterInfo.requiredSkills);

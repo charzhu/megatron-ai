@@ -428,6 +428,31 @@ export async function delegateTaskSingle(roleArg: string, taskPath: string, outp
         );
     }
 
+    // --- Model Pre-Flight Validation ---
+    // If a model was explicitly provided, validate it against available-agents.json whitelist.
+    // Prevents invalid model names from silently passing through to CLI and failing late.
+    if (activeModel) {
+        const modelConfigPath = path.join(workspacePath, '.optimus', 'config', 'available-agents.json');
+        try {
+            if (fs.existsSync(modelConfigPath)) {
+                const config = JSON.parse(fs.readFileSync(modelConfigPath, 'utf8'));
+                const engineConfig = config.engines?.[activeEngine];
+                if (engineConfig?.available_models && Array.isArray(engineConfig.available_models)) {
+                    const allowedModels: string[] = engineConfig.available_models;
+                    if (!allowedModels.includes(activeModel)) {
+                        throw new Error(
+                            `⚠️ **Model Pre-Flight Failed**: Model \`${activeModel}\` is not in the allowed list for engine \`${activeEngine}\`.\n\n` +
+                            `**Allowed models**: ${allowedModels.map(m => `\`${m}\``).join(', ')}\n\n` +
+                            `Please re-delegate with a valid \`role_model\` or omit it to use the default.`
+                        );
+                    }
+                }
+            }
+        } catch (e: any) {
+            if (e.message?.includes('Model Pre-Flight Failed')) throw e;
+        }
+    }
+
     // --- Skill Pre-Flight Check ---
     // If Master specified required_skills, verify they all exist before proceeding.
     // Missing skills → reject with actionable error so Master can create them first.

@@ -17,6 +17,10 @@ export interface TaskRecord {
     startTime: number;
     heartbeatTime: number;
     workspacePath: string;
+    role_description?: string;
+    role_engine?: string;
+    role_model?: string;
+    required_skills?: string[];
 }
 
 export class TaskManifestManager {
