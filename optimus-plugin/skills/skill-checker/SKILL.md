@@ -1,14 +1,13 @@
 ---
-name: skill-registrar
-description: Registers new skills into the Optimus Spartan Swarm project. Defines WHERE skills go and WHAT constraints apply. Use the official Claude Code skill-creator plugin (/skill-creator) for HOW to write high-quality skills.
+name: skill-checker
+description: Validates and ensures new skills comply with Optimus standards — correct paths, valid MCP tool references, proper structure, and error handling.
 ---
 
-# Skill Registrar (Optimus Meta-Skill)
+# Skill Checker (Optimus Meta-Skill)
 
 <purpose>
-This skill activates when the Master Agent needs to add a new skill to the project.
-It does NOT teach you how to write a good skill — use the official Claude Code `/skill-creator` plugin for that.
-Instead, it defines the Optimus-specific registration rules: file paths, naming conventions, and tool constraints.
+This skill activates when the Master Agent needs to validate a new or updated skill before it is deployed.
+It checks file paths, naming conventions, MCP tool accuracy, and structural compliance.
 </purpose>
 
 <instructions>
