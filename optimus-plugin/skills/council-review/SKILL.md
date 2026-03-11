@@ -24,10 +24,13 @@ Commonly requested dynamic roles:
 - `security-expert`: Checks for injection vectors, auth/authz bypass.
 - `refactoring-architect`: Identifies code smelles, outlines clean abstractions.
 
-### Step 3: Await and Read The Reviews (The Gather)
-1. If using `dispatch_council_async`, the tool will return a `taskId`. Use the `check_task_status` tool in a loop (wait 10 seconds between checks) until the task is marked `completed`.
-2. The tool (or status check) will return a precise folder path matching the isolated execution timestamp: (e.g., `.optimus/reviews/<timestamp>/`).
-3. Once the tool returns success or is completed, read the generated review files from that directory (e.g., `<role>_review.md`).
+### Step 3: Non-Blocking Status Check and Result Collection (The Gather)
+1. If using `dispatch_council_async`, the tool will return a `taskId`. Treat this as a fire-and-forget background task.
+2. Do **NOT** block the main flow with manual waiting or sleep commands. Do **NOT** pause just to wait for completion.
+3. Instead, tell the user the council is running asynchronously and that `check_task_status` can be used later to inspect progress or completion.
+4. If you need the results in the same session, poll with `check_task_status` only when useful, while continuing other productive work in the meantime.
+5. The status tool will return a precise folder path matching the isolated execution timestamp (e.g., `.optimus/reviews/<timestamp>/`).
+6. Once the task is marked `completed`, read the generated review files from that directory (e.g., `<role>_review.md`).
 
 ### Step 4: Arbitration and Action (The Arbiter)
 Analyze the gathered reviews.

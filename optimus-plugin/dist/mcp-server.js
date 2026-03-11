@@ -144,6 +144,7 @@ function resolveWindowsSpawnResolution(cmd) {
   return null;
 }
 function platformSpawn(cmd, args, options) {
+  options = { ...options, windowsHide: true };
   if (process.platform === "win32") {
     const resolved = resolveWindowsSpawnResolution(cmd);
     if (resolved) {
@@ -665,9 +666,13 @@ ${outputBlock}
       const structuredToolCalls = /* @__PURE__ */ new Map();
       const startTime = Date.now();
       let stallWarningTimer = null;
+      const safeEnv = { ...process.env, TERM: "dumb", CI: "false", FORCE_COLOR: "0" };
+      if (process.platform === "win32" && !safeEnv.CLAUDE_CODE_GIT_BASH_PATH) {
+        safeEnv.CLAUDE_CODE_GIT_BASH_PATH = "C:\\Program Files\\Git\\bin\\bash.exe";
+      }
       const child = platformSpawn(cmd, args, {
         cwd: currentCwd,
-        env: { ...process.env, TERM: "dumb", CI: "false", FORCE_COLOR: "0" }
+        env: safeEnv
       });
       this.lastDebugInfo = {
         command: cmd + " " + args.join(" "),
@@ -971,9 +976,13 @@ ${outputBlock}
     const currentCwd = workspacePath.path;
     const { cmd, args } = this.getSpawnCommand(mode);
     debugLog(this.id, "Starting daemon", JSON.stringify({ mode, cwd: currentCwd, cwdSource: workspacePath.source, cmd, args }));
+    const safeEnv = { ...process.env, TERM: "dumb", CI: "false", FORCE_COLOR: "0" };
+    if (process.platform === "win32" && !safeEnv.CLAUDE_CODE_GIT_BASH_PATH) {
+      safeEnv.CLAUDE_CODE_GIT_BASH_PATH = "C:\\Program Files\\Git\\bin\\bash.exe";
+    }
     this.childProcess = platformSpawn(cmd, args, {
       cwd: currentCwd,
-      env: { ...process.env, TERM: "dumb", CI: "false", FORCE_COLOR: "0" }
+      env: safeEnv
     });
     this.childProcess.stdout.on("data", (data) => {
       const chunk = (0, import_strip_ansi.default)(decodeBuffer(data));
@@ -1856,8 +1865,14 @@ async function updateTaskGitHubIssue(workspacePath, taskId, status, outputPath, 
 // ../src/mcp/mcp-server.ts
 var import_child_process2 = require("child_process");
 var import_dotenv = __toESM(require("dotenv"));
-import_dotenv.default.config({ path: import_path3.default.resolve(__dirname, "../../.env") });
-import_dotenv.default.config();
+function reloadEnv() {
+  if (process.env.DOTENV_PATH) {
+    import_dotenv.default.config({ path: import_path3.default.resolve(process.env.DOTENV_PATH), override: true });
+  } else {
+    import_dotenv.default.config({ override: true });
+  }
+}
+reloadEnv();
 var server = new import_server.Server(
   {
     name: "optimus-facade",
@@ -2392,6 +2407,7 @@ Memory appended to: ${memoryFile}`
       };
     }
   } else if (request.params.name === "github_update_issue") {
+    reloadEnv();
     const { owner, repo, issue_number, state, body, agent_role, session_id } = request.params.arguments;
     const token = process.env.GITHUB_TOKEN || process.env.GH_TOKEN;
     if (!token) throw new import_types.McpError(import_types.ErrorCode.InvalidRequest, "GITHUB_TOKEN env is not set");
@@ -2430,8 +2446,12 @@ Memory appended to: ${memoryFile}`
     if (!local_path) {
       throw new import_types.McpError(import_types.ErrorCode.InvalidParams, "Violated Issue First Protocol: local_path is mandatory to bind to a blackboard file (e.g. .optimus/tasks/task.md)");
     }
+    reloadEnv();
     const token = process.env.GITHUB_TOKEN || process.env.GH_TOKEN;
     if (!token) throw new import_types.McpError(import_types.ErrorCode.InvalidRequest, "GITHUB_TOKEN env is not set");
+    const taggedTitle = title.startsWith("[Optimus]") ? title : `[Optimus] ${title}`;
+    const issueLabels = Array.isArray(labels) ? [...labels] : [];
+    if (!issueLabels.includes("optimus-bot")) issueLabels.push("optimus-bot");
     let finalBody = body;
     if (local_path || session_id) {
       finalBody += "\n\n---\n**\u{1F916} Agent System Metadata:**\n";
@@ -2449,7 +2469,7 @@ Memory appended to: ${memoryFile}`
           "Content-Type": "application/json",
           "User-Agent": "Optimus-Agent"
         },
-        body: JSON.stringify({ title, body: finalBody, labels: labels || [] })
+        body: JSON.stringify({ title: taggedTitle, body: finalBody, labels: issueLabels })
       });
       if (!resp.ok) throw new Error(`GitHub API Error: ${resp.status}`);
       const data = await resp.json();
@@ -2459,8 +2479,10 @@ Memory appended to: ${memoryFile}`
     }
   } else if (request.params.name === "github_create_pr") {
     const { owner, repo, title, head, base, body } = request.params.arguments;
+    reloadEnv();
     const token = process.env.GITHUB_TOKEN || process.env.GH_TOKEN;
     if (!token) throw new import_types.McpError(import_types.ErrorCode.InvalidRequest, "GITHUB_TOKEN env is not set");
+    const taggedTitle = title.startsWith("[Optimus]") ? title : `[Optimus] ${title}`;
     try {
       const resp = await fetch(`https://api.github.com/repos/${owner}/${repo}/pulls`, {
         method: "POST",
@@ -2470,12 +2492,25 @@ Memory appended to: ${memoryFile}`
           "Content-Type": "application/json",
           "User-Agent": "Optimus-Agent"
         },
-        body: JSON.stringify({ title, head, base, body: body || "" })
+        body: JSON.stringify({ title: taggedTitle, head, base, body: body || "" })
       });
       if (!resp.ok) {
         throw new Error("GitHub API Error: " + await resp.text());
       }
       const data = await resp.json();
+      try {
+        await fetch(`https://api.github.com/repos/${owner}/${repo}/issues/${data.number}/labels`, {
+          method: "POST",
+          headers: {
+            "Authorization": `Bearer ${token}`,
+            "Accept": "application/vnd.github.v3+json",
+            "Content-Type": "application/json",
+            "User-Agent": "Optimus-Agent"
+          },
+          body: JSON.stringify({ labels: ["optimus-bot"] })
+        });
+      } catch (_) {
+      }
       return { content: [{ type: "text", text: `Pull request created successfully! PR Number: ${data.number}
 URL: ${data.html_url}` }] };
     } catch (err) {
@@ -2483,6 +2518,7 @@ URL: ${data.html_url}` }] };
     }
   } else if (request.params.name === "github_merge_pr") {
     const { owner, repo, pull_number, commit_title, merge_method } = request.params.arguments;
+    reloadEnv();
     const token = process.env.GITHUB_TOKEN || process.env.GH_TOKEN;
     if (!token) throw new import_types.McpError(import_types.ErrorCode.InvalidRequest, "GITHUB_TOKEN env is not set");
     try {
@@ -2508,6 +2544,7 @@ URL: ${data.html_url}` }] };
     }
   } else if (request.params.name === "github_sync_board") {
     const { owner, repo, workspace_path } = request.params.arguments;
+    reloadEnv();
     const token = process.env.GITHUB_TOKEN || process.env.GH_TOKEN;
     if (!token) throw new import_types.McpError(import_types.ErrorCode.InvalidRequest, "GITHUB_TOKEN env is not set");
     try {
@@ -2576,22 +2613,18 @@ URL: ${data.html_url}` }] };
     } else {
       roster += "(No local personas directory found)\n";
     }
-    const registryPath = import_path3.default.join(workspace_path, ".optimus", "registry", "available-agents.json");
-    if (import_fs3.default.existsSync(registryPath)) {
+    const configPath = import_path3.default.join(workspace_path, ".optimus", "config", "available-agents.json");
+    if (import_fs3.default.existsSync(configPath)) {
       try {
-        const registry = JSON.parse(import_fs3.default.readFileSync(registryPath, "utf8"));
-        roster += "\n### \u2699\uFE0F Dynamic Registry: Execution Engines & Agents\n";
+        const config = JSON.parse(import_fs3.default.readFileSync(configPath, "utf8"));
+        roster += "\n### \u2699\uFE0F Engine & Model Spec (T3 configuration)\n";
         roster += "**Available Execution Engines (Toolchains & Supported Models)**:\n";
-        Object.keys(registry.engines).forEach((engine) => {
-          roster += `- [Engine: ${engine}] Models: [${registry.engines[engine].available_models.join(", ")}]
+        Object.keys(config.engines).forEach((engine) => {
+          const statusMatch = config.engines[engine].status ? ` *[Status: ${config.engines[engine].status}]*` : "";
+          roster += `- [Engine: ${engine}] Models: [${config.engines[engine].available_models.join(", ")}]${statusMatch}
 `;
         });
-        roster += "\n**Strategic Identifiers (Modifiers)**:\n";
-        Object.keys(registry.roles).forEach((role) => {
-          roster += `- ${role}: [${registry.roles[role].strategies.join(", ")}]
-`;
-        });
-        roster += "*Note: Append these combinations to role names to spawn customized variants. Examples: `chief-architect_claude-code_claude-3-opus`, `chief-architect_copilot-cli_o1-preview_conservative`.*\n\n";
+        roster += "*Note: Append these engine and model combinations to role names to spawn customized variants. Examples: `chief-architect_claude-code_claude-3-opus`, `security-auditor_copilot-cli_o1-preview`.*\n\n";
       } catch (e) {
       }
     }

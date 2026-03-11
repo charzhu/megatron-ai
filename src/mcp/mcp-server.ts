@@ -19,9 +19,15 @@ import { runAsyncWorker } from "./council-runner";
 import { spawn } from "child_process";
 import dotenv from "dotenv";
 
-// Load environment variables from .env file up to the repository root
-dotenv.config({ path: path.resolve(__dirname, "../../.env") });
-dotenv.config(); // fallback to cwd
+// Load environment variables: prefer DOTENV_PATH from mcp.json env mount, fallback to cwd
+function reloadEnv() {
+  if (process.env.DOTENV_PATH) {
+    dotenv.config({ path: path.resolve(process.env.DOTENV_PATH), override: true });
+  } else {
+    dotenv.config({ override: true });
+  }
+}
+reloadEnv();
 
 // 1. Initialize the MCP Server (The Marionette Controller)
 const server = new Server(
@@ -549,6 +555,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
         };
       }
     } else if (request.params.name === "github_update_issue") {
+      reloadEnv(); // Hot-reload .env for long-running MCP process
       const { owner, repo, issue_number, state, body, agent_role, session_id } = request.params.arguments as any;
       const token = process.env.GITHUB_TOKEN || process.env.GH_TOKEN;
       if (!token) throw new McpError(ErrorCode.InvalidRequest, "GITHUB_TOKEN env is not set");
@@ -590,9 +597,15 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
       if (!local_path) {
         throw new McpError(ErrorCode.InvalidParams, "Violated Issue First Protocol: local_path is mandatory to bind to a blackboard file (e.g. .optimus/tasks/task.md)");
       }
+    reloadEnv();
     const token = process.env.GITHUB_TOKEN || process.env.GH_TOKEN;
     if (!token) throw new McpError(ErrorCode.InvalidRequest, "GITHUB_TOKEN env is not set");
     
+    // Auto-tag: prefix title and ensure optimus-bot label
+    const taggedTitle = title.startsWith('[Optimus]') ? title : `[Optimus] ${title}`;
+    const issueLabels = Array.isArray(labels) ? [...labels] : [];
+    if (!issueLabels.includes('optimus-bot')) issueLabels.push('optimus-bot');
+
     let finalBody = body;
     if (local_path || session_id) {
       finalBody += '\n\n---\n**🤖 Agent System Metadata:**\n';
@@ -609,7 +622,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
           "Content-Type": "application/json",
           "User-Agent": "Optimus-Agent"
         },
-        body: JSON.stringify({ title, body: finalBody, labels: labels || [] })
+        body: JSON.stringify({ title: taggedTitle, body: finalBody, labels: issueLabels })
       });
       if (!resp.ok) throw new Error(`GitHub API Error: ${resp.status}`);
       const data: any = await resp.json();
@@ -617,8 +630,11 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
     } catch (e: any) { throw new McpError(ErrorCode.InternalError, String(e)); }
   } else if (request.params.name === "github_create_pr") {
       const { owner, repo, title, head, base, body } = request.params.arguments as any;
-      const token = process.env.GITHUB_TOKEN || process.env.GH_TOKEN;
+      reloadEnv();
+    const token = process.env.GITHUB_TOKEN || process.env.GH_TOKEN;
       if (!token) throw new McpError(ErrorCode.InvalidRequest, "GITHUB_TOKEN env is not set");
+      // Auto-tag: prefix PR title
+      const taggedTitle = title.startsWith('[Optimus]') ? title : `[Optimus] ${title}`;
       try {
         const resp = await fetch(`https://api.github.com/repos/${owner}/${repo}/pulls`, {
           method: "POST",
@@ -628,19 +644,33 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
             "Content-Type": "application/json",
             "User-Agent": "Optimus-Agent"
           },
-          body: JSON.stringify({ title, head, base, body: body || '' })
+          body: JSON.stringify({ title: taggedTitle, head, base, body: body || '' })
         });
         if (!resp.ok) {
           throw new Error('GitHub API Error: ' + await resp.text());
         }
         const data = (await resp.json()) as any;
+        // Auto-label: add optimus-bot label to the PR
+        try {
+          await fetch(`https://api.github.com/repos/${owner}/${repo}/issues/${data.number}/labels`, {
+            method: "POST",
+            headers: {
+              "Authorization": `Bearer ${token}`,
+              "Accept": "application/vnd.github.v3+json",
+              "Content-Type": "application/json",
+              "User-Agent": "Optimus-Agent"
+            },
+            body: JSON.stringify({ labels: ["optimus-bot"] })
+          });
+        } catch (_) { /* label is best-effort, don't fail the PR */ }
         return { content: [{ type: "text", text: `Pull request created successfully! PR Number: ${data.number}\nURL: ${data.html_url}` }] };
       } catch (err: any) {
         return { content: [{ type: "text", text: `Failed to create PR: ${err.message}` }], isError: true };
       }
     } else if (request.params.name === "github_merge_pr") {
       const { owner, repo, pull_number, commit_title, merge_method } = request.params.arguments as any;
-      const token = process.env.GITHUB_TOKEN || process.env.GH_TOKEN;
+      reloadEnv();
+    const token = process.env.GITHUB_TOKEN || process.env.GH_TOKEN;
       if (!token) throw new McpError(ErrorCode.InvalidRequest, "GITHUB_TOKEN env is not set");
       try {
         const payload: any = { merge_method: merge_method || 'merge' };
@@ -665,6 +695,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
       }
     } else if (request.params.name === "github_sync_board") {
     const { owner, repo, workspace_path } = request.params.arguments as any;
+    reloadEnv();
     const token = process.env.GITHUB_TOKEN || process.env.GH_TOKEN;
     if (!token) throw new McpError(ErrorCode.InvalidRequest, "GITHUB_TOKEN env is not set");
     try {
@@ -730,22 +761,19 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
       roster += "(No local personas directory found)\n";
     }
 
-    // --- Dynamic Registry Loading ---
-    const registryPath = path.join(workspace_path, ".optimus", "registry", "available-agents.json");
-    if (fs.existsSync(registryPath)) {
+    // --- Dynamic T3 Config Loading ---
+    const configPath = path.join(workspace_path, ".optimus", "config", "available-agents.json");
+    if (fs.existsSync(configPath)) {
       try {
-        const registry = JSON.parse(fs.readFileSync(registryPath, 'utf8'));
-        roster += "\n### ⚙️ Dynamic Registry: Execution Engines & Agents\n";
+        const config = JSON.parse(fs.readFileSync(configPath, 'utf8'));
+        roster += "\n### ⚙️ Engine & Model Spec (T3 configuration)\n";
         roster += "**Available Execution Engines (Toolchains & Supported Models)**:\n";
-        Object.keys(registry.engines).forEach(engine => {
-          roster += `- [Engine: ${engine}] Models: [${registry.engines[engine].available_models.join(', ')}]\n`;
+        Object.keys(config.engines).forEach(engine => {
+          const statusMatch = config.engines[engine].status ? ` *[Status: ${config.engines[engine].status}]*` : '';
+          roster += `- [Engine: ${engine}] Models: [${config.engines[engine].available_models.join(', ')}]${statusMatch}\n`;
         });
-        roster += "\n**Strategic Identifiers (Modifiers)**:\n";
-        Object.keys(registry.roles).forEach(role => {
-          roster += `- ${role}: [${registry.roles[role].strategies.join(', ')}]\n`;
-        });
-        roster += "*Note: Append these combinations to role names to spawn customized variants. Examples: `chief-architect_claude-code_claude-3-opus`, `chief-architect_copilot-cli_o1-preview_conservative`.*\n\n";
-      } catch (e) {}
+          roster += "*Note: Append these engine and model combinations to role names to spawn customized variants. Examples: `chief-architect_claude-code_claude-3-opus`, `security-auditor_copilot-cli_o1-preview`.*\n\n";
+        } catch (e) {}
     }
 
     roster += "\n### T2: Project Default Roles (.optimus/roles)\n";

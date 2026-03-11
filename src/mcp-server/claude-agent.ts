@@ -38,11 +38,17 @@ function runCli(cmd: string, args: string[], cwd: string, timeoutMs = 300_000): 
         let stdout = "";
         let stderr = "";
 
+        const safeEnv: NodeJS.ProcessEnv = { ...process.env, TERM: "dumb", CI: "false", FORCE_COLOR: "0" };
+        if (process.platform === 'win32' && !safeEnv.CLAUDE_CODE_GIT_BASH_PATH) {
+            safeEnv.CLAUDE_CODE_GIT_BASH_PATH = 'C:\\Program Files\\Git\\bin\\bash.exe';
+        }
+
         const child = cp.spawn(cmd, args, {
             cwd,
-            env: { ...process.env, TERM: "dumb", CI: "false", FORCE_COLOR: "0" },
+            env: safeEnv as any,
             stdio: ["ignore", "pipe", "pipe"],
             shell: true,
+            windowsHide: true
         });
 
         child.stdout.on("data", (d: Buffer) => { stdout += d.toString(); });

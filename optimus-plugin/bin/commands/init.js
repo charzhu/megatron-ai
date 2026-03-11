@@ -87,6 +87,48 @@ module.exports = function init() {
     copyDirRecursive(skillsSrc, path.join(optimusDir, 'skills'));
   }
 
+  // 3.5 Generate or merge .vscode/mcp.json for VS Code / Copilot users
+  const vscodeMcpDir = path.join(cwd, '.vscode');
+  const vscodeMcpPath = path.join(vscodeMcpDir, 'mcp.json');
+  if (!fs.existsSync(vscodeMcpDir)) {
+    fs.mkdirSync(vscodeMcpDir, { recursive: true });
+  }
+  // Resolve the actual dist path relative to this CLI package
+  const distPath = path.resolve(pluginRoot, 'dist', 'mcp-server.js');
+  const spartanEntry = {
+    type: "stdio",
+    command: "node",
+    args: [distPath],
+    env: {
+      "OPTIMUS_WORKSPACE_ROOT": "${workspaceFolder}",
+      "DOTENV_PATH": "${workspaceFolder}/.env",
+      "PATH": "${env:PATH}"
+    }
+  };
+
+  if (fs.existsSync(vscodeMcpPath)) {
+    try {
+      const existing = JSON.parse(fs.readFileSync(vscodeMcpPath, 'utf8'));
+      const key = existing.servers ? 'servers' : 'mcpServers';
+      if (!existing[key]) existing[key] = {};
+      if (!existing[key]['spartan-swarm']) {
+        existing[key]['spartan-swarm'] = spartanEntry;
+        fs.writeFileSync(vscodeMcpPath, JSON.stringify(existing, null, 4), 'utf8');
+        console.log('\n🔌 Merged spartan-swarm into existing .vscode/mcp.json');
+      } else {
+        console.log('\n⏭️  Skipped .vscode/mcp.json (spartan-swarm already configured)');
+      }
+    } catch (e) {
+      console.log('\n⚠️  Could not parse existing .vscode/mcp.json, skipping merge');
+    }
+  } else {
+    const mcpConfig = { servers: { "spartan-swarm": spartanEntry }, inputs: [] };
+    fs.writeFileSync(vscodeMcpPath, JSON.stringify(mcpConfig, null, 4), 'utf8');
+    console.log('\n🔌 Generated .vscode/mcp.json (MCP server config for VS Code / Copilot)');
+  }
+  console.log(`   📍 MCP server path: ${distPath}`);
+  console.log('   💡 Users can change DOTENV_PATH to point to a different env file.');
+
   // 4. Append to .gitignore if needed
   const gitignorePath = path.join(cwd, '.gitignore');
   const optIgnorePath = path.join(scaffoldDir, '.gitignore-optimus');

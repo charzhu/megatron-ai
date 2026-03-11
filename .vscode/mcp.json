@@ -6,6 +6,17 @@
             "args": ["${workspaceFolder}/out/mcp/optimus-agents.js"],
             "env": {
                 "OPTIMUS_WORKSPACE": "${workspaceFolder}",
+                "DOTENV_PATH": "${workspaceFolder}/.env",
+                "PATH": "${env:PATH}"
+            }
+        },
+        "spartan-swarm": {
+            "type": "stdio",
+            "command": "node",
+            "args": ["${workspaceFolder}/optimus-plugin/dist/mcp-server.js"],
+            "env": {
+                "OPTIMUS_WORKSPACE_ROOT": "${workspaceFolder}",
+                "DOTENV_PATH": "${workspaceFolder}/.env",
                 "PATH": "${env:PATH}"
             }
         }

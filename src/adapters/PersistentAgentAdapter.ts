@@ -134,6 +134,9 @@ function platformSpawn(
     args: string[],
     options: cp.SpawnOptionsWithoutStdio
 ): cp.ChildProcessWithoutNullStreams {
+    // Force windowsHide to prevent annoying console popups
+    options = { ...options, windowsHide: true };
+    
     if (process.platform === 'win32') {
         const resolved = resolveWindowsSpawnResolution(cmd);
         if (resolved) {
@@ -779,9 +782,14 @@ export abstract class PersistentAgentAdapter implements AgentAdapter {
             const structuredToolCalls = new Map<string, StructuredToolRecord>();
             const startTime = Date.now();
             let stallWarningTimer: ReturnType<typeof setTimeout> | null = null;
+            const safeEnv: NodeJS.ProcessEnv = { ...process.env, TERM: 'dumb', CI: 'false', FORCE_COLOR: '0' };
+            if (process.platform === 'win32' && !safeEnv.CLAUDE_CODE_GIT_BASH_PATH) {
+                safeEnv.CLAUDE_CODE_GIT_BASH_PATH = 'C:\\Program Files\\Git\\bin\\bash.exe';
+            }
+            
             const child = platformSpawn(cmd, args, {
                 cwd: currentCwd,
-                env: { ...process.env, TERM: 'dumb', CI: 'false', FORCE_COLOR: '0' }
+                env: safeEnv as any
             });
 
             this.lastDebugInfo = {
@@ -1144,9 +1152,14 @@ export abstract class PersistentAgentAdapter implements AgentAdapter {
         const { cmd, args } = this.getSpawnCommand(mode);
         debugLog(this.id, 'Starting daemon', JSON.stringify({ mode, cwd: currentCwd, cwdSource: workspacePath.source, cmd, args }));
 
+        const safeEnv: NodeJS.ProcessEnv = { ...process.env, TERM: 'dumb', CI: 'false', FORCE_COLOR: '0' };
+        if (process.platform === 'win32' && !safeEnv.CLAUDE_CODE_GIT_BASH_PATH) {
+            safeEnv.CLAUDE_CODE_GIT_BASH_PATH = 'C:\\Program Files\\Git\\bin\\bash.exe';
+        }
+
         this.childProcess = platformSpawn(cmd, args, {
             cwd: currentCwd,
-            env: { ...process.env, TERM: 'dumb', CI: 'false', FORCE_COLOR: '0' }
+            env: safeEnv as any
         });
 
         this.childProcess.stdout.on('data', (data) => {
