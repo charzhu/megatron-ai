@@ -207,10 +207,18 @@
   },
   "session-tester": {
     "role": "session-tester",
-    "invocations": 1,
-    "successes": 1,
+    "invocations": 2,
+    "successes": 2,
     "failures": 0,
-    "lastUsed": "2026-03-11T16:43:10.572Z",
+    "lastUsed": "2026-03-11T16:57:49.142Z",
     "engine": "claude-code"
+  },
+  "copilot-session-tester": {
+    "role": "copilot-session-tester",
+    "invocations": 2,
+    "successes": 1,
+    "failures": 1,
+    "lastUsed": "2026-03-11T16:59:45.594Z",
+    "engine": "github-copilot"
   }
 }

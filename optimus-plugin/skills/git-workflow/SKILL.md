@@ -39,15 +39,23 @@ Using local terminal commands:
 3. Push: `git push -u origin <branch-name>`
 </step>
 
-<step number="3" name="Create Pull Request">
+<step number="3" name="Verify Before PR">
+Before creating a PR, you MUST verify your changes:
+1. If the project has a build step (e.g., `npm run build`, `dotnet build`), run it and confirm zero errors.
+2. If test scripts exist (e.g., `npm test`), run them and confirm all pass.
+3. If neither exists, at minimum review the diff (`git diff HEAD~1`) to sanity-check your changes.
+Do NOT create a PR with broken builds or failing tests.
+</step>
+
+<step number="4" name="Create Pull Request">
 Invoke `vcs_create_pr` with `title`, `head`, `base` (master), and `body` containing `Fixes #<ID>`.
 </step>
 
-<step number="4" name="Merge Pull Request">
+<step number="5" name="Merge Pull Request">
 Invoke `vcs_merge_pr` to merge the PR into master. Use `merge_method: "squash"` for clean history.
 </step>
 
-<step number="5" name="Workspace Reversion">
+<step number="6" name="Workspace Reversion">
 Run `git checkout master && git pull` to sync the merged changes locally.
 </step>
 

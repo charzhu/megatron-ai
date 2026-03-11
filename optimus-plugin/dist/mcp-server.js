@@ -543,6 +543,7 @@ function resolveWindowsSpawnResolution(cmd) {
     return null;
   }
   const candidates = whereResult.stdout.split(/\r?\n/).map((line) => line.trim()).filter(Boolean).filter((candidate) => fs.existsSync(candidate)).sort((left, right) => {
+    const vscodeBundledBonus = (filePath) => filePath.includes("globalStorage") ? -10 : 0;
     const extRank = (filePath) => {
       const ext = path.extname(filePath).toLowerCase();
       if (ext === ".exe" || ext === ".com") {
@@ -556,7 +557,7 @@ function resolveWindowsSpawnResolution(cmd) {
       }
       return 3;
     };
-    return extRank(left) - extRank(right);
+    return extRank(left) + vscodeBundledBonus(left) - (extRank(right) + vscodeBundledBonus(right));
   });
   for (const candidate of candidates) {
     const ext = path.extname(candidate).toLowerCase();
