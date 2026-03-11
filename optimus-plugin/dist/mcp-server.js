@@ -1945,9 +1945,9 @@ function parseRoleSpec(roleArg) {
 }
 function getAdapterForEngine(engine, sessionId, model) {
   if (engine === "copilot-cli" || engine === "github-copilot") {
-    return new GitHubCopilotAdapter(sessionId, "\u{1F6F8} GitHub Copilot", model);
+    return new GitHubCopilotAdapter(void 0, "\u{1F6F8} GitHub Copilot", model || "");
   }
-  return new ClaudeCodeAdapter(sessionId, "\u{1F996} Claude Code", model);
+  return new ClaudeCodeAdapter(void 0, "\u{1F996} Claude Code", model || "");
 }
 async function delegateTaskSingle(roleArg, taskPath, outputPath, _fallbackSessionId, workspacePath, contextFiles, masterInfo) {
   const parsedRole = parseRoleSpec(roleArg);
@@ -2173,7 +2173,7 @@ role: ${role}
       import_fs.default.writeFileSync(t1TempPath, t1Instance, "utf8");
       console.error(`[Orchestrator] T2\u2192T1: Created temp agent placeholder '${role}' at ${import_path.default.basename(t1TempPath)}`);
     }
-    const response = await adapter.invoke(basePrompt, "agent");
+    const response = await adapter.invoke(basePrompt, "agent", activeSessionId);
     const firstLines = response.slice(0, 500);
     const errorPatterns = [
       /^> \[LOG\] [Ee]rror:/m,

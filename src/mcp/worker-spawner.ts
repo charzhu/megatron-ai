@@ -352,9 +352,9 @@ function parseRoleSpec(roleArg: string): { role: string, engine?: string, model?
 
 function getAdapterForEngine(engine: string, sessionId?: string, model?: string): AgentAdapter {
     if (engine === 'copilot-cli' || engine === 'github-copilot') {
-        return new GitHubCopilotAdapter(sessionId, '🛸 GitHub Copilot', model);
+        return new GitHubCopilotAdapter(undefined, '🛸 GitHub Copilot', model || '');
     }
-    return new ClaudeCodeAdapter(sessionId, '🦖 Claude Code', model);
+    return new ClaudeCodeAdapter(undefined, '🦖 Claude Code', model || '');
 }
 
 /**
@@ -602,7 +602,7 @@ Please provide your complete execution result below.`;
             console.error(`[Orchestrator] T2→T1: Created temp agent placeholder '${role}' at ${path.basename(t1TempPath)}`);
         }
 
-        const response = await adapter.invoke(basePrompt, 'agent');
+        const response = await adapter.invoke(basePrompt, 'agent', activeSessionId);
 
         // --- Fail-Fast: Detect CLI-level errors in output ---
         // Some CLIs (e.g., Copilot) exit code 0 but output error text.
