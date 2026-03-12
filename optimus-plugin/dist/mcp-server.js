@@ -478,6 +478,9 @@ var import_crypto = __toESM(require("crypto"));
 var import_fs = __toESM(require("fs"));
 var import_path = __toESM(require("path"));
 
+// ../src/constants.ts
+var MAX_DELEGATION_DEPTH = 3;
+
 // ../src/adapters/PersistentAgentAdapter.ts
 var cp = __toESM(require("child_process"));
 var fs = __toESM(require("fs"));
@@ -1086,13 +1089,22 @@ ${outputBlock}
   /**
    * One-shot execution using -p flag. Spawns a process, collects all output, resolves when done.
    */
-  invokeNonInteractive(prompt, mode, sessionId, onUpdate) {
+  invokeNonInteractive(prompt, mode, sessionId, onUpdate, extraEnv) {
     return new Promise((resolve, reject) => {
       const workspacePath = _PersistentAgentAdapter.resolveWorkspacePath();
       const currentCwd = workspacePath.path;
       const preparedPrompt = this.preparePromptForNonInteractive(mode, prompt, currentCwd);
       const promptFileThreshold = this.getPromptFileThreshold();
       const { cmd, args } = this.getNonInteractiveCommand(mode, preparedPrompt.prompt, sessionId);
+      if (extraEnv?.OPTIMUS_DELEGATION_DEPTH) {
+        const depth = parseInt(extraEnv.OPTIMUS_DELEGATION_DEPTH, 10);
+        if (depth >= MAX_DELEGATION_DEPTH) {
+          const mcpIdx = args.findIndex((a) => a === "--mcp-config" || a.startsWith("--mcp-config="));
+          if (mcpIdx !== -1) {
+            args.splice(mcpIdx, args[mcpIdx].includes("=") ? 1 : 2);
+          }
+        }
+      }
       const useStructuredOutput = this.shouldUseStructuredOutput(mode);
       this.lastUsageLog = void 0;
       debugLog(this.id, "Starting non-interactive invoke", JSON.stringify({
@@ -1116,7 +1128,7 @@ ${outputBlock}
       const structuredToolCalls = /* @__PURE__ */ new Map();
       const startTime = Date.now();
       let stallWarningTimer = null;
-      const safeEnv = { ...process.env, TERM: "dumb", CI: "false", FORCE_COLOR: "0" };
+      const safeEnv = { ...process.env, TERM: "dumb", CI: "false", FORCE_COLOR: "0", ...extraEnv || {} };
       if (process.platform === "win32" && !safeEnv.CLAUDE_CODE_GIT_BASH_PATH) {
         safeEnv.CLAUDE_CODE_GIT_BASH_PATH = "C:\\Program Files\\Git\\bin\\bash.exe";
       }
@@ -1506,9 +1518,12 @@ ${line}` : "";
     this.outputBuffer = "";
     this.currentTurnMarker = null;
   }
-  async invoke(prompt, mode = "plan", sessionId, onUpdate) {
+  async invoke(prompt, mode = "plan", sessionId, onUpdate, extraEnv) {
     if (!this.shouldUsePersistentSession(mode)) {
-      return this.invokeNonInteractive(prompt, mode, sessionId, onUpdate);
+      return this.invokeNonInteractive(prompt, mode, sessionId, onUpdate, extraEnv);
+    }
+    if (extraEnv && Object.keys(extraEnv).length > 0) {
+      throw new Error(`extraEnv is not supported in persistent session mode. Use non-interactive mode for delegated tasks.`);
     }
     if (!this.childProcess || this.currentMode !== mode) {
       await this.initialize(mode);
@@ -1974,9 +1989,15 @@ function getAdapterForEngine(engine, sessionId, model) {
   }
   return new ClaudeCodeAdapter(void 0, "\u{1F996} Claude Code", model || "");
 }
-async function delegateTaskSingle(roleArg, taskPath, outputPath, _fallbackSessionId, workspacePath, contextFiles, masterInfo) {
+async function delegateTaskSingle(roleArg, taskPath, outputPath, _fallbackSessionId, workspacePath, contextFiles, masterInfo, parentDepth) {
   const parsedRole = parseRoleSpec(roleArg);
   const role = sanitizeRoleName(parsedRole.role);
+  const currentDepth = parentDepth !== void 0 ? parentDepth : parseInt(process.env.OPTIMUS_DELEGATION_DEPTH || "0", 10);
+  const childDepth = currentDepth + 1;
+  console.error(`[Orchestrator] Delegation depth: ${childDepth}/${MAX_DELEGATION_DEPTH}`);
+  if (childDepth >= MAX_DELEGATION_DEPTH) {
+    console.error(`[Orchestrator] Max delegation depth reached \u2014 MCP config will be stripped`);
+  }
   const legacyT1Dir = import_path.default.join(workspacePath, ".optimus", "personas");
   const t1Dir = import_path.default.join(workspacePath, ".optimus", "agents");
   if (import_fs.default.existsSync(legacyT1Dir) && !import_fs.default.existsSync(t1Dir)) {
@@ -2198,7 +2219,9 @@ role: ${role}
       import_fs.default.writeFileSync(t1TempPath, t1Instance, "utf8");
       console.error(`[Orchestrator] T2\u2192T1: Created temp agent placeholder '${role}' at ${import_path.default.basename(t1TempPath)}`);
     }
-    const response = await adapter.invoke(basePrompt, "agent", activeSessionId);
+    const response = await adapter.invoke(basePrompt, "agent", activeSessionId, void 0, {
+      OPTIMUS_DELEGATION_DEPTH: String(childDepth)
+    });
     const nonLogLines = response.split("\n").filter((l) => !l.startsWith("> [LOG]")).join("\n").trim();
     const firstLines = response.slice(0, 500);
     const errorPatterns = [
@@ -2273,20 +2296,20 @@ Agent has finished execution. Check standard output at \`${outputPath}\`.`;
     lockManager.releaseLock(role);
   }
 }
-async function spawnWorker(role, proposalPath, outputPath, sessionId, workspacePath) {
+async function spawnWorker(role, proposalPath, outputPath, sessionId, workspacePath, parentDepth) {
   try {
     console.error(`[Spawner] Launching Real Worker ${role} for council review`);
-    return await delegateTaskSingle(role, `Please read the architectural PROPOSAL located at: ${proposalPath}. 
-Provide your expert critique from the perspective of your role (${role}). Identify architectural bottlenecks, DX friction, security risks, or asynchronous race conditions. Conclude with a recommendation: Reject, Accept, or Hybrid.`, outputPath, sessionId, workspacePath);
+    return await delegateTaskSingle(role, `Please read the architectural PROPOSAL located at: ${proposalPath}.
+Provide your expert critique from the perspective of your role (${role}). Identify architectural bottlenecks, DX friction, security risks, or asynchronous race conditions. Conclude with a recommendation: Reject, Accept, or Hybrid.`, outputPath, sessionId, workspacePath, void 0, void 0, parentDepth);
   } catch (err) {
     console.error(`[Spawner] Worker ${role} failed to start:`, err);
     return `\u274C ${role}: exited with errors (${err.message}).`;
   }
 }
-async function dispatchCouncilConcurrent(roles, proposalPath, reviewsPath, timestampId, workspacePath) {
+async function dispatchCouncilConcurrent(roles, proposalPath, reviewsPath, timestampId, workspacePath, parentDepth) {
   const promises = roles.map((role) => {
     const outputPath = import_path.default.join(reviewsPath, `${role}_review.md`);
-    return spawnWorker(role, proposalPath, outputPath, `${timestampId}_${Math.random().toString(36).slice(2, 8)}`, workspacePath);
+    return spawnWorker(role, proposalPath, outputPath, `${timestampId}_${Math.random().toString(36).slice(2, 8)}`, workspacePath, parentDepth);
   });
   return Promise.all(promises);
 }
@@ -2470,6 +2493,10 @@ async function runAsyncWorker(taskId, workspacePath) {
     console.error(`[Runner] Task already running or completed: ${taskId}`);
     process.exit(0);
   }
+  const parentDepth = task.delegation_depth !== void 0 ? task.delegation_depth : void 0;
+  if (parentDepth !== void 0) {
+    console.error(`[Runner] Restored delegation depth: ${parentDepth} from task record`);
+  }
   TaskManifestManager.updateTask(workspacePath, taskId, { status: "running", pid: process.pid });
   const heartbeatInterval = setInterval(() => {
     TaskManifestManager.heartbeat(workspacePath, taskId);
@@ -2488,7 +2515,8 @@ async function runAsyncWorker(taskId, workspacePath) {
           engine: task.role_engine,
           model: task.role_model,
           requiredSkills: task.required_skills
-        }
+        },
+        parentDepth
       );
     } else if (task.type === "dispatch_council") {
       await dispatchCouncilConcurrent(
@@ -2497,7 +2525,8 @@ async function runAsyncWorker(taskId, workspacePath) {
         task.output_path,
         // Actually reviews path
         `async_council_${taskId}`,
-        task.workspacePath
+        task.workspacePath,
+        parentDepth
       );
       const reviewsPath = task.output_path;
       const synthesisPath = import_path2.default.join(reviewsPath, "COUNCIL_SYNTHESIS.md");
@@ -2567,7 +2596,10 @@ ${synthesisContent}`;
           pmSynthesisPrompt,
           verdictPath,
           `reduce_${taskId}`,
-          task.workspacePath
+          task.workspacePath,
+          void 0,
+          void 0,
+          parentDepth
         );
         console.error(`[Runner] PM verdict generated at ${verdictPath}`);
       } catch (reduceErr) {
@@ -3206,7 +3238,8 @@ Error: ${task.error_message}`;
       role_description,
       role_engine,
       role_model,
-      required_skills
+      required_skills,
+      delegation_depth: parseInt(process.env.OPTIMUS_DELEGATION_DEPTH || "0", 10)
     });
     let issueInfo = "";
     const remote = parseGitRemote(workspace_path);
@@ -3259,7 +3292,8 @@ Use check_task_status tool periodically with this task ID to check its completio
       roles,
       proposal_path,
       output_path: reviewsPath,
-      workspacePath: workspace_path
+      workspacePath: workspace_path,
+      delegation_depth: parseInt(process.env.OPTIMUS_DELEGATION_DEPTH || "0", 10)
     });
     let issueInfo = "";
     const remote = parseGitRemote(workspace_path);

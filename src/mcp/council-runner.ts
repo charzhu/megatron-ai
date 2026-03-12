@@ -55,6 +55,12 @@ export async function runAsyncWorker(taskId: string, workspacePath: string) {
         process.exit(0);
     }
 
+    // Resolve delegation depth from the persisted task record (no process.env mutation)
+    const parentDepth = task.delegation_depth !== undefined ? task.delegation_depth : undefined;
+    if (parentDepth !== undefined) {
+        console.error(`[Runner] Restored delegation depth: ${parentDepth} from task record`);
+    }
+
     TaskManifestManager.updateTask(workspacePath, taskId, { status: 'running', pid: process.pid });
 
     // Set up heartbeat every 1 minute
@@ -76,7 +82,8 @@ export async function runAsyncWorker(taskId: string, workspacePath: string) {
                     engine: task.role_engine,
                     model: task.role_model,
                     requiredSkills: task.required_skills
-                }
+                },
+                parentDepth
             );
         } else if (task.type === 'dispatch_council') {
             await dispatchCouncilConcurrent(
@@ -84,7 +91,8 @@ export async function runAsyncWorker(taskId: string, workspacePath: string) {
                 task.proposal_path!,
                 task.output_path!, // Actually reviews path
                 `async_council_${taskId}`,
-                task.workspacePath
+                task.workspacePath,
+                parentDepth
             );
 
             // Phase 3: Concatenate into COUNCIL_SYNTHESIS.md
@@ -145,7 +153,10 @@ Here is the synthesis report:\n\n${synthesisContent}`;
                     pmSynthesisPrompt,
                     verdictPath,
                     `reduce_${taskId}`,
-                    task.workspacePath
+                    task.workspacePath,
+                    undefined,
+                    undefined,
+                    parentDepth
                 );
                 console.error(`[Runner] PM verdict generated at ${verdictPath}`);
             } catch (reduceErr: any) {

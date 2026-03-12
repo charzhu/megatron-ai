@@ -1,5 +1,6 @@
 import { AgentAdapter } from './AgentAdapter';
 import { AgentMode } from '../types/SharedTaskContext';
+import { MAX_DELEGATION_DEPTH } from '../constants';
 import * as cp from 'child_process';
 import * as fs from 'fs';
 import * as path from 'path';
@@ -758,13 +759,25 @@ export abstract class PersistentAgentAdapter implements AgentAdapter {
     /**
      * One-shot execution using -p flag. Spawns a process, collects all output, resolves when done.
      */
-    private invokeNonInteractive(prompt: string, mode: AgentMode, sessionId?: string, onUpdate?: (chunk: string) => void): Promise<string> {
+    private invokeNonInteractive(prompt: string, mode: AgentMode, sessionId?: string, onUpdate?: (chunk: string) => void, extraEnv?: Record<string, string>): Promise<string> {
         return new Promise((resolve, reject) => {
             const workspacePath = PersistentAgentAdapter.resolveWorkspacePath();
             const currentCwd = workspacePath.path;
             const preparedPrompt = this.preparePromptForNonInteractive(mode, prompt, currentCwd);
             const promptFileThreshold = this.getPromptFileThreshold();
             const { cmd, args } = this.getNonInteractiveCommand(mode, preparedPrompt.prompt, sessionId);
+
+            // Depth enforcement: strip MCP config at max delegation depth
+            if (extraEnv?.OPTIMUS_DELEGATION_DEPTH) {
+                const depth = parseInt(extraEnv.OPTIMUS_DELEGATION_DEPTH, 10);
+                if (depth >= MAX_DELEGATION_DEPTH) {
+                    const mcpIdx = args.findIndex(a => a === '--mcp-config' || a.startsWith('--mcp-config='));
+                    if (mcpIdx !== -1) {
+                        args.splice(mcpIdx, args[mcpIdx].includes('=') ? 1 : 2);
+                    }
+                }
+            }
+
             const useStructuredOutput = this.shouldUseStructuredOutput(mode);
             this.lastUsageLog = undefined;
             // Retain lastSessionId across invokes if not explicitly overwritten
@@ -790,7 +803,7 @@ export abstract class PersistentAgentAdapter implements AgentAdapter {
             const structuredToolCalls = new Map<string, StructuredToolRecord>();
             const startTime = Date.now();
             let stallWarningTimer: ReturnType<typeof setTimeout> | null = null;
-            const safeEnv: NodeJS.ProcessEnv = { ...process.env, TERM: 'dumb', CI: 'false', FORCE_COLOR: '0' };
+            const safeEnv: NodeJS.ProcessEnv = { ...process.env, TERM: 'dumb', CI: 'false', FORCE_COLOR: '0', ...(extraEnv || {}) };
             if (process.platform === 'win32' && !safeEnv.CLAUDE_CODE_GIT_BASH_PATH) {
                 safeEnv.CLAUDE_CODE_GIT_BASH_PATH = 'C:\\Program Files\\Git\\bin\\bash.exe';
             }
@@ -1254,10 +1267,15 @@ export abstract class PersistentAgentAdapter implements AgentAdapter {
         this.currentTurnMarker = null;
     }
 
-    async invoke(prompt: string, mode: AgentMode = 'plan', sessionId?: string, onUpdate?: (chunk: string) => void): Promise<string> {
+    async invoke(prompt: string, mode: AgentMode = 'plan', sessionId?: string, onUpdate?: (chunk: string) => void, extraEnv?: Record<string, string>): Promise<string> {
         // Use one-shot execution unless the adapter explicitly requires a persistent interactive session.
         if (!this.shouldUsePersistentSession(mode)) {
-            return this.invokeNonInteractive(prompt, mode, sessionId, onUpdate);
+            return this.invokeNonInteractive(prompt, mode, sessionId, onUpdate, extraEnv);
+        }
+
+        // Fail-fast: extraEnv (e.g. delegation depth) is not supported in persistent session mode
+        if (extraEnv && Object.keys(extraEnv).length > 0) {
+            throw new Error(`extraEnv is not supported in persistent session mode. Use non-interactive mode for delegated tasks.`);
         }
 
         // Agent mode: use persistent interactive daemon

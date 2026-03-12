@@ -437,7 +437,8 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
     const taskId = `task_${Date.now()}_${Math.random().toString(36).substring(2,8)}`;
     TaskManifestManager.createTask(workspace_path, {
         taskId, type: "delegate_task", role, task_description, output_path, workspacePath: workspace_path, context_files: context_files || [],
-        role_description, role_engine, role_model, required_skills
+        role_description, role_engine, role_model, required_skills,
+        delegation_depth: parseInt(process.env.OPTIMUS_DELEGATION_DEPTH || '0', 10)
     });
 
     // Best-effort: auto-create GitHub Issue for traceability
@@ -475,7 +476,8 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
     const taskId = `council_${Date.now()}_${Math.random().toString(36).substring(2,8)}`;
     const reviewsPath = path.join(workspace_path, ".optimus", "reviews", taskId);
     TaskManifestManager.createTask(workspace_path, {
-        taskId, type: "dispatch_council", roles, proposal_path, output_path: reviewsPath, workspacePath: workspace_path
+        taskId, type: "dispatch_council", roles, proposal_path, output_path: reviewsPath, workspacePath: workspace_path,
+        delegation_depth: parseInt(process.env.OPTIMUS_DELEGATION_DEPTH || '0', 10)
     });
 
     // Best-effort: auto-create GitHub Issue for traceability

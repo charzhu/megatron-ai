@@ -4,6 +4,7 @@ import os from "os";
 import { AgentAdapter } from "../adapters/AgentAdapter";
 import { ClaudeCodeAdapter } from "../adapters/ClaudeCodeAdapter";
 import { GitHubCopilotAdapter } from "../adapters/GitHubCopilotAdapter";
+import { MAX_DELEGATION_DEPTH } from "../constants";
 
 function parseFrontmatter(content: string): { frontmatter: Record<string, string>, body: string } {
     const normalized = content.replace(/\r\n/g, '\n');
@@ -362,10 +363,17 @@ function getAdapterForEngine(engine: string, sessionId?: string, model?: string)
 /**
  * Executes a single task delegation synchronously.
  */
-export async function delegateTaskSingle(roleArg: string, taskPath: string, outputPath: string, _fallbackSessionId: string, workspacePath: string, contextFiles?: string[], masterInfo?: MasterRoleInfo): Promise<string> {
+export async function delegateTaskSingle(roleArg: string, taskPath: string, outputPath: string, _fallbackSessionId: string, workspacePath: string, contextFiles?: string[], masterInfo?: MasterRoleInfo, parentDepth?: number): Promise<string> {
     const parsedRole = parseRoleSpec(roleArg);
     const role = sanitizeRoleName(parsedRole.role);
-    
+
+    const currentDepth = parentDepth !== undefined ? parentDepth : parseInt(process.env.OPTIMUS_DELEGATION_DEPTH || '0', 10);
+    const childDepth = currentDepth + 1;
+    console.error(`[Orchestrator] Delegation depth: ${childDepth}/${MAX_DELEGATION_DEPTH}`);
+    if (childDepth >= MAX_DELEGATION_DEPTH) {
+        console.error(`[Orchestrator] Max delegation depth reached — MCP config will be stripped`);
+    }
+
     // Auto-migrate legacy folder `.optimus/personas` to `.optimus/agents`
     const legacyT1Dir = path.join(workspacePath, '.optimus', 'personas');
     const t1Dir = path.join(workspacePath, '.optimus', 'agents');
@@ -604,7 +612,9 @@ Please provide your complete execution result below.`;
             console.error(`[Orchestrator] T2→T1: Created temp agent placeholder '${role}' at ${path.basename(t1TempPath)}`);
         }
 
-        const response = await adapter.invoke(basePrompt, 'agent', activeSessionId);
+        const response = await adapter.invoke(basePrompt, 'agent', activeSessionId, undefined, {
+            OPTIMUS_DELEGATION_DEPTH: String(childDepth)
+        });
 
         // --- Fail-Fast: Detect CLI-level errors in output ---
         // Some CLIs (e.g., Copilot) exit code 0 but output error text to stderr,
@@ -681,11 +691,11 @@ Please provide your complete execution result below.`;
 /**
  * Spawns a single expert worker process for council review.
  */
-export async function spawnWorker(role: string, proposalPath: string, outputPath: string, sessionId: string, workspacePath: string): Promise<string> {
+export async function spawnWorker(role: string, proposalPath: string, outputPath: string, sessionId: string, workspacePath: string, parentDepth?: number): Promise<string> {
     try {
         console.error(`[Spawner] Launching Real Worker ${role} for council review`);
-        return await delegateTaskSingle(role, `Please read the architectural PROPOSAL located at: ${proposalPath}. 
-Provide your expert critique from the perspective of your role (${role}). Identify architectural bottlenecks, DX friction, security risks, or asynchronous race conditions. Conclude with a recommendation: Reject, Accept, or Hybrid.`, outputPath, sessionId, workspacePath);
+        return await delegateTaskSingle(role, `Please read the architectural PROPOSAL located at: ${proposalPath}.
+Provide your expert critique from the perspective of your role (${role}). Identify architectural bottlenecks, DX friction, security risks, or asynchronous race conditions. Conclude with a recommendation: Reject, Accept, or Hybrid.`, outputPath, sessionId, workspacePath, undefined, undefined, parentDepth);
     } catch (err: any) {
         console.error(`[Spawner] Worker ${role} failed to start:`, err);
         return `❌ ${role}: exited with errors (${err.message}).`;
@@ -695,10 +705,10 @@ Provide your expert critique from the perspective of your role (${role}). Identi
 /**
  * Dispatches the council of experts concurrently.
  */
-export async function dispatchCouncilConcurrent(roles: string[], proposalPath: string, reviewsPath: string, timestampId: string, workspacePath: string): Promise<string[]> {
+export async function dispatchCouncilConcurrent(roles: string[], proposalPath: string, reviewsPath: string, timestampId: string, workspacePath: string, parentDepth?: number): Promise<string[]> {
   const promises = roles.map(role => {
     const outputPath = path.join(reviewsPath, `${role}_review.md`);
-    return spawnWorker(role, proposalPath, outputPath, `${timestampId}_${Math.random().toString(36).slice(2,8)}`, workspacePath);
+    return spawnWorker(role, proposalPath, outputPath, `${timestampId}_${Math.random().toString(36).slice(2,8)}`, workspacePath, parentDepth);
   });
 
   return Promise.all(promises);

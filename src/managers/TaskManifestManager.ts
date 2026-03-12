@@ -21,6 +21,7 @@ export interface TaskRecord {
     role_engine?: string;
     role_model?: string;
     required_skills?: string[];
+    delegation_depth?: number;
 }
 
 export class TaskManifestManager {
