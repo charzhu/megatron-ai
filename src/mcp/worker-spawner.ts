@@ -266,6 +266,21 @@ async function ensureT2Role(workspacePath: string, role: string, engine: string,
         } catch {}
     }
 
+    // No plugin template found — check if Master provided a meaningful description
+    const hasExplicitDescription = !!masterInfo?.description && masterInfo.description.trim().length > 0;
+
+    if (!hasExplicitDescription) {
+        // Master didn't provide role_description — refuse to create garbage T2.
+        // The role will operate as T3 (zero-shot) this time without polluting the filesystem.
+        console.error(
+            `[T2 Guard] Refused to create T2 for '${safeRole}': no role_description provided by Master. ` +
+            `Role will run as T3 zero-shot. To create a proper T2, the delegating agent should either: ` +
+            `(1) provide a detailed role_description in delegate_task, or ` +
+            `(2) use agent-creator to pre-create the role before delegation.`
+        );
+        return null; // No T2 created — agent proceeds as T3
+    }
+
     // No plugin template found — use agent-creator for rich T2 generation
     const META_ROLES = ['agent-creator', 'skill-creator'];
     const safeRoleCheck = sanitizeRoleName(role);

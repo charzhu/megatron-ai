@@ -3343,6 +3343,13 @@ async function ensureT2Role(workspacePath, role, engine, model, masterInfo, dele
     } catch {
     }
   }
+  const hasExplicitDescription = !!masterInfo?.description && masterInfo.description.trim().length > 0;
+  if (!hasExplicitDescription) {
+    console.error(
+      `[T2 Guard] Refused to create T2 for '${safeRole}': no role_description provided by Master. Role will run as T3 zero-shot. To create a proper T2, the delegating agent should either: (1) provide a detailed role_description in delegate_task, or (2) use agent-creator to pre-create the role before delegation.`
+    );
+    return null;
+  }
   const META_ROLES = ["agent-creator", "skill-creator"];
   const safeRoleCheck = sanitizeRoleName(role);
   const currentDepthLocal = delegationDepth ?? 0;
