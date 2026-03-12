@@ -156,6 +156,10 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
               items: { type: "string" },
               description: "An array of expert roles to spawn concurrently (e.g., ['security-expert', 'performance-tyrant'])",
             },
+            parent_issue_number: {
+              type: "number",
+              description: "The GitHub issue number of the parent epic or task. Used for issue lineage tracking."
+            },
           },
           required: ["proposal_path", "roles"],
         },
@@ -218,6 +222,10 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
               items: { type: "string" },
               description: "Optional array of skill names this role needs (e.g., ['council-review', 'git-workflow']). If any skill does not exist in .optimus/skills/<name>/SKILL.md, the task will be rejected with a list of missing skills so Master can create them first via a skill-creator delegation.",
             },
+            parent_issue_number: {
+              type: "number",
+              description: "The GitHub issue number of the parent epic or task. Used for issue lineage tracking."
+            },
           },
           required: ["role", "task_description", "output_path", "workspace_path"],
         }
@@ -266,6 +274,10 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
               items: { type: "string" },
               description: "Optional array of skill names this role needs. Missing skills will cause rejection so Master can create them first.",
             },
+            parent_issue_number: {
+              type: "number",
+              description: "The GitHub issue number of the parent epic or task. Used for issue lineage tracking."
+            },
           },
           required: ["role", "task_description", "output_path", "workspace_path"],
         }
@@ -288,6 +300,10 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
             workspace_path: {
               type: "string",
               description: "Absolute path to the project workspace root.",
+            },
+            parent_issue_number: {
+              type: "number",
+              description: "The GitHub issue number of the parent epic or task. Used for issue lineage tracking."
             },
           },
           required: ["proposal_path", "roles", "workspace_path"],
@@ -457,12 +473,18 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
     if (!role || !task_description || !output_path || !workspace_path) {
         throw new McpError(ErrorCode.InvalidParams, "Invalid arguments");
     }
-    
+
+    // Resolve parent issue: explicit param > env var > undefined (with NaN guard)
+    const rawParentAsync = process.env.OPTIMUS_PARENT_ISSUE ? parseInt(process.env.OPTIMUS_PARENT_ISSUE, 10) : undefined;
+    const parentIssueNumber = (request.params.arguments as any).parent_issue_number
+        ?? (Number.isNaN(rawParentAsync) ? undefined : rawParentAsync);
+
     const taskId = `task_${Date.now()}_${Math.random().toString(36).substring(2,8)}`;
     TaskManifestManager.createTask(workspace_path, {
         taskId, type: "delegate_task", role, task_description, output_path, workspacePath: workspace_path, context_files: context_files || [],
         role_description, role_engine, role_model, required_skills,
-        delegation_depth: parseInt(process.env.OPTIMUS_DELEGATION_DEPTH || '0', 10)
+        delegation_depth: parseInt(process.env.OPTIMUS_DELEGATION_DEPTH || '0', 10),
+        parent_issue_number: parentIssueNumber
     });
 
     // Best-effort: auto-create GitHub Issue for traceability
@@ -471,9 +493,10 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
     if (remote) {
         const truncDesc = task_description.length > 300 ? task_description.substring(0, 300) + '...' : task_description;
         const shortTitle = task_description.split('\n')[0].substring(0, 80).trim();
+        const parentRef = parentIssueNumber ? `**Parent Epic:** #${parentIssueNumber}\n\n` : '';
         const issue = await createGitHubIssue(remote.owner, remote.repo,
             `[Task] ${role}: ${shortTitle}...`,
-            `## Auto-generated Swarm Task Tracker\n\n**Task ID:** \`${taskId}\`\n**Role:** \`${role}\`\n**Output Path:** \`${output_path}\`\n\n### Task Description\n${truncDesc}`,
+            `${parentRef}## Auto-generated Swarm Task Tracker\n\n**Task ID:** \`${taskId}\`\n**Role:** \`${role}\`\n**Output Path:** \`${output_path}\`\n\n### Task Description\n${truncDesc}`,
             ['swarm-task']
         );
         if (issue) {
@@ -496,12 +519,18 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
     if (!proposal_path || !Array.isArray(roles) || !workspace_path) {
         throw new McpError(ErrorCode.InvalidParams, "Invalid arguments");
     }
-    
+
+    // Resolve parent issue: explicit param > env var > undefined (with NaN guard)
+    const rawParentAsync2 = process.env.OPTIMUS_PARENT_ISSUE ? parseInt(process.env.OPTIMUS_PARENT_ISSUE, 10) : undefined;
+    const parentIssueNumber = (request.params.arguments as any).parent_issue_number
+        ?? (Number.isNaN(rawParentAsync2) ? undefined : rawParentAsync2);
+
     const taskId = `council_${Date.now()}_${Math.random().toString(36).substring(2,8)}`;
     const reviewsPath = path.join(workspace_path, ".optimus", "reviews", taskId);
     TaskManifestManager.createTask(workspace_path, {
         taskId, type: "dispatch_council", roles, proposal_path, output_path: reviewsPath, workspacePath: workspace_path,
-        delegation_depth: parseInt(process.env.OPTIMUS_DELEGATION_DEPTH || '0', 10)
+        delegation_depth: parseInt(process.env.OPTIMUS_DELEGATION_DEPTH || '0', 10),
+        parent_issue_number: parentIssueNumber
     });
 
     // Best-effort: auto-create GitHub Issue for traceability
@@ -509,9 +538,10 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
     const remote = parseGitRemote(workspace_path);
     if (remote) {
         const proposalName = require('path').basename(proposal_path, '.md').replace(/^PROPOSAL_/i, '').replace(/[_-]/g, ' ');
+        const parentRef = parentIssueNumber ? `**Parent Epic:** #${parentIssueNumber}\n\n` : '';
         const issue = await createGitHubIssue(remote.owner, remote.repo,
             `[Council] ${proposalName} (Review)`,
-            `## Auto-generated Council Review Tracker\n\n**Council ID:** \`${taskId}\`\n**Roles:** ${roles.map((r: string) => `\`${r}\``).join(', ')}\n**Proposal:** \`${proposal_path}\`\n**Reviews Path:** \`${reviewsPath}\``,
+            `${parentRef}## Auto-generated Council Review Tracker\n\n**Council ID:** \`${taskId}\`\n**Roles:** ${roles.map((r: string) => `\`${r}\``).join(', ')}\n**Proposal:** \`${proposal_path}\`\n**Reviews Path:** \`${reviewsPath}\``,
             ['swarm-council']
         );
         if (issue) {
@@ -532,10 +562,15 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
   if (request.params.name === "dispatch_council") {
 
     let { proposal_path, roles, workspace_path } = request.params.arguments as any;
-    
+
     if (!proposal_path || !Array.isArray(roles) || roles.length === 0) {
       throw new McpError(ErrorCode.InvalidParams, "Invalid arguments: requires proposal_path and an array of roles");
     }
+
+    // Resolve parent issue: explicit param > env var > undefined
+    const rawParentSync = process.env.OPTIMUS_PARENT_ISSUE ? parseInt(process.env.OPTIMUS_PARENT_ISSUE, 10) : undefined;
+    const parentIssueNumber = (request.params.arguments as any).parent_issue_number
+        ?? (Number.isNaN(rawParentSync) ? undefined : rawParentSync);
     
     // Resolve workspace root from the proposal_path instead of process.cwd().
     // Global MCP servers boot in the user home directory, so we must calculate the project root dynamically.
@@ -558,7 +593,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
     // In Phase 2 implementation, this is where we invoke worker-spawner.js for Promise.all
     // Launching autonomous CLI instances concurrently
     console.error(`[MCP] Dispatching council with roles: ${roles.join(', ')}`);
-    const results = await dispatchCouncilConcurrent(roles, proposal_path, reviewsPath, timestampId.toString(), workspacePath);
+    const results = await dispatchCouncilConcurrent(roles, proposal_path, reviewsPath, timestampId.toString(), workspacePath, undefined, parentIssueNumber);
 
     return {
       content: [
@@ -756,6 +791,11 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
     const { role, role_description, role_engine, role_model, task_description, output_path, context_files, required_skills } = request.params.arguments as any;
     let workspace_path = (request.params.arguments as any).workspace_path;
 
+    // Resolve parent issue: explicit param > env var > undefined
+    const rawParentSync = process.env.OPTIMUS_PARENT_ISSUE ? parseInt(process.env.OPTIMUS_PARENT_ISSUE, 10) : undefined;
+    const parentIssueNumber = (request.params.arguments as any).parent_issue_number
+        ?? (Number.isNaN(rawParentSync) ? undefined : rawParentSync);
+
     if (!role || !task_description || !output_path) {
       throw new McpError(ErrorCode.InvalidParams, "Invalid arguments: requires role, task_description, output_path");
     }
@@ -791,7 +831,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
     console.error(`[MCP] Delegating task to role: ${role}, output scoped to: ${canonicalOutputPath}`);
     
     // 2. Delegate to the single worker pool (use canonicalOutputPath so agent writes inside .optimus/)
-      const result = await delegateTaskSingle(role, taskArtifactPath, canonicalOutputPath, sessionId, workspacePath, context_files, { description: role_description, engine: role_engine, model: role_model, requiredSkills: required_skills });
+      const result = await delegateTaskSingle(role, taskArtifactPath, canonicalOutputPath, sessionId, workspacePath, context_files, { description: role_description, engine: role_engine, model: role_model, requiredSkills: required_skills }, undefined, parentIssueNumber);
     return {
       content: [{ type: "text", text: result }]
     };
