@@ -1,5 +1,25 @@
 ﻿# Changelog
 
+## [0.3.0] — 2026-03-12
+
+### Features
+- **Delegation Depth Control** — `MAX_DELEGATION_DEPTH = 3` prevents infinite agent recursion. Tracked via `OPTIMUS_DELEGATION_DEPTH` env var.
+- **Plan Mode for Orchestrators** — `mode: plan` strips write permissions from PM/orchestrator roles, forcing delegation instead of direct coding.
+- **`write_blackboard_artifact` MCP Tool** — Allows plan-mode agents to write exclusively to `.optimus/` directory with symlink-safe path validation.
+- **Issue Lineage Tracking** — `OPTIMUS_PARENT_ISSUE` env var injected into child agents, enabling GitHub Issue parent-child tree visualization.
+- **`optimus upgrade` CLI Command** — Safe incremental upgrade that force-updates skills/roles/config while preserving user agents and runtime data.
+- **Enhanced ADO `vcs_create_work_item`** — New params (`area_path`, `iteration_path`, `assigned_to`, `parent_id`, `priority`), `vcs.json` defaults section, auto-tag `created-by:optimus-code`, Markdown→HTML body conversion.
+- **Auto-Skill Genesis** — Auto-generate `SKILL.md` after successful T3 precipitation so new roles are born with operational playbooks.
+- **Rich T3→T2 Precipitation via `agent-creator`** — Replace thin `fs.writeFileSync` templates with full `agent-creator` invocation for professional-grade role definitions.
+- **Engine/Model Validation** — Validate engine and model names against `available-agents.json` before writing to T2 frontmatter, preventing invalid engine corruption.
+
+### Improvements
+- Feature-dev skill rewritten with 6-phase PM-driven autonomous workflow
+- Senior Full-Stack Developer role replaces generic dev
+- Session Continuity Rule for agent memory reuse
+- Environment variable interpolation fix for nested MCP worker processes
+- Explicit tool call examples added to each feature-dev phase
+
 ## [Unreleased]
 
 ### Self-Evolving Agent System (T3→T2→T1 Complete Lifecycle)
