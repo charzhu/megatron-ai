@@ -35,12 +35,29 @@ var TaskManifestManager_exports = {};
 __export(TaskManifestManager_exports, {
   TaskManifestManager: () => TaskManifestManager
 });
-var fs2, path2, TaskManifestManager;
+function withManifestLock(fn) {
+  let release;
+  const next = new Promise((resolve) => {
+    release = resolve;
+  });
+  const prev = manifestMutex;
+  manifestMutex = next;
+  return prev.then(() => {
+    try {
+      const result = fn();
+      return result;
+    } finally {
+      release();
+    }
+  });
+}
+var fs2, path2, manifestMutex, TaskManifestManager;
 var init_TaskManifestManager = __esm({
   "../src/managers/TaskManifestManager.ts"() {
     "use strict";
     fs2 = __toESM(require("fs"));
     path2 = __toESM(require("path"));
+    manifestMutex = Promise.resolve();
     TaskManifestManager = class {
       static getManifestPath(workspacePath) {
         return path2.join(workspacePath, ".optimus", "state", "task-manifest.json");
@@ -65,54 +82,66 @@ var init_TaskManifestManager = __esm({
         fs2.renameSync(tempPath, manifestPath);
       }
       static createTask(workspacePath, record) {
-        const manifest = this.loadManifest(workspacePath);
         const fullRecord = {
           ...record,
           status: "pending",
           startTime: Date.now(),
           heartbeatTime: Date.now()
         };
-        manifest[record.taskId] = fullRecord;
-        this.saveManifest(workspacePath, manifest);
+        withManifestLock(() => {
+          const manifest = this.loadManifest(workspacePath);
+          manifest[record.taskId] = fullRecord;
+          this.saveManifest(workspacePath, manifest);
+        });
         return fullRecord;
       }
       static updateTask(workspacePath, taskId, updates) {
-        const manifest = this.loadManifest(workspacePath);
-        if (manifest[taskId]) {
-          manifest[taskId] = { ...manifest[taskId], ...updates };
-          this.saveManifest(workspacePath, manifest);
-        }
+        withManifestLock(() => {
+          const manifest = this.loadManifest(workspacePath);
+          if (manifest[taskId]) {
+            manifest[taskId] = { ...manifest[taskId], ...updates };
+            this.saveManifest(workspacePath, manifest);
+          }
+        });
       }
       static heartbeat(workspacePath, taskId) {
-        this.updateTask(workspacePath, taskId, { heartbeatTime: Date.now() });
+        withManifestLock(() => {
+          const manifest = this.loadManifest(workspacePath);
+          if (manifest[taskId]) {
+            manifest[taskId].heartbeatTime = Date.now();
+            this.saveManifest(workspacePath, manifest);
+          }
+        });
       }
       static reapStaleTasks(workspacePath) {
-        const manifest = this.loadManifest(workspacePath);
-        const now = Date.now();
-        const TIMEOUT_MS = 1e3 * 60 * 3;
-        let changed = false;
-        for (const taskId in manifest) {
-          const task = manifest[taskId];
-          if (task.status === "running") {
-            if (now - task.heartbeatTime > TIMEOUT_MS) {
-              task.status = "failed";
-              task.error_message = "Task timed out or runner process died (reaped by Watchdog).";
-              changed = true;
-              try {
-                if (task.output_path) {
-                  const dir = path2.dirname(task.output_path);
-                  if (!fs2.existsSync(dir)) fs2.mkdirSync(dir, { recursive: true });
-                  fs2.writeFileSync(task.output_path, `\u274C **Fatal Error**: ${task.error_message}
+        withManifestLock(() => {
+          const manifest = this.loadManifest(workspacePath);
+          const now = Date.now();
+          const TIMEOUT_MS = 1e3 * 60 * 3;
+          let changed = false;
+          for (const taskId in manifest) {
+            const task = manifest[taskId];
+            if (task.status === "running") {
+              if (now - task.heartbeatTime > TIMEOUT_MS) {
+                task.status = "failed";
+                task.error_message = "Task timed out or runner process died (reaped by Watchdog).";
+                changed = true;
+                try {
+                  if (task.output_path) {
+                    const dir = path2.dirname(task.output_path);
+                    if (!fs2.existsSync(dir)) fs2.mkdirSync(dir, { recursive: true });
+                    fs2.writeFileSync(task.output_path, `\u274C **Fatal Error**: ${task.error_message}
 `, "utf8");
+                  }
+                } catch (e) {
                 }
-              } catch (e) {
               }
             }
           }
-        }
-        if (changed) {
-          this.saveManifest(workspacePath, manifest);
-        }
+          if (changed) {
+            this.saveManifest(workspacePath, manifest);
+          }
+        });
       }
     };
   }

@@ -1,6 +1,25 @@
 import * as fs from 'fs';
 import * as path from 'path';
 
+// File-level mutex to prevent concurrent read-modify-write on task-manifest.json
+// Multiple agents (heartbeats, status updates, task creation) can race on the same file.
+let manifestMutex: Promise<void> = Promise.resolve();
+
+function withManifestLock<T>(fn: () => T): Promise<T> {
+    let release: () => void;
+    const next = new Promise<void>(resolve => { release = resolve; });
+    const prev = manifestMutex;
+    manifestMutex = next;
+    return prev.then(() => {
+        try {
+            const result = fn();
+            return result;
+        } finally {
+            release!();
+        }
+    });
+}
+
 export interface TaskRecord {
     taskId: string;
     type: 'delegate_task' | 'dispatch_council';
@@ -53,56 +72,68 @@ export class TaskManifestManager {
     }
 
     static createTask(workspacePath: string, record: Omit<TaskRecord, 'status' | 'startTime' | 'heartbeatTime'>): TaskRecord {
-        const manifest = this.loadManifest(workspacePath);
         const fullRecord: TaskRecord = {
             ...record,
             status: 'pending',
             startTime: Date.now(),
             heartbeatTime: Date.now()
         };
-        manifest[record.taskId] = fullRecord;
-        this.saveManifest(workspacePath, manifest);
+        // Fire-and-forget locked write — record is returned immediately
+        withManifestLock(() => {
+            const manifest = this.loadManifest(workspacePath);
+            manifest[record.taskId] = fullRecord;
+            this.saveManifest(workspacePath, manifest);
+        });
         return fullRecord;
     }
 
     static updateTask(workspacePath: string, taskId: string, updates: Partial<TaskRecord>) {
-        const manifest = this.loadManifest(workspacePath);
-        if (manifest[taskId]) {
-            manifest[taskId] = { ...manifest[taskId], ...updates };
-            this.saveManifest(workspacePath, manifest);
-        }
+        withManifestLock(() => {
+            const manifest = this.loadManifest(workspacePath);
+            if (manifest[taskId]) {
+                manifest[taskId] = { ...manifest[taskId], ...updates };
+                this.saveManifest(workspacePath, manifest);
+            }
+        });
     }
 
     static heartbeat(workspacePath: string, taskId: string) {
-        this.updateTask(workspacePath, taskId, { heartbeatTime: Date.now() });
+        withManifestLock(() => {
+            const manifest = this.loadManifest(workspacePath);
+            if (manifest[taskId]) {
+                manifest[taskId].heartbeatTime = Date.now();
+                this.saveManifest(workspacePath, manifest);
+            }
+        });
     }
 
     static reapStaleTasks(workspacePath: string) {
-        const manifest = this.loadManifest(workspacePath);
-        const now = Date.now();
-        const TIMEOUT_MS = 1000 * 60 * 3; // 3 minutes timeout
-        let changed = false;
+        withManifestLock(() => {
+            const manifest = this.loadManifest(workspacePath);
+            const now = Date.now();
+            const TIMEOUT_MS = 1000 * 60 * 3; // 3 minutes timeout
+            let changed = false;
 
-        for (const taskId in manifest) {
-            const task = manifest[taskId];
-            if (task.status === 'running') {
-                if (now - task.heartbeatTime > TIMEOUT_MS) {
-                    task.status = 'failed';
-                    task.error_message = 'Task timed out or runner process died (reaped by Watchdog).';
-                    changed = true;
-                    // Try write a FAILED.md if it's a delegate task
-                    try {
-                        if (task.output_path) {
-                            const dir = path.dirname(task.output_path);
-                            if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
-                            fs.writeFileSync(task.output_path, `❌ **Fatal Error**: ${task.error_message}\n`, 'utf8');
-                        }
-                    } catch(e) {}
+            for (const taskId in manifest) {
+                const task = manifest[taskId];
+                if (task.status === 'running') {
+                    if (now - task.heartbeatTime > TIMEOUT_MS) {
+                        task.status = 'failed';
+                        task.error_message = 'Task timed out or runner process died (reaped by Watchdog).';
+                        changed = true;
+                        try {
+                            if (task.output_path) {
+                                const dir = path.dirname(task.output_path);
+                                if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+                                fs.writeFileSync(task.output_path, `❌ **Fatal Error**: ${task.error_message}\n`, 'utf8');
+                            }
+                        } catch(e) {}
+                    }
                 }
             }
-        }
-        if (changed) {
-            this.saveManifest(workspacePath, manifest);
-        }
+            if (changed) {
+                this.saveManifest(workspacePath, manifest);
+            }
+        });
     }
 }
