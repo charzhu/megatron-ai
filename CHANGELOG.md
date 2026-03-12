@@ -1,5 +1,29 @@
 ﻿# Changelog
 
+## [0.4.0] - 2026-03-12
+
+### Features
+- Inject project memory into agent prompts at spawn time (#181)
+- Add release-process skill SOP (#189)
+- Default to squash merge and sync local master after merge (#185)
+- Add agent attribution signatures to all VCS tools (#152)
+- Inject auto-created issue ID into agent prompt to prevent duplicates (#166)
+- Implement agent retirement, quarantine and T1 GC (#161)
+- Role-skill decoupling, enhance roster_check (#163)
+- Ensure optimus-bot label on all auto-created issues (#153)
+- Auto-delete source branch after PR merge (#150)
+
+### Fixes
+- Preserve user config during optimus upgrade (#175)
+- Prevent async council tasks from getting stuck in running state (#64)
+
+### Improvements
+- Add systemic safeguards from vcs.json wipe postmortem (#178)
+- Fix misleading MCP config section in Quick Start (#176)
+- Update README and system-instructions for v0.3.0 features (#144)
+- Enforce issue lineage in skills and instructions (#155)
+- Remove auto-skill genesis (#160)
+
 ## [0.3.0] — 2026-03-12
 
 ### Features
