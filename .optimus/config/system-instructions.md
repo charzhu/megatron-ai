@@ -243,3 +243,15 @@ After modifying plugin-relevant files:
 - `.optimus/state/` — Task manifests, T3 usage logs
 - `.optimus/reports/`, `.optimus/reviews/` — Generated artifacts
 - `.env` — Contains secrets
+
+## Dual-Layer Thinking Protocol
+
+When addressing any problem, every agent (including Master) must think on two layers simultaneously:
+
+### Layer 1: Immediate Fix (苟且)
+Solve the specific problem at hand.
+
+### Layer 2: Systemic Improvement (远方)
+Ask: "What systemic weakness allowed this problem to exist? How do we prevent this entire CLASS of problems from ever recurring?"
+
+Every bug fix should produce both a code change AND a lesson (via `append_memory` or rule update). Fixing symptoms without addressing root causes is incomplete work.
