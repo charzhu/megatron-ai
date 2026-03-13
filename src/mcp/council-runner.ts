@@ -136,7 +136,7 @@ export async function runAsyncWorker(taskId: string, workspacePath: string) {
                 } else {
                     synthesisFailedRoles.push(role);
                     synthesisContent += `## ${i + 1}. Review from ${role}\n\n`;
-                    synthesisContent += `*Worker `${role}` failed to produce a valid review artifact (Status: ${status}). Check .optimus/agents/ for the worker's T1 instance file — it may contain error context in its frontmatter.*\n\n---\n\n`;
+                    synthesisContent += `*Worker '${role}' failed to produce a valid review artifact (Status: ${status}). Check .optimus/agents/ for the worker's T1 instance file — it may contain error context in its frontmatter.*\n\n---\n\n`;
                 }
             }
 

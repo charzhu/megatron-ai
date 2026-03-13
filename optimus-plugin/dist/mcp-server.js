@@ -3283,7 +3283,7 @@ ${desc}
     console.error(`[Precipitation] T3 role '${safeRole}' promoted to T2 (rich, via role-creator) at ${t2Path}`);
     return t2Path;
   } catch (err) {
-    console.error(`[Precipitation] role-creator failed for '${safeRole}': ${err.message}. Role will remain T3.`);
+    console.error(`[Precipitation] role-creator failed for '${safeRole}': ${err.message}. Role will remain T3 (zero-shot). To fix: (1) check role-creator skill at .optimus/skills/role-creator/SKILL.md, (2) ensure engine CLI is authenticated, (3) retry delegation with explicit role_description.`);
     return null;
   }
 }
@@ -3388,13 +3388,15 @@ var AgentLockManager = class {
         import_fs.default.mkdirSync(this.lockDir, { recursive: true });
       }
       import_fs.default.writeFileSync(this.lockFilePath(role), JSON.stringify({ pid: process.pid, timestamp: Date.now() }), "utf8");
-    } catch {
+    } catch (e) {
+      console.error(`[AgentLockManager] Warning: failed to write lock file for '${role}': ${e.message}. In-memory lock still active.`);
     }
   }
   deleteLockFile(role) {
     try {
       import_fs.default.unlinkSync(this.lockFilePath(role));
-    } catch {
+    } catch (e) {
+      if (e.code !== "ENOENT") console.error(`[AgentLockManager] Warning: failed to delete lock file for '${role}': ${e.message}`);
     }
   }
   cleanStaleLocks() {
@@ -3410,14 +3412,17 @@ var AgentLockManager = class {
             import_fs.default.unlinkSync(filePath);
             console.error(`[AgentLockManager] Cleaned stale lock for ${file} (PID ${content.pid} no longer running)`);
           }
-        } catch {
+        } catch (e) {
+          console.error(`[AgentLockManager] Removing malformed lock file ${file}: ${e.message}`);
           try {
             import_fs.default.unlinkSync(filePath);
-          } catch {
+          } catch (e2) {
+            console.error(`[AgentLockManager] Warning: cleanup failed for ${file}: ${e2.message}`);
           }
         }
       }
-    } catch {
+    } catch (e) {
+      console.error(`[AgentLockManager] Warning: stale lock cleanup failed: ${e.message}`);
     }
   }
 };
@@ -3558,16 +3563,20 @@ async function delegateTaskSingle(roleArg, taskPath, outputPath, _fallbackSessio
   if (t1Content) {
     const qfm = parseFrontmatter(t1Content);
     if (qfm.frontmatter.status === "quarantined") {
+      const usageLog = loadT3UsageLog(workspacePath);
+      const usageEntry = usageLog[role];
       throw new Error(
-        `\u26A0\uFE0F **Role Quarantined**: Role '${role}' is quarantined due to repeated failures (quarantined at: ${qfm.frontmatter.quarantined_at || "unknown"}). Fix the role template at '.optimus/roles/${role}.md' or delete it to allow T3 re-creation.`
+        `\u26A0\uFE0F **Role Quarantined**: Role '${role}' is quarantined due to ${usageEntry?.consecutive_failures || "3+"} consecutive failures (quarantined at: ${qfm.frontmatter.quarantined_at || "unknown"}). **Recovery**: (1) Fix the role template at '.optimus/roles/${role}.md', or (2) delete it to allow T3 re-creation, or (3) use the quarantine_role tool to unquarantine it.`
       );
     }
   }
   if (import_fs.default.existsSync(t2Path)) {
     const t2Fm = parseFrontmatter(import_fs.default.readFileSync(t2Path, "utf8"));
     if (t2Fm.frontmatter.status === "quarantined") {
+      const usageLog2 = loadT3UsageLog(workspacePath);
+      const usageEntry2 = usageLog2[role];
       throw new Error(
-        `\u26A0\uFE0F **Role Quarantined**: Role '${role}' is quarantined due to repeated failures (quarantined at: ${t2Fm.frontmatter.quarantined_at || "unknown"}). Fix the role template at '.optimus/roles/${role}.md' or delete it to allow T3 re-creation.`
+        `\u26A0\uFE0F **Role Quarantined**: Role '${role}' is quarantined due to ${usageEntry2?.consecutive_failures || "3+"} consecutive failures (quarantined at: ${t2Fm.frontmatter.quarantined_at || "unknown"}). **Recovery**: (1) Fix the role template at '.optimus/roles/${role}.md', or (2) delete it to allow T3 re-creation, or (3) use the quarantine_role tool to unquarantine it.`
       );
     }
   }
@@ -3864,7 +3873,7 @@ Agent has finished execution. Check standard output at \`${outputPath}\`.`;
         console.error(`[Meta-Immune] Role '${role}' quarantined after ${entry.consecutive_failures} consecutive failures with 0 successes`);
       }
     }
-    throw new Error(`Worker execution failed: ${e.message}`);
+    throw new Error(`Worker execution failed for role '${role}' on engine '${activeEngine}': ${e.message}`);
   } finally {
     ConcurrencyGovernor.release();
     lockManager.releaseLock(role);
@@ -3974,7 +3983,8 @@ var TaskManifestManager = class {
     }
     try {
       return JSON.parse(fs4.readFileSync(manifestPath, "utf8"));
-    } catch {
+    } catch (e) {
+      console.error(`[TaskManifest] Warning: failed to parse task manifest at ${manifestPath}: ${e.message}. Returning empty manifest \u2014 existing tasks may appear missing.`);
       return {};
     }
   }
@@ -4147,7 +4157,8 @@ function verifyOutputPath(outputPath) {
       return files.length > 0 ? "verified" : "partial";
     }
     return "partial";
-  } catch {
+  } catch (e) {
+    console.error(`[Verification] Warning: failed to verify output at '${outputPath}': ${e.message}. Marking as partial.`);
     return "partial";
   }
 }
@@ -4242,7 +4253,7 @@ async function runAsyncWorker(taskId, workspacePath) {
           synthesisContent += `## ${i + 1}. Review from ${role}
 
 `;
-          synthesisContent += `*Worker failed to produce a valid review artifact (Status: ${status}).*
+          synthesisContent += `*Worker '${role}' failed to produce a valid review artifact (Status: ${status}). Check .optimus/agents/ for the worker's T1 instance file \u2014 it may contain error context in its frontmatter.*
 
 ---
 
@@ -4302,7 +4313,7 @@ ${synthesisContent}`;
         );
         console.error(`[Runner] PM verdict generated at ${verdictPath}`);
       } catch (reduceErr) {
-        console.error(`[Runner] PM reduce phase failed (non-fatal): ${reduceErr.message}`);
+        console.error(`[Runner] PM reduce phase failed: ${reduceErr.message}. Council reviews are still available but unified VERDICT.md was not generated. Read individual review files in the reviews directory instead.`);
       }
     }
     let verificationStatus = "partial";
@@ -4374,7 +4385,8 @@ async function updateTaskGitHubIssue(workspacePath, taskId, status, outputPath, 
 `;
     comment += agentSignature("council-runner", taskId);
     await commentOnGitHubIssue(remote.owner, remote.repo, task.github_issue_number, comment);
-  } catch {
+  } catch (e) {
+    console.error(`[Runner] Warning: failed to update GitHub issue for task ${taskId}: ${e.message}. Task completion not affected.`);
   }
 }
 
@@ -4466,7 +4478,7 @@ var VcsProviderFactory = class {
       console.warn(`Unable to detect VCS provider from remote URL: ${remoteUrl}. Defaulting to GitHub.`);
       return "github";
     } catch (error) {
-      console.warn("Failed to detect git remote URL. Defaulting to GitHub.");
+      console.warn("Failed to detect git remote URL: " + error.message + ". Defaulting to GitHub.");
       return "github";
     }
   }
@@ -4629,7 +4641,7 @@ server.setRequestHandler(import_types2.ReadResourceRequestSchema, async (request
         throw new import_types2.McpError(import_types2.ErrorCode.InvalidRequest, `The system-instructions.md file does not exist at ${instructionsPath}`);
       }
     } catch (e) {
-      throw new import_types2.McpError(import_types2.ErrorCode.InternalError, `Failed to read instructions: ${e.message}`);
+      throw new import_types2.McpError(import_types2.ErrorCode.InternalError, `Failed to read system instructions from '${instructionsPath}': ${e.message}. Ensure .optimus/config/system-instructions.md exists (run 'optimus init' or 'optimus upgrade').`);
     }
   }
   throw new import_types2.McpError(import_types2.ErrorCode.InvalidRequest, `Resource not found: ${request.params.uri}`);
@@ -5075,7 +5087,8 @@ Error: ${task.error_message}`;
   if (request.params.name === "delegate_task_async") {
     let { role, role_description, role_engine, role_model, task_description, output_path, workspace_path, context_files, required_skills } = request.params.arguments;
     if (!role || !task_description || !output_path || !workspace_path) {
-      throw new import_types2.McpError(import_types2.ErrorCode.InvalidParams, "Invalid arguments: requires role, task_description, output_path, workspace_path");
+      const missing = [!role && "role", !task_description && "task_description", !output_path && "output_path", !workspace_path && "workspace_path"].filter(Boolean).join(", ");
+      throw new import_types2.McpError(import_types2.ErrorCode.InvalidParams, "delegate_task_async: missing required parameter(s): " + missing);
     }
     validateRoleNotModelName(role);
     validateEngineAndModel(role_engine, role_model, workspace_path);
@@ -5142,7 +5155,8 @@ Use check_task_status tool periodically with this task ID to check its completio
   if (request.params.name === "dispatch_council_async") {
     let { proposal_path, roles, workspace_path, role_descriptions: role_descriptions2 } = request.params.arguments;
     if (!proposal_path || !Array.isArray(roles) || !workspace_path) {
-      throw new import_types2.McpError(import_types2.ErrorCode.InvalidParams, "Invalid arguments: requires proposal_path, roles (array), workspace_path");
+      const missing = [!proposal_path && "proposal_path", !Array.isArray(roles) && "roles (must be array)", !workspace_path && "workspace_path"].filter(Boolean).join(", ");
+      throw new import_types2.McpError(import_types2.ErrorCode.InvalidParams, "dispatch_council_async: missing required parameter(s): " + missing);
     }
     const modelAsRole = roles.find((r) => looksLikeModelName(r));
     if (modelAsRole) {
@@ -5359,7 +5373,8 @@ Memory appended to: ${memoryFile}`
             }
             roster += `- ${roleName}${engineInfo}${quarantineMarker}
 `;
-          } catch {
+          } catch (e) {
+            console.error("[roster_check] Warning: failed to read role " + f + ":", e.message);
             roster += `- ${roleName}
 `;
           }
@@ -5396,7 +5411,8 @@ Memory appended to: ${memoryFile}`
       const skillDirs = import_fs3.default.readdirSync(skillsDir).filter((d) => {
         try {
           return import_fs3.default.statSync(import_path3.default.join(skillsDir, d)).isDirectory() && import_fs3.default.existsSync(import_path3.default.join(skillsDir, d, "SKILL.md"));
-        } catch {
+        } catch (e) {
+          console.error("[roster_check] Warning: failed to stat skill dir " + d + ":", e.message);
           return false;
         }
       });
@@ -5420,7 +5436,8 @@ Memory appended to: ${memoryFile}`
             const autoTag = isAutoGenerated ? " (auto-generated)" : "";
             roster += `- ${isMeta ? "\u{1F9EC} " : ""}\`${skill}\`${desc}${autoTag}${nameCollision}
 `;
-          } catch {
+          } catch (e) {
+            console.error("[roster_check] Warning: failed to read skill " + skill + ":", e.message);
             roster += `- \`${skill}\`
 `;
           }
