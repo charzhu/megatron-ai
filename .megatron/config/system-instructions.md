@@ -4,7 +4,7 @@
 
 # Part 1: System-Level Constraints (Universal)
 
-> These rules apply to ALL projects using the Megatron Megatron Swarm. They are shipped via `megatron init` and must NOT be modified per-project.
+> These rules apply to ALL projects using the Megatron Swarm. They are shipped via `megatron init` and must NOT be modified per-project.
 
 ## Issue First Protocol
 Before any work begins, a GitHub Issue must be created to acquire an `#ID`. All local task files (`.megatron/tasks/`) must be bound to this ID.

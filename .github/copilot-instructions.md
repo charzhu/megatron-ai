@@ -46,7 +46,7 @@ ALL generated reports, JSON dumps, review logs, tasks, and memory artifacts (e.g
 <!-- Auto-injected by megatron init — DO NOT EDIT this block -->
 ## Megatron Swarm Instructions
 
-This project uses the [Megatron Megatron Swarm](https://github.com/cloga/megatron-ai) multi-agent orchestrator.
+This project uses the [Megatron Swarm](https://github.com/charzhu/megatron-ai) multi-agent orchestrator.
 System instructions are maintained in `.megatron/config/system-instructions.md` and served via MCP Resource `megatron://system/instructions`.
 
 Please read and follow `.megatron/config/system-instructions.md` for all workflow protocols.

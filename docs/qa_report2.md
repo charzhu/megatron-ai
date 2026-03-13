@@ -129,7 +129,7 @@
 • powershell
 ↳ command=cd C:\Users\lochen\megatron-ai; $j = Start-Job { node C:\Users\lochen\megatron-ai\out\mcp-s..., description=Test mcp-server.js startup via background job
 ✓ powershell
-↳ result=stdout=2 lines, preview=Megatron Megatron Swarm MCP server running on stdio
+↳ result=stdout=2 lines, preview=Megatron Swarm MCP server running on stdio
 • powershell
 ↳ command=cd C:\Users\lochen\megatron-ai # Send MCP initialize + list_tools request to mcp-server.js v..., description=Send MCP initialize and list tools to mcp-server.js
 ✓ powershell
@@ -173,7 +173,7 @@ Now let me run the actual tests — first check the build status, then test both
 **Command:** `node out/mcp-server.js` (via background job)
 **Result:** ✅ PASS
 ```
-Megatron Megatron Swarm MCP server running on stdio
+Megatron Swarm MCP server running on stdio
 ```
 Server booted as a pure Node.js process with no vscode module invocations.
 

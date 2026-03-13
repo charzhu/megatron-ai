@@ -1,7 +1,7 @@
 # PROPOSAL: Migrate Agent Blackboard to GitHub Issues & Pull Requests
 
 ## 1. Context & Background
-Currently, the Megatron Megatron Swarm utilizes a local, file-based "Blackboard" architecture. State, tasks, and memory are stored strictly within the local project workspace under `.megatron/` (e.g., `.megatron/tasks/`, `.megatron/reports/`). Agents interact by reading and writing files locally.
+Currently, the Megatron Swarm utilizes a local, file-based "Blackboard" architecture. State, tasks, and memory are stored strictly within the local project workspace under `.megatron/` (e.g., `.megatron/tasks/`, `.megatron/reports/`). Agents interact by reading and writing files locally.
 
 ## 2. Proposed Architectural Shift
 The user has proposed upgrading the Blackboard system to rely purely on GitHub infrastructure:

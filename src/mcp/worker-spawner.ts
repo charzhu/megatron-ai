@@ -837,7 +837,7 @@ export async function delegateTaskSingle(roleArg: string, taskPath: string, outp
             .map(word => word.charAt(0).toUpperCase() + word.slice(1))
             .join(' ');
             
-        personaContext = `You are a ${formattedRole} expert operating within the Megatron Megatron Swarm. Your purpose is to fulfill tasks autonomously within your specialized domain of expertise.\nAs a dynamically provisioned "T3" agent, apply industry best practices, solve complex problems, and deliver professional-grade results associated with your role.`;
+        personaContext = `You are a ${formattedRole} expert operating within the Megatron Swarm. Your purpose is to fulfill tasks autonomously within your specialized domain of expertise.\nAs a dynamically provisioned "T3" agent, apply industry best practices, solve complex problems, and deliver professional-grade results associated with your role.`;
         
         const systemInstructionsPath = path.join(workspacePath, '.megatron', 'config', 'system-instructions.md');
         if (fs.existsSync(systemInstructionsPath)) {
