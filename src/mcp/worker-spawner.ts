@@ -679,7 +679,8 @@ export async function delegateTaskSingle(roleArg: string, taskPath: string, outp
     let resolvedTier = 'T3 (Zero-Shot Outsource)';
     let personaProof = 'No dedicated role template found in T2 or T1. Using T3 generic prompt.';
 
-    // --- T1 Lookup: exact agent_id match, or glob agents/{role}_*.md ---
+    // --- T1 Lookup: ONLY when agent_id is specified (explicit session reuse) ---
+    // Without agent_id, each task gets a fresh T1 instance to enable parallel execution.
     if (agentId && fs.existsSync(t1Dir)) {
         // Exact T1 lookup by agent_id (e.g., 'product-manager_1e5b9723')
         const exactPath = path.join(t1Dir, `${agentId}.md`);
@@ -690,25 +691,10 @@ export async function delegateTaskSingle(roleArg: string, taskPath: string, outp
             personaProof = `Resumed specific agent instance: ${t1Path}`;
             console.error(`[Orchestrator] agent_id="${agentId}" resolved to T1 instance: ${exactPath}`);
         } else {
-            console.error(`[Orchestrator] agent_id="${agentId}" not found at ${exactPath} — falling back to role-based lookup`);
+            console.error(`[Orchestrator] agent_id="${agentId}" not found at ${exactPath} — falling back to T2 role template`);
         }
     }
-    if (!t1Content && fs.existsSync(t1Dir)) {
-        const t1Candidates = fs.readdirSync(t1Dir)
-            .filter(f => f.startsWith(`${role}_`) && f.endsWith('.md'));
-        for (const candidate of t1Candidates) {
-            const candidatePath = path.join(t1Dir, candidate);
-            const candidateFm = parseFrontmatter(fs.readFileSync(candidatePath, 'utf8'));
-            // Match by engine: if caller specified an engine, only match that; otherwise match any
-            if (!activeEngine || candidateFm.frontmatter.engine === activeEngine) {
-                t1Path = candidatePath;
-                t1Content = fs.readFileSync(candidatePath, 'utf8');
-                resolvedTier = `T1 (Agent Instance -> ${candidate})`;
-                personaProof = `Found local project agent state: ${t1Path}`;
-                break;
-            }
-        }
-    }
+    // Without agent_id: skip T1 glob lookup — go straight to T2 template for a fresh session
 
     if (!t1Content && fs.existsSync(t2Path)) {
         t1Content = fs.readFileSync(t2Path, 'utf8');

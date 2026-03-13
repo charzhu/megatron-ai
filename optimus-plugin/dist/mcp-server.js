@@ -3647,21 +3647,7 @@ async function delegateTaskSingle(roleArg, taskPath, outputPath, _fallbackSessio
       personaProof = `Resumed specific agent instance: ${t1Path}`;
       console.error(`[Orchestrator] agent_id="${agentId}" resolved to T1 instance: ${exactPath}`);
     } else {
-      console.error(`[Orchestrator] agent_id="${agentId}" not found at ${exactPath} \u2014 falling back to role-based lookup`);
-    }
-  }
-  if (!t1Content && import_fs2.default.existsSync(t1Dir)) {
-    const t1Candidates = import_fs2.default.readdirSync(t1Dir).filter((f) => f.startsWith(`${role}_`) && f.endsWith(".md"));
-    for (const candidate of t1Candidates) {
-      const candidatePath = import_path2.default.join(t1Dir, candidate);
-      const candidateFm = parseFrontmatter(import_fs2.default.readFileSync(candidatePath, "utf8"));
-      if (!activeEngine || candidateFm.frontmatter.engine === activeEngine) {
-        t1Path = candidatePath;
-        t1Content = import_fs2.default.readFileSync(candidatePath, "utf8");
-        resolvedTier = `T1 (Agent Instance -> ${candidate})`;
-        personaProof = `Found local project agent state: ${t1Path}`;
-        break;
-      }
+      console.error(`[Orchestrator] agent_id="${agentId}" not found at ${exactPath} \u2014 falling back to T2 role template`);
     }
   }
   if (!t1Content && import_fs2.default.existsSync(t2Path)) {
