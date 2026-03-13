@@ -2,1163 +2,171 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Megatron AI — Your AI coding tool's operating system</title>
-<meta name="description" content="Turn one AI assistant into a coordinated dev team. Multi-agent orchestration for Cursor, Claude Code, Copilot, Windsurf, and any MCP client.">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="description" content="Megatron AI is a dark multi-agent orchestrator for MCP-compatible coding tools.">
+<meta name="theme-color" content="#09040b">
+<title>Megatron AI | The Swarm Awakens</title>
 <style>
-*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
-:root{
-  --bg:#0a0a0b;
-  --surface:#141416;
-  --surface-hover:#1c1c20;
-  --border:#2a2a2e;
-  --text:#e4e4e7;
-  --text-secondary:#a1a1aa;
-  --text-tertiary:#7e7e86;
-  --accent:#3b82f6;
-  --accent-hover:#60a5fa;
-  --accent-secondary:#10b981;
-  --accent-tertiary:#8b5cf6;
-  --code-bg:#18181b;
-  --code-text:#4ade80;
-}
-html{scroll-behavior:smooth;font-size:16px}
-body{
-  background:var(--bg);
-  color:var(--text);
-  font-family:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
-  line-height:1.6;
-  overflow-x:hidden;
-}
-a{color:var(--accent-hover);text-decoration:none;transition:color .2s}
-a:hover{color:var(--accent)}
-:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
-
-.container{max-width:1100px;margin:0 auto;padding:0 24px}
-
-/* ========== LANGUAGE TOGGLE ========== */
-.lang-toggle{
-  position:fixed;top:20px;right:20px;z-index:1000;
-  display:flex;align-items:center;
-  background:var(--surface);border:1px solid var(--border);border-radius:8px;
-  overflow:hidden;cursor:pointer;
-  box-shadow:0 4px 16px rgba(0,0,0,.3);
-  transition:border-color .2s;
-}
-.lang-toggle:hover{border-color:var(--accent)}
-.lang-btn{
-  padding:8px 14px;font-size:.8rem;font-weight:600;
-  color:var(--text-tertiary);background:transparent;
-  border:none;cursor:pointer;transition:all .2s;
-  font-family:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
-}
-.lang-btn.active{
-  color:#fff;background:var(--accent);
-}
-
-/* ========== HERO ========== */
-.hero{
-  min-height:100vh;display:flex;align-items:center;justify-content:center;
-  text-align:center;padding:80px 24px 60px;position:relative;overflow:hidden;
-}
-.hero::before{
-  content:'';position:absolute;top:20%;left:50%;transform:translateX(-50%);
-  width:800px;height:800px;
-  background:radial-gradient(circle,rgba(59,130,246,.08),transparent 70%);
-  pointer-events:none;
-}
-.hero-inner{position:relative;z-index:1;max-width:800px;margin:0 auto}
-.hero h1{
-  font-size:clamp(2.2rem,5.5vw,3.5rem);font-weight:800;
-  line-height:1.1;margin-bottom:20px;color:var(--text);
-}
-.hero .subtitle{
-  font-size:clamp(1rem,2vw,1.125rem);color:var(--text-secondary);
-  max-width:580px;margin:0 auto 32px;line-height:1.6;
-}
-
-/* Tool logos */
-.tool-logos{
-  display:flex;justify-content:center;gap:24px;flex-wrap:wrap;
-  margin-bottom:40px;opacity:0;animation:fadeIn .5s ease forwards .2s;
-}
-.tool-logos span{
-  font-size:.8rem;color:var(--text-tertiary);letter-spacing:.03em;
-  padding:6px 12px;border:1px solid var(--border);border-radius:6px;
-  transition:border-color .2s;
-}
-.tool-logos span:nth-child(1){animation-delay:.3s}
-.tool-logos span:nth-child(2){animation-delay:.4s}
-.tool-logos span:nth-child(3){animation-delay:.5s}
-.tool-logos span:nth-child(4){animation-delay:.6s}
-.tool-logos span:nth-child(5){animation-delay:.7s}
-.tool-logos span:nth-child(6){animation-delay:.8s}
-.tool-logos span{opacity:0;animation:fadeIn .5s ease forwards}
-.tool-logos span:hover{border-color:var(--accent)}
-
-/* Hero animation */
-.hero-animation{
-  width:100%;max-width:500px;height:300px;margin:0 auto 40px;position:relative;
-}
-.hero-animation svg{width:100%;height:100%}
-
-/* Master node */
-.master-node{
-  animation:pulse 3s ease-in-out infinite;
-}
-@keyframes pulse{
-  0%,100%{filter:drop-shadow(0 0 8px rgba(59,130,246,.3))}
-  50%{filter:drop-shadow(0 0 20px rgba(59,130,246,.6))}
-}
-
-/* Connection lines */
-.conn-line{
-  stroke-dasharray:200;
-  stroke-dashoffset:200;
-  animation:drawLine 2s ease forwards;
-}
-.conn-line:nth-child(1){animation-delay:0s}
-.conn-line:nth-child(2){animation-delay:.3s}
-.conn-line:nth-child(3){animation-delay:.6s}
-@keyframes drawLine{
-  to{stroke-dashoffset:0}
-}
-
-/* Agent nodes */
-.agent-node{
-  opacity:0;
-  animation:nodeAppear .6s ease forwards;
-}
-.agent-node:nth-of-type(1){animation-delay:1.5s}
-.agent-node:nth-of-type(2){animation-delay:1.8s}
-.agent-node:nth-of-type(3){animation-delay:2.1s}
-@keyframes nodeAppear{
-  from{opacity:0;transform:scale(.8)}
-  to{opacity:1;transform:scale(1)}
-}
-
-/* Data particles */
-.particle{
-  r:3;fill:var(--accent);opacity:0;
-}
-.particle-out{
-  animation:particleOut 4s ease-in-out infinite;
-}
-.particle-in{
-  animation:particleIn 4s ease-in-out infinite;
-}
-@keyframes particleOut{
-  0%{opacity:0;offset-distance:0%}
-  10%{opacity:1}
-  50%{opacity:1;offset-distance:100%}
-  51%{opacity:0}
-  100%{opacity:0}
-}
-@keyframes particleIn{
-  0%,50%{opacity:0;offset-distance:100%}
-  60%{opacity:1}
-  90%{opacity:1;offset-distance:0%}
-  91%{opacity:0}
-  100%{opacity:0}
-}
-
-/* Checkmark */
-.check-mark{
-  opacity:0;
-  animation:showCheck .5s ease forwards 12s;
-}
-@keyframes showCheck{
-  from{opacity:0;transform:scale(.5)}
-  to{opacity:1;transform:scale(1)}
-}
-
-/* CTA buttons */
-.cta-group{display:flex;justify-content:center;gap:16px;flex-wrap:wrap;margin-bottom:24px}
-.btn-primary{
-  display:inline-flex;align-items:center;gap:8px;
-  padding:14px 28px;border-radius:8px;font-weight:600;font-size:1rem;
-  background:linear-gradient(135deg,var(--accent),var(--accent-tertiary));
-  color:#fff;border:none;cursor:pointer;
-  transition:transform .2s,box-shadow .2s;
-}
-.btn-primary:hover{
-  transform:translateY(-2px);
-  box-shadow:0 8px 30px rgba(59,130,246,.3);
-  color:#fff;
-}
-.btn-secondary{
-  display:inline-flex;align-items:center;gap:8px;
-  padding:14px 28px;border-radius:8px;font-weight:600;font-size:1rem;
-  background:transparent;color:var(--text);
-  border:1px solid var(--border);cursor:pointer;
-  transition:border-color .2s,transform .2s;
-}
-.btn-secondary:hover{
-  border-color:var(--accent);transform:translateY(-2px);
-  color:var(--text);
-}
-
-/* Install code block */
-.install-block{
-  display:inline-flex;align-items:center;gap:12px;
-  background:var(--code-bg);border:1px solid var(--border);
-  border-radius:8px;padding:12px 20px;margin-top:8px;
-  font-family:'JetBrains Mono','Fira Code','Cascadia Code','Consolas',monospace;
-  font-size:.875rem;color:var(--code-text);
-  cursor:pointer;transition:box-shadow .3s;position:relative;
-}
-.install-block:hover{box-shadow:0 0 12px rgba(59,130,246,.15)}
-.install-block .copy-icon{
-  color:var(--text-tertiary);transition:color .2s;flex-shrink:0;
-}
-.install-block:hover .copy-icon{color:var(--accent)}
-.copy-tooltip{
-  position:absolute;top:-32px;left:50%;transform:translateX(-50%);
-  background:var(--accent-secondary);color:#fff;padding:4px 12px;
-  border-radius:4px;font-size:.75rem;font-family:'Inter',sans-serif;
-  opacity:0;pointer-events:none;transition:opacity .3s;
-}
-.copy-tooltip.show{opacity:1}
-
-/* ========== SECTIONS COMMON ========== */
-section{padding:120px 0}
-.section-header{text-align:center;margin-bottom:64px}
-.section-header h2{
-  font-size:clamp(1.5rem,3.5vw,2.25rem);font-weight:700;line-height:1.2;
-  margin-bottom:16px;
-}
-.section-header p{
-  color:var(--text-secondary);max-width:560px;margin:0 auto;
-  font-size:1.125rem;line-height:1.6;
-}
-
-/* ========== HOW IT WORKS ========== */
-.how-grid{
-  display:grid;grid-template-columns:repeat(3,1fr);gap:32px;margin-bottom:64px;
-}
-.how-card{
-  background:var(--surface);border:1px solid var(--border);border-radius:12px;
-  padding:32px;text-align:center;
-  transition:border-color .2s,transform .3s;
-}
-.how-card:hover{border-color:var(--accent);transform:translateY(-4px)}
-.how-icon{font-size:2.5rem;margin-bottom:16px;display:block}
-.how-card h3{font-size:1.25rem;font-weight:600;margin-bottom:8px;line-height:1.3}
-.how-card p{font-size:.95rem;color:var(--text-secondary);line-height:1.6}
-
-/* T3-T2-T1 flow */
-.tier-flow{
-  display:flex;align-items:center;justify-content:center;gap:0;
-  flex-wrap:wrap;
-}
-.tier-box{
-  background:var(--surface);border:1px solid var(--border);border-radius:8px;
-  padding:16px 24px;text-align:center;min-width:140px;
-}
-.tier-box .tier-label{
-  font-size:.75rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;
-  margin-bottom:4px;
-}
-.tier-box:nth-child(1) .tier-label{color:var(--text-tertiary)}
-.tier-box:nth-child(3) .tier-label{color:var(--accent)}
-.tier-box:nth-child(5) .tier-label{color:var(--accent-secondary)}
-.tier-box .tier-name{font-size:.875rem;color:var(--text-secondary)}
-.tier-arrow{
-  font-size:1.2rem;color:var(--text-tertiary);padding:0 12px;
-}
-
-/* ========== SEE IT IN ACTION ========== */
-.usecase-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:24px}
-.usecase-card{
-  background:var(--surface);border:1px solid var(--border);border-radius:12px;
-  padding:28px;transition:border-color .2s;
-}
-.usecase-card:hover{border-color:var(--accent-tertiary)}
-.usecase-card h3{font-size:1.1rem;font-weight:600;margin-bottom:16px}
-.usecase-before,.usecase-after{font-size:.9rem;line-height:1.5;margin-bottom:12px}
-.usecase-before{color:var(--text-tertiary)}
-.usecase-after{color:var(--accent-secondary)}
-.usecase-label{
-  display:inline-block;font-size:.7rem;font-weight:700;letter-spacing:.06em;
-  text-transform:uppercase;padding:2px 8px;border-radius:4px;margin-bottom:6px;
-}
-.label-before{background:rgba(113,113,122,.15);color:var(--text-tertiary)}
-.label-after{background:rgba(16,185,129,.1);color:var(--accent-secondary)}
-
-/* ========== ARCHITECTURE SECTION ========== */
-.arch-split{
-  display:grid;grid-template-columns:1fr 1fr;gap:48px;align-items:center;
-}
-.arch-text p{font-size:1.05rem;color:var(--text-secondary);line-height:1.7;margin-bottom:24px}
-.arch-stats{
-  display:flex;gap:24px;flex-wrap:wrap;margin-bottom:28px;
-}
-.arch-stat{
-  font-size:.875rem;color:var(--text-tertiary);
-  padding:6px 14px;border:1px solid var(--border);border-radius:6px;
-}
-.arch-graphic{
-  display:flex;flex-direction:column;align-items:center;gap:0;
-}
-.arch-layer{
-  width:100%;max-width:320px;padding:18px 24px;
-  background:var(--surface);border:1px solid var(--border);border-radius:8px;
-  text-align:center;
-}
-.arch-layer .al-title{font-weight:600;font-size:.95rem}
-.arch-layer .al-desc{font-size:.8rem;color:var(--text-tertiary)}
-.arch-connector{width:2px;height:24px;background:var(--border)}
-
-/* ========== FEATURES GRID ========== */
-.features-grid{
-  display:grid;grid-template-columns:repeat(3,1fr);gap:24px;
-}
-.feature-card{
-  background:var(--surface);border:1px solid var(--border);border-radius:12px;
-  padding:28px;transition:border-color .2s,transform .2s;
-}
-.feature-card:hover{border-color:var(--accent);transform:translateY(-4px)}
-.feat-icon{font-size:2rem;margin-bottom:12px;display:block}
-.feature-card h3{font-size:1.25rem;font-weight:600;margin-bottom:8px;line-height:1.3}
-.feature-card p{font-size:.9rem;color:var(--text-secondary);line-height:1.6}
-
-/* ========== QUICK START ========== */
-.quickstart{max-width:700px;margin:0 auto}
-.qs-step{margin-bottom:32px}
-.qs-step-num{
-  display:inline-flex;align-items:center;justify-content:center;
-  width:28px;height:28px;border-radius:50%;
-  background:var(--accent);color:#fff;font-size:.8rem;font-weight:700;
-  margin-bottom:12px;
-}
-.qs-step h3{font-size:1.1rem;font-weight:600;margin-bottom:8px}
-.qs-step p{font-size:.95rem;color:var(--text-secondary);margin-bottom:12px}
-.code-block{
-  background:var(--code-bg);border:1px solid var(--border);
-  border-radius:8px;padding:14px 20px;
-  font-family:'JetBrains Mono','Fira Code','Cascadia Code','Consolas',monospace;
-  font-size:.875rem;color:var(--code-text);overflow-x:auto;
-  transition:box-shadow .3s;line-height:1.5;
-}
-.code-block:hover{box-shadow:0 0 12px rgba(59,130,246,.1)}
-
-/* ========== ECOSYSTEM ========== */
-.eco-grid{
-  display:grid;grid-template-columns:repeat(3,1fr);gap:20px;
-  max-width:600px;margin:0 auto 32px;
-}
-.eco-item{
-  background:var(--surface);border:1px solid var(--border);border-radius:8px;
-  padding:20px;text-align:center;font-size:.95rem;font-weight:500;
-  transition:border-color .2s;
-}
-.eco-item:hover{border-color:var(--accent)}
-.eco-badge{
-  text-align:center;color:var(--text-tertiary);font-size:.875rem;
-  padding:10px 20px;border:1px solid var(--border);border-radius:6px;
-  display:inline-block;
-}
-
-/* ========== FOOTER ========== */
-footer{
-  border-top:1px solid var(--border);padding:48px 0;text-align:center;
-}
-.footer-logo{font-size:1.1rem;font-weight:700;margin-bottom:16px}
-.footer-links{
-  display:flex;justify-content:center;gap:24px;flex-wrap:wrap;margin-bottom:20px;
-}
-.footer-links a{color:var(--text-tertiary);font-size:.875rem;transition:color .2s}
-.footer-links a:hover{color:var(--accent)}
-.footer-tagline{color:var(--text-tertiary);font-size:.875rem;font-style:italic}
-
-/* ========== WORKFLOW PIPELINE ========== */
-.workflow-pipeline{
-  display:flex;align-items:flex-start;justify-content:center;gap:0;
-}
-.workflow-step{
-  flex:1;max-width:200px;text-align:center;position:relative;
-  padding:0 8px;
-}
-.workflow-step-num{
-  display:inline-flex;align-items:center;justify-content:center;
-  width:36px;height:36px;border-radius:50%;
-  background:var(--accent);color:#fff;font-size:.85rem;font-weight:700;
-  margin-bottom:10px;
-}
-.workflow-step-icon{font-size:1.5rem;display:block;margin-bottom:8px}
-.workflow-step h4{font-size:.9rem;font-weight:600;margin-bottom:4px;line-height:1.3}
-.workflow-step p{font-size:.78rem;color:var(--text-secondary);line-height:1.5}
-.workflow-step:not(:last-child)::after{
-  content:'\2192';position:absolute;top:12px;right:-12px;
-  font-size:1.1rem;color:var(--text-tertiary);z-index:2;
-}
-@keyframes fadeUp{
-  from{opacity:0;transform:translateY(24px)}
-  to{opacity:1;transform:translateY(0)}
-}
-.animate-on-scroll{opacity:0;transform:translateY(24px);transition:opacity .6s ease,transform .6s ease}
-.animate-on-scroll.visible{opacity:1;transform:translateY(0)}
-.stagger-1{transition-delay:.1s}
-.stagger-2{transition-delay:.2s}
-.stagger-3{transition-delay:.3s}
-.stagger-4{transition-delay:.4s}
-.stagger-5{transition-delay:.5s}
-.stagger-6{transition-delay:.6s}
-
-/* ========== ANIMATIONS ========== */
-@keyframes fadeIn{
-  from{opacity:0}to{opacity:1}
-}
-@keyframes fadeUp{
-  from{opacity:0;transform:translateY(24px)}
-  to{opacity:1;transform:translateY(0)}
-}
-.animate-on-scroll{opacity:0;transform:translateY(24px);transition:opacity .6s ease,transform .6s ease}
-.animate-on-scroll.visible{opacity:1;transform:translateY(0)}
-.stagger-1{transition-delay:.1s}
-.stagger-2{transition-delay:.2s}
-.stagger-3{transition-delay:.3s}
-.stagger-4{transition-delay:.4s}
-.stagger-5{transition-delay:.5s}
-.stagger-6{transition-delay:.6s}
-
-/* ========== RESPONSIVE ========== */
-@media(min-width:768px) and (max-width:1023px){
-  .workflow-pipeline{flex-wrap:wrap;gap:24px 0;justify-content:center}
-  .workflow-step{flex:0 0 33.33%;max-width:33.33%}
-  .workflow-step:nth-child(3)::after{display:none}
-  .workflow-step:nth-child(4){margin-left:16.66%}
-}
-@media(max-width:1023px){
-  .arch-split{grid-template-columns:1fr;text-align:center}
-  .arch-stats{justify-content:center}
-}
-@media(max-width:767px){
-  .how-grid,.usecase-grid,.features-grid{grid-template-columns:1fr}
-  .eco-grid{grid-template-columns:repeat(2,1fr)}
-  section{padding:80px 0}
-  .hero{padding:60px 16px 40px}
-  .hero-animation{height:220px}
-  .cta-group{flex-direction:column;align-items:center}
-  .btn-primary,.btn-secondary{width:100%;max-width:280px;justify-content:center}
-  .tier-flow{flex-direction:column;gap:0}
-  .tier-arrow{transform:rotate(90deg);padding:8px 0}
-  /* Workflow vertical timeline */
-  .workflow-pipeline{
-    flex-direction:column;align-items:flex-start;gap:0;
-    padding-left:24px;position:relative;
-  }
-  .workflow-pipeline::before{
-    content:'';position:absolute;left:41px;top:18px;bottom:18px;
-    width:2px;background:var(--border);
-  }
-  .workflow-step{
-    display:flex;align-items:flex-start;gap:16px;
-    text-align:left;padding:12px 0;max-width:100%;
-  }
-  .workflow-step-num{flex-shrink:0}
-  .workflow-step:not(:last-child)::after{display:none}
-  .workflow-step-icon{display:inline;font-size:1.2rem;margin-bottom:0}
-}
-@media(max-width:374px){
-  .container{padding:0 12px}
-}
-
-/* ========== SCROLL INDICATOR ========== */
-.scroll-indicator{
-  position:absolute;bottom:32px;left:50%;transform:translateX(-50%);
-  display:flex;flex-direction:column;align-items:center;gap:10px;
-  color:var(--text-secondary);font-size:.85rem;font-weight:600;letter-spacing:.1em;
-  text-transform:uppercase;opacity:0;animation:fadeIn 1s ease forwards 2s;
-  cursor:pointer;transition:color .2s,filter .2s;
-}
-.scroll-indicator:hover{color:var(--accent);filter:drop-shadow(0 0 8px rgba(59,130,246,.5))}
-.scroll-indicator svg{
-  animation:scrollBounce 1.5s ease-in-out infinite;
-  filter:drop-shadow(0 0 6px rgba(59,130,246,.4));
-}
-@keyframes scrollBounce{
-  0%,100%{transform:translateY(0)}
-  50%{transform:translateY(10px)}
-}
+:root{--bg:#09040b;--bg2:#140613;--panel:rgba(17,8,18,.8);--panel2:rgba(24,10,18,.94);--line:rgba(255,70,110,.18);--text:#f8e9f0;--muted:#b59eaa;--red:#ff355e;--crim:#d31245;--purple:#8e2bff;--pink:#ff58b5;--glow:0 0 24px rgba(255,53,94,.35);--glow2:0 0 24px rgba(142,43,255,.25)}*{box-sizing:border-box}html{scroll-behavior:smooth}body{margin:0;font:16px/1.6 system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;color:var(--text);background:radial-gradient(circle at 15% 0,rgba(142,43,255,.15),transparent 32%),radial-gradient(circle at 85% 10%,rgba(255,53,94,.13),transparent 28%),linear-gradient(180deg,#0b060d,#070409 36%,#09040b);overflow-x:hidden}body:before,body:after{content:"";position:fixed;inset:0;pointer-events:none;z-index:0}body:before{background:repeating-linear-gradient(180deg,transparent 0 3px,rgba(255,255,255,.03) 3px 4px);opacity:.12}body:after{background:linear-gradient(180deg,transparent,rgba(255,28,82,.06),transparent);animation:scan 8s linear infinite}.wrap{width:min(1120px,calc(100% - 2rem));margin:auto;position:relative;z-index:1}a{color:inherit;text-decoration:none}section{padding:2.5rem 0;scroll-margin-top:4rem}.nav{position:sticky;top:0;z-index:10;backdrop-filter:blur(18px);background:rgba(7,4,9,.58);border-bottom:1px solid rgba(255,255,255,.06)}.nav .wrap{display:flex;justify-content:space-between;align-items:center;gap:1rem;padding:.95rem 0}.brand{display:flex;align-items:center;gap:.75rem;font-weight:800;letter-spacing:.24em;font-size:.92rem}.sigil{width:1.85rem;height:1.85rem;border:1px solid rgba(255,83,131,.45);border-radius:.55rem;position:relative;box-shadow:var(--glow)}.sigil:before,.sigil:after,.sigil i{content:"";position:absolute}.sigil:before,.sigil:after{top:.52rem;width:.24rem;height:.24rem;border-radius:50%;background:var(--red);box-shadow:0 0 8px var(--red)}.sigil:before{left:.43rem}.sigil:after{right:.43rem}.sigil i{left:.42rem;right:.42rem;bottom:.45rem;height:.14rem;border-radius:999px;background:linear-gradient(90deg,var(--purple),var(--red))}.navlinks{display:flex;gap:1rem;flex-wrap:wrap;justify-content:flex-end}.navlinks a{font-size:.84rem;color:var(--muted);text-transform:uppercase;letter-spacing:.12em}.navlinks a:hover,.copy:hover,.hero-cta:hover,.card:hover,.tier:hover,.codebox:hover{box-shadow:var(--glow)}.hero{min-height:auto;display:grid;align-items:center;position:relative;overflow:hidden;padding:5rem 0 2rem}.hero .grid{position:absolute;inset:0;background:linear-gradient(rgba(255,255,255,.02) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.02) 1px,transparent 1px);background-size:64px 64px;mask-image:linear-gradient(180deg,rgba(0,0,0,.9),transparent 92%)}#swarm{position:absolute;inset:0;width:100%;height:100%}.hero-copy{padding:1.5rem 0 1rem;max-width:760px;text-align:center;margin:0 auto}.eyebrow{display:inline-flex;gap:.5rem;align-items:center;padding:.45rem .8rem;border:1px solid rgba(255,83,131,.22);border-radius:999px;background:rgba(255,53,94,.08);color:#f9b9cc;font-size:.78rem;letter-spacing:.16em;text-transform:uppercase}.eyebrow b{font-size:.92rem}.glitch{position:relative;margin:.95rem 0 .4rem;font-size:clamp(3.6rem,12vw,7.5rem);line-height:.9;font-weight:900;letter-spacing:.18em;text-transform:uppercase;color:#fff;text-shadow:0 0 18px rgba(255,255,255,.15),0 0 28px rgba(255,53,94,.25);animation:flicker 4s linear infinite}.glitch:before,.glitch:after{content:attr(data-text);position:absolute;inset:0;pointer-events:none}.glitch:before{color:var(--red);transform:translate(.05em,.01em);clip-path:inset(0 0 54% 0);opacity:.75;animation:glitchA 2.6s steps(2) infinite}.glitch:after{color:var(--purple);transform:translate(-.06em,-.02em);clip-path:inset(48% 0 0 0);opacity:.65;animation:glitchB 2.1s steps(2) infinite}.tag{margin:0 0 .55rem;font-size:clamp(1.2rem,2.8vw,1.8rem);font-weight:700}.sub{max-width:44rem;margin:0 0 1.4rem;color:var(--muted);font-size:1.04rem}.badges{display:flex;flex-wrap:wrap;gap:.7rem;margin:1.2rem 0 1.5rem;justify-content:center}.badges span,.pill{padding:.45rem .8rem;border:1px solid rgba(255,255,255,.09);border-radius:999px;background:rgba(255,255,255,.03);color:#f2cbd8;font-size:.82rem;box-shadow:inset 0 0 0 1px rgba(255,53,94,.05)}.hero-cta,.copy,.copy-chip{display:inline-flex;align-items:center;justify-content:space-between;gap:1rem;border:1px solid rgba(255,83,131,.3);background:linear-gradient(135deg,rgba(255,53,94,.18),rgba(142,43,255,.15));color:#fff;border-radius:1rem;padding:1rem 1.15rem;cursor:pointer;transition:.25s transform,.25s box-shadow,.25s border-color}.hero-cta{min-width:min(100%,31rem);font-weight:700;box-shadow:var(--glow2);margin:0 auto}.hero-cta code,.copy code{font:600 .95rem/1.4 Consolas,Monaco,monospace;white-space:normal;text-align:left}.hero-cta span,.copy-label{font-size:.78rem;letter-spacing:.14em;text-transform:uppercase;color:#ffd5de}.hero-cta:hover,.copy:hover,.copy-chip:hover{transform:translateY(-2px);border-color:rgba(255,83,131,.52)}.hero-github{display:inline-block;margin-top:1rem;color:#f4a3be;font-size:.92rem;letter-spacing:.08em;transition:.2s color}.hero-github:hover{color:#fff;text-shadow:0 0 12px rgba(255,53,94,.5)}.section-head{max-width:42rem;margin:0 auto 2rem;text-align:center}.kicker{display:block;color:#f4a3be;font-size:.76rem;letter-spacing:.2em;text-transform:uppercase;margin-bottom:.5rem}.section-head h2{margin:0 0 .55rem;font-size:clamp(1.9rem,4vw,3rem);line-height:1.05}.section-head p{margin:0;color:var(--muted)}.terminal,.card,.tier,.codebox{background:linear-gradient(180deg,rgba(30,10,23,.88),rgba(12,6,13,.95));border:1px solid rgba(255,255,255,.08);border-radius:1.25rem;box-shadow:0 16px 40px rgba(0,0,0,.35);position:relative;overflow:hidden}.terminal:before,.card:before,.tier:before,.codebox:before{content:"";position:absolute;inset:0;background:linear-gradient(135deg,rgba(255,53,94,.08),transparent 40%,rgba(142,43,255,.08));pointer-events:none}.term-top{display:flex;align-items:center;gap:.45rem;padding:1rem 1.15rem;border-bottom:1px solid rgba(255,255,255,.06);color:#e8b0c0}.dot{width:.7rem;height:.7rem;border-radius:50%;background:var(--red);box-shadow:0 0 10px rgba(255,53,94,.6)}.dot:nth-child(2){background:#ffb84d;box-shadow:0 0 10px rgba(255,184,77,.45)}.dot:nth-child(3){background:#adff6d;box-shadow:0 0 10px rgba(173,255,109,.45)}.term-top em{margin-left:.35rem;font-style:normal;font-size:.8rem;letter-spacing:.14em;text-transform:uppercase;color:var(--muted)}#terminal{margin:0;min-height:22rem;padding:1.15rem;font:500 .96rem/1.6 Consolas,Monaco,monospace;color:#ffccd8;white-space:pre-wrap}.cursor{display:inline-block;width:.62rem;height:1.1em;vertical-align:-.18em;background:linear-gradient(180deg,var(--red),#fff);box-shadow:0 0 10px rgba(255,53,94,.7);animation:blink 1s steps(1) infinite}.tiers{display:grid;grid-template-columns:1fr auto 1fr auto 1fr;align-items:center;gap:1rem}.tier{padding:1.25rem;min-height:15rem;display:flex;flex-direction:column;justify-content:space-between;transition:.25s transform,.25s box-shadow}.tier small{color:#f8a9c1;letter-spacing:.16em;text-transform:uppercase}.tier h3{margin:.45rem 0;font-size:1.55rem}.tier p{margin:0;color:var(--muted)}.tier strong{display:inline-block;margin-top:1rem;font-size:.8rem;letter-spacing:.14em;text-transform:uppercase}.ghost{opacity:.72;border-color:rgba(181,158,170,.2)}.templated{border-color:rgba(142,43,255,.34);box-shadow:var(--glow2)}.veteran{border-color:rgba(255,53,94,.38);box-shadow:var(--glow)}.flow{font-size:2.4rem;color:#ff7b9d;animation:flow 1.5s ease-in-out infinite}.grid6{display:grid;grid-template-columns:repeat(3,1fr);gap:1rem}.card{padding:1.25rem;transition:.25s transform,.25s border-color,.25s box-shadow}.card:hover,.tier:hover{transform:translateY(-4px);border-color:rgba(255,83,131,.35)}.card h3{margin:.4rem 0 .45rem;font-size:1.15rem}.card p{margin:0;color:var(--muted)}.icon{font-size:1.5rem;filter:drop-shadow(0 0 8px rgba(255,53,94,.4))}.quick{display:grid;gap:1rem}.step{display:grid;gap:.8rem}.stephead{display:flex;align-items:center;justify-content:space-between;gap:1rem}.stephead h3{margin:0;font-size:1.12rem}.num{display:inline-grid;place-items:center;width:2rem;height:2rem;border-radius:50%;background:linear-gradient(135deg,var(--red),var(--purple));box-shadow:var(--glow);font-weight:800;margin-right:.7rem}.codebox{padding:1rem}.copyrow{display:flex;align-items:center;justify-content:space-between;gap:1rem;margin-bottom:.75rem}.copyrow b{font-size:.84rem;letter-spacing:.14em;text-transform:uppercase;color:#efb0c4}pre{margin:0;overflow:auto;white-space:pre-wrap;word-break:break-word}code{font:500 .92rem/1.6 Consolas,Monaco,monospace;color:#ffd3df}.footer{padding:2.5rem 0 3rem;text-align:center;border-top:1px solid rgba(255,255,255,.06)}.footer h2{margin:0 0 .55rem;font-size:clamp(1.5rem,4vw,2.25rem)}.footer p{margin:.35rem 0;color:var(--muted)}.footlinks{display:flex;gap:.8rem;justify-content:center;flex-wrap:wrap;margin:1.2rem 0}.footlinks a:hover,.pill:hover{color:#fff;border-color:rgba(255,83,131,.45)}.tiny{font-size:.82rem;letter-spacing:.12em;text-transform:uppercase;color:#f0b7c8}@keyframes glitchA{0%,100%{transform:translate(.05em,.01em)}25%{transform:translate(-.03em,.02em)}50%{transform:translate(.07em,-.01em)}75%{transform:translate(.02em,.03em)}}@keyframes glitchB{0%,100%{transform:translate(-.06em,-.02em)}35%{transform:translate(.03em,.03em)}65%{transform:translate(-.02em,-.04em)}}@keyframes flicker{0%,18%,22%,62%,64%,100%{opacity:1}20%,63%{opacity:.6}21%{opacity:.85}}@keyframes blink{50%{opacity:0}}@keyframes scan{0%{transform:translateY(-100%)}100%{transform:translateY(100%)}}@keyframes flow{50%{transform:translateX(.25rem);text-shadow:0 0 14px rgba(255,53,94,.6)}}@media (max-width:900px){.grid6{grid-template-columns:repeat(2,1fr)}.tiers{grid-template-columns:1fr;justify-items:stretch}.flow{transform:rotate(90deg)}.nav .wrap{align-items:flex-start}.navlinks{justify-content:flex-start}}@media (max-width:640px){.hero{padding-top:3rem}.navlinks{display:none}.grid6{grid-template-columns:1fr}.hero-cta{width:100%}.wrap{width:min(100% - 1rem,1120px)}#terminal{min-height:24rem;font-size:.88rem}}@media (prefers-reduced-motion:reduce){html{scroll-behavior:auto}*,:before,:after{animation:none!important;transition:none!important}#swarm{display:none}}
 </style>
 </head>
 <body>
-
-<!-- Language Toggle -->
-<div class="lang-toggle" id="langToggle" role="radiogroup" aria-label="Language selector">
-  <button class="lang-btn active" data-lang="en" role="radio" aria-checked="true">EN</button>
-  <button class="lang-btn" data-lang="zh" role="radio" aria-checked="false">中文</button>
-</div>
-
-<!-- ==================== SECTION 1: HERO ==================== -->
-<section class="hero" id="hero">
-  <div class="hero-inner">
-    <h1 data-i18n="hero_title">Your AI coding tool's operating system</h1>
-    <p class="subtitle" data-i18n="hero_subtitle">Turn one AI assistant into a coordinated dev team. Works with Cursor, Claude Code, Copilot, Windsurf, and any MCP client.</p>
-
-    <div class="tool-logos" aria-label="Compatible tools">
-      <span>Cursor</span>
-      <span>Claude Code</span>
-      <span>GitHub Copilot</span>
-      <span>Windsurf</span>
-      <span>Goose</span>
-      <span>Roo Cline</span>
-    </div>
-
-    <!-- Hero SVG Animation: Master Agent delegates to 3 specialists -->
-    <div class="hero-animation" role="img" aria-label="Animation showing Master Agent delegating tasks to Architect, Developer, and QA specialists">
-      <svg viewBox="0 0 500 300" xmlns="http://www.w3.org/2000/svg">
-        <!-- Connection lines (drawn first, appear behind nodes) -->
-        <line class="conn-line" x1="250" y1="110" x2="100" y2="230" stroke="#3b82f6" stroke-width="1.5" stroke-opacity=".4"/>
-        <line class="conn-line" x1="250" y1="110" x2="250" y2="240" stroke="#3b82f6" stroke-width="1.5" stroke-opacity=".4"/>
-        <line class="conn-line" x1="250" y1="110" x2="400" y2="230" stroke="#3b82f6" stroke-width="1.5" stroke-opacity=".4"/>
-
-        <!-- Master Agent node (center top) -->
-        <g class="master-node">
-          <circle cx="250" cy="90" r="36" fill="#141416" stroke="#3b82f6" stroke-width="2"/>
-          <text x="250" y="85" text-anchor="middle" fill="#e4e4e7" font-size="11" font-weight="600" font-family="Inter,sans-serif" data-i18n="svg_master">Master</text>
-          <text x="250" y="99" text-anchor="middle" fill="#a1a1aa" font-size="9" font-family="Inter,sans-serif" data-i18n="svg_agent">Agent</text>
-        </g>
-
-        <!-- Architect node -->
-        <g class="agent-node" style="animation-delay:1.5s">
-          <circle cx="100" cy="240" r="30" fill="#141416" stroke="#8b5cf6" stroke-width="2"/>
-          <text x="100" y="237" text-anchor="middle" fill="#e4e4e7" font-size="10" font-weight="600" font-family="Inter,sans-serif" data-i18n="svg_architect">Architect</text>
-          <text x="100" y="250" text-anchor="middle" fill="#a1a1aa" font-size="8" font-family="Inter,sans-serif" data-i18n="svg_design">design</text>
-        </g>
-
-        <!-- Developer node -->
-        <g class="agent-node" style="animation-delay:1.8s">
-          <circle cx="250" cy="250" r="30" fill="#141416" stroke="#10b981" stroke-width="2"/>
-          <text x="250" y="247" text-anchor="middle" fill="#e4e4e7" font-size="10" font-weight="600" font-family="Inter,sans-serif" data-i18n="svg_developer">Developer</text>
-          <text x="250" y="260" text-anchor="middle" fill="#a1a1aa" font-size="8" font-family="Inter,sans-serif" data-i18n="svg_build">build</text>
-        </g>
-
-        <!-- QA node -->
-        <g class="agent-node" style="animation-delay:2.1s">
-          <circle cx="400" cy="240" r="30" fill="#141416" stroke="#f59e0b" stroke-width="2"/>
-          <text x="400" y="237" text-anchor="middle" fill="#e4e4e7" font-size="10" font-weight="600" font-family="Inter,sans-serif">QA</text>
-          <text x="400" y="250" text-anchor="middle" fill="#a1a1aa" font-size="8" font-family="Inter,sans-serif" data-i18n="svg_verify">verify</text>
-        </g>
-
-        <!-- Outbound particles (data flowing to agents) -->
-        <circle class="particle particle-out" style="offset-path:path('M250,110 L100,230');animation-delay:3s;fill:#8b5cf6"/>
-        <circle class="particle particle-out" style="offset-path:path('M250,110 L250,240');animation-delay:3.3s;fill:#10b981"/>
-        <circle class="particle particle-out" style="offset-path:path('M250,110 L400,230');animation-delay:3.6s;fill:#f59e0b"/>
-
-        <!-- Return particles (results flowing back) -->
-        <circle class="particle particle-in" style="offset-path:path('M250,110 L100,230');animation-delay:4s;fill:#8b5cf6"/>
-        <circle class="particle particle-in" style="offset-path:path('M250,110 L250,240');animation-delay:4.3s;fill:#10b981"/>
-        <circle class="particle particle-in" style="offset-path:path('M250,110 L400,230');animation-delay:4.6s;fill:#f59e0b"/>
-
-        <!-- Success checkmark -->
-        <g class="check-mark" transform="translate(250,90)">
-          <circle r="14" fill="#10b981" opacity=".2"/>
-          <path d="M-5,0 L-1,4 L6,-4" fill="none" stroke="#10b981" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
-        </g>
-      </svg>
-    </div>
-
-    <div class="cta-group">
-      <a href="#quickstart" class="btn-primary" data-i18n="hero_cta_start">Get Started</a>
-      <a href="https://github.com/cloga/megatron-ai" class="btn-secondary" target="_blank" rel="noopener">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z"/></svg>
-        GitHub
-      </a>
-    </div>
-
-    <div class="install-block" id="installCmd" role="button" tabindex="0" aria-label="Copy install command to clipboard">
-      <code>npx -y github:cloga/megatron-ai init</code>
-      <svg class="copy-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
-      <span class="copy-tooltip" id="copyTooltip" data-i18n="copied">Copied!</span>
-    </div>
+<header class="nav">
+  <div class="wrap">
+    <a class="brand" href="#top"><span class="sigil"><i></i></span>MEGATRON</a>
+    <nav class="navlinks" aria-label="Sections">
+      <a href="#demo">Demo</a>
+      <a href="#tiers">Tiers</a>
+      <a href="#features">Features</a>
+      <a href="#quickstart">Quick Start</a>
+      <a href="https://github.com/charzhu/megatron-ai" target="_blank" rel="noopener">⬡ GitHub</a>
+    </nav>
   </div>
+</header>
 
-  <!-- Scroll-down indicator -->
-  <a href="#how-it-works" class="scroll-indicator" aria-label="Scroll down">
-    <span data-i18n="scroll_down">Scroll</span>
-    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 4l5 5 5-5"/><path d="M7 10l5 5 5-5"/></svg>
-  </a>
-</section>
-
-<!-- ==================== SECTION 2: HOW IT WORKS ==================== -->
-<section id="how-it-works">
-  <div class="container">
-    <div class="section-header">
-      <h2 data-i18n="how_title">How It Works</h2>
-      <p data-i18n="how_subtitle">A self-evolving agent lifecycle</p>
+<section class="hero" id="top">
+  <canvas id="swarm" aria-hidden="true"></canvas>
+  <div class="grid" aria-hidden="true"></div>
+  <div class="wrap hero-copy">
+    <div class="eyebrow"><b>🤖</b> MCP-native swarm command</div>
+    <h1 class="glitch" data-text="MEGATRON">MEGATRON</h1>
+    <p class="tag">One AI assistant. An army of specialists. Total domination.</p>
+    <p class="sub">Multi-agent orchestration engine for any MCP-compatible AI coding tool</p>
+    <div class="badges" aria-label="Compatible tools">
+      <span>VS Code</span><span>Cursor</span><span>Claude Code</span><span>Windsurf</span><span>Copilot CLI</span>
     </div>
-
-    <div class="how-grid">
-      <div class="how-card animate-on-scroll">
-        <span class="how-icon" aria-hidden="true">&#9881;&#65039;</span>
-        <h3 data-i18n="how_orchestrate_title">Orchestrate</h3>
-        <p data-i18n="how_orchestrate_desc">Your AI assistant becomes a Master Agent that analyzes tasks and selects the right specialists.</p>
-      </div>
-      <div class="how-card animate-on-scroll stagger-1">
-        <span class="how-icon" aria-hidden="true">&#128640;</span>
-        <h3 data-i18n="how_delegate_title">Delegate</h3>
-        <p data-i18n="how_delegate_desc">Tasks are dispatched to specialized roles — Architect, PM, QA, Dev — that work in parallel via the Council pattern.</p>
-      </div>
-      <div class="how-card animate-on-scroll stagger-2">
-        <span class="how-icon" aria-hidden="true">&#129516;</span>
-        <h3 data-i18n="how_evolve_title">Evolve</h3>
-        <p data-i18n="how_evolve_desc">Agents start ephemeral (T3), precipitate into templates (T2), and freeze as reusable instances (T1). Your team grows with every task.</p>
-      </div>
-    </div>
-
-    <!-- T3 → T2 → T1 flow diagram -->
-    <div class="tier-flow animate-on-scroll stagger-3">
-      <div class="tier-box">
-        <div class="tier-label">T3</div>
-        <div class="tier-name" data-i18n="tier_ephemeral">Ephemeral</div>
-      </div>
-      <div class="tier-arrow" aria-hidden="true">&#8594;</div>
-      <div class="tier-box">
-        <div class="tier-label">T2</div>
-        <div class="tier-name" data-i18n="tier_template">Template</div>
-      </div>
-      <div class="tier-arrow" aria-hidden="true">&#8594;</div>
-      <div class="tier-box">
-        <div class="tier-label">T1</div>
-        <div class="tier-name" data-i18n="tier_instance">Instance</div>
-      </div>
-    </div>
+    <button class="hero-cta" data-copy="npx -y github:charzhu/megatron-ai init" aria-label="Copy install command">
+      <code>npx -y github:charzhu/megatron-ai init</code>
+      <span class="copy-label">⎘ Copy</span>
+    </button>
+    <a class="hero-github" href="https://github.com/charzhu/megatron-ai" target="_blank" rel="noopener">⬡ View on GitHub →</a>
   </div>
 </section>
 
-<!-- ==================== SECTION 2.5: WORKFLOW PIPELINE ==================== -->
-<section id="workflow">
-  <div class="container">
-    <div class="section-header">
-      <h2 data-i18n="workflow_title">Watch the Swarm Work</h2>
-      <p data-i18n="workflow_subtitle">From request to merge &mdash; a fully automated pipeline</p>
+<main class="wrap">
+  <section id="demo">
+    <div class="section-head">
+      <span class="kicker">How it works</span>
+      <h2>Interactive terminal demo</h2>
+      <p>Issue-first orchestration. Specialist deployment. Pull request supremacy.</p>
     </div>
+    <div class="terminal">
+      <div class="term-top"><span class="dot"></span><span class="dot"></span><span class="dot"></span><em>swarm.console</em></div>
+      <pre id="terminal" aria-live="polite"></pre>
+    </div>
+  </section>
 
-    <div class="workflow-pipeline">
-      <div class="workflow-step animate-on-scroll">
-        <div class="workflow-step-num">1</div>
-        <div class="workflow-step-content">
-          <span class="workflow-step-icon" aria-hidden="true">&#128172;</span>
-          <h4 data-i18n="workflow_s1_title">User Request</h4>
-          <p data-i18n="workflow_s1_desc">You describe what you need in natural language</p>
-        </div>
-      </div>
-      <div class="workflow-step animate-on-scroll stagger-1">
-        <div class="workflow-step-num">2</div>
-        <div class="workflow-step-content">
-          <span class="workflow-step-icon" aria-hidden="true">&#128203;</span>
-          <h4 data-i18n="workflow_s2_title">PM Creates Issue</h4>
-          <p data-i18n="workflow_s2_desc">Product Manager structures requirements and creates a tracking issue</p>
-        </div>
-      </div>
-      <div class="workflow-step animate-on-scroll stagger-2">
-        <div class="workflow-step-num">3</div>
-        <div class="workflow-step-content">
-          <span class="workflow-step-icon" aria-hidden="true">&#128187;</span>
-          <h4 data-i18n="workflow_s3_title">Dev Writes Code</h4>
-          <p data-i18n="workflow_s3_desc">Developer implements with full architectural context</p>
-        </div>
-      </div>
-      <div class="workflow-step animate-on-scroll stagger-3">
-        <div class="workflow-step-num">4</div>
-        <div class="workflow-step-content">
-          <span class="workflow-step-icon" aria-hidden="true">&#9989;</span>
-          <h4 data-i18n="workflow_s4_title">QA Verifies</h4>
-          <p data-i18n="workflow_s4_desc">QA Engineer runs tests and reviews quality</p>
-        </div>
-      </div>
-      <div class="workflow-step animate-on-scroll stagger-4">
-        <div class="workflow-step-num">5</div>
-        <div class="workflow-step-content">
-          <span class="workflow-step-icon" aria-hidden="true">&#128256;</span>
-          <h4 data-i18n="workflow_s5_title">PR Merged</h4>
-          <p data-i18n="workflow_s5_desc">Pull request merged, issue closed, work shipped</p>
-        </div>
-      </div>
+  <section id="tiers">
+    <div class="section-head">
+      <span class="kicker">Agent tier system</span>
+      <h2>T3 → T2 → T1 evolution lifecycle</h2>
+      <p>From disposable ghosts to battle-tested veterans. A rank ladder for autonomous specialists.</p>
     </div>
-  </div>
-</section>
+    <div class="tiers">
+      <article class="tier ghost">
+        <div><small>T3 // Ephemeral</small><h3>Ephemeral</h3><p>Zero-shot dynamic workers. Spawn fast, strike once, vanish into static.</p></div>
+        <strong>Ghost class</strong>
+      </article>
+      <div class="flow" aria-hidden="true">→</div>
+      <article class="tier templated">
+        <div><small>T2 // Role Templates</small><h3>Role Templates</h3><p>Reusable specialists with stable doctrine, skill packs, and repeatable mission profiles.</p></div>
+        <strong>Specialist class</strong>
+      </article>
+      <div class="flow" aria-hidden="true">→</div>
+      <article class="tier veteran">
+        <div><small>T1 // Frozen Instances</small><h3>Frozen Instances</h3><p>Battle-tested veterans. Bright, pulsing, trusted operators forged by successful campaigns.</p></div>
+        <strong>Veteran class</strong>
+      </article>
+    </div>
+  </section>
 
-<!-- ==================== SECTION 3: SEE IT IN ACTION ==================== -->
-<section id="see-it-in-action">
-  <div class="container">
-    <div class="section-header">
-      <h2 data-i18n="action_title">See It In Action</h2>
-      <p data-i18n="action_subtitle">Real workflows, not demos</p>
+  <section id="features">
+    <div class="section-head">
+      <span class="kicker">Weapons systems</span>
+      <h2>Swarm-grade features</h2>
+      <p>Six reasons the machine army gets things done faster than a lonely prompt ever will.</p>
     </div>
+    <div class="grid6">
+      <article class="card"><div class="icon">🧠</div><h3>Swarm Intelligence</h3><p>Coordinate multiple AI agents in parallel for focused, synchronized execution.</p></article>
+      <article class="card"><div class="icon">⚡</div><h3>Self-Evolving</h3><p>Agents learn, evolve, and level up automatically from each completed operation.</p></article>
+      <article class="card"><div class="icon">🏛️</div><h3>Council Reviews</h3><p>Map-reduce expert panels deliver design decisions with ruthless multi-angle scrutiny.</p></article>
+      <article class="card"><div class="icon">🔧</div><h3>Any MCP Client</h3><p>Deploy from VS Code, Cursor, Claude Code, Windsurf, and any MCP-compatible front end.</p></article>
+      <article class="card"><div class="icon">🎯</div><h3>Skill System</h3><p>Pre-built and auto-generated playbooks tell each role exactly how to dominate its domain.</p></article>
+      <article class="card"><div class="icon">🔄</div><h3>GitHub Native</h3><p>Auto-creates Issues, PRs, and lineage trails so every mission is tracked from order to merge.</p></article>
+    </div>
+  </section>
 
-    <div class="usecase-grid">
-      <div class="usecase-card animate-on-scroll">
-        <h3 data-i18n="action_bugfix_title">Bug Fix</h3>
-        <div>
-          <span class="usecase-label label-before" data-i18n="label_before">Before</span>
-          <p class="usecase-before" data-i18n="action_bugfix_before">You debug alone, context scattered across files and tabs.</p>
-        </div>
-        <div>
-          <span class="usecase-label label-after" data-i18n="label_after">After</span>
-          <p class="usecase-after" data-i18n="action_bugfix_after">PM creates issue, Architect designs fix, Dev implements, QA verifies — all tracked.</p>
-        </div>
+  <section id="quickstart">
+    <div class="section-head">
+      <span class="kicker">Quick start</span>
+      <h2>Boot the swarm in three steps</h2>
+      <p>Minimal ceremony. Maximum menace.</p>
+    </div>
+    <div class="quick">
+      <div class="step codebox">
+        <div class="copyrow"><b><span class="num">1</span>Initialize</b><button class="copy-chip" data-copy-target="cmd1"><span class="copy-label">Copy</span></button></div>
+        <pre id="cmd1"><code>npx -y github:charzhu/megatron-ai init</code></pre>
       </div>
-      <div class="usecase-card animate-on-scroll stagger-1">
-        <h3 data-i18n="action_feature_title">New Feature</h3>
-        <div>
-          <span class="usecase-label label-before" data-i18n="label_before">Before</span>
-          <p class="usecase-before" data-i18n="action_feature_before">Solo agent guesses at architecture and writes everything in one pass.</p>
-        </div>
-        <div>
-          <span class="usecase-label label-after" data-i18n="label_after">After</span>
-          <p class="usecase-after" data-i18n="action_feature_after">Council debates architecture, then Dev builds with full context and reviewed design.</p>
-        </div>
+      <div class="step codebox">
+        <div class="copyrow"><b><span class="num">2</span>Configure MCP client</b><button class="copy-chip" data-copy-target="cmd2"><span class="copy-label">Copy</span></button></div>
+        <pre id="cmd2"><code>{
+  "servers": {
+    "megatron-swarm": {
+      "type": "stdio",
+      "command": "node",
+      "args": ["${workspaceFolder}/megatron-plugin/dist/mcp-server.js"],
+      "env": {
+        "MEGATRON_WORKSPACE_ROOT": "${workspaceFolder}",
+        "DOTENV_PATH": "${workspaceFolder}/.env",
+        "PATH": "${env:PATH}"
+      }
+    }
+  },
+  "inputs": []
+}</code></pre>
       </div>
-      <div class="usecase-card animate-on-scroll stagger-2">
-        <h3 data-i18n="action_review_title">Code Review</h3>
-        <div>
-          <span class="usecase-label label-before" data-i18n="label_before">Before</span>
-          <p class="usecase-before" data-i18n="action_review_before">One reviewer, one perspective, blind spots everywhere.</p>
-        </div>
-        <div>
-          <span class="usecase-label label-after" data-i18n="label_after">After</span>
-          <p class="usecase-after" data-i18n="action_review_after">3 expert reviewers in parallel with synthesis report — security, performance, and architecture.</p>
-        </div>
+      <div class="step codebox">
+        <div class="copyrow"><b><span class="num">3</span>Start orchestrating</b><button class="copy-chip" data-copy-target="cmd3"><span class="copy-label">Copy</span></button></div>
+        <pre id="cmd3"><code>"Build a user authentication system with issue-first workflow,
+deploy architect + developer + QA, and return a review-ready PR."</code></pre>
       </div>
     </div>
-  </div>
-</section>
+  </section>
+</main>
 
-<!-- ==================== SECTION 4: ARCHITECTURE ==================== -->
-<section id="architecture">
-  <div class="container">
-    <div class="section-header">
-      <h2 data-i18n="arch_title">The Architecture</h2>
+<footer class="footer">
+  <div class="wrap">
+    <h2>Stop prompting. Start orchestrating.</h2>
+    <div class="footlinks">
+      <a class="pill" href="https://github.com/charzhu/megatron-ai" target="_blank" rel="noopener">GitHub</a>
+      <a class="pill" href="https://opensource.org/licenses/MIT" target="_blank" rel="noopener">MIT License</a>
     </div>
-
-    <div class="arch-split">
-      <div class="arch-text">
-        <p data-i18n="arch_desc">Megatron AI is built on a Great Unification architecture — a pure Node.js MCP daemon with self-evolving agents, map-reduce councils, and issue-first SDLC. Read the full technical deep-dive.</p>
-        <div class="arch-stats">
-          <span class="arch-stat" data-i18n="arch_stat_tiers">3 Agent Tiers</span>
-          <span class="arch-stat" data-i18n="arch_stat_skills">5 Core Skills</span>
-          <span class="arch-stat" data-i18n="arch_stat_roles">Unlimited Roles</span>
-          <span class="arch-stat" data-i18n="arch_stat_config">Zero Config</span>
-        </div>
-        <a href="architecture.html" class="btn-primary" data-i18n-html="arch_cta">Read Architecture Whitepaper &rarr;</a>
-      </div>
-      <div class="arch-graphic animate-on-scroll" aria-label="Architecture layers diagram">
-        <div class="arch-layer" style="border-color:var(--accent)">
-          <div class="al-title" data-i18n="arch_layer_user">User Layer</div>
-          <div class="al-desc" data-i18n="arch_layer_user_desc">Any MCP client</div>
-        </div>
-        <div class="arch-connector"></div>
-        <div class="arch-layer" style="border-color:var(--accent-tertiary)">
-          <div class="al-title" data-i18n="arch_layer_kernel">Meta Kernel</div>
-          <div class="al-desc" data-i18n="arch_layer_kernel_desc">Memory, cron, reflection</div>
-        </div>
-        <div class="arch-connector"></div>
-        <div class="arch-layer" style="border-color:#f59e0b">
-          <div class="al-title" data-i18n="arch_layer_org">Organization</div>
-          <div class="al-desc" data-i18n="arch_layer_org_desc">PM, Architect — plan &amp; review</div>
-        </div>
-        <div class="arch-connector"></div>
-        <div class="arch-layer" style="border-color:var(--accent-secondary)">
-          <div class="al-title" data-i18n="arch_layer_exec">Execution</div>
-          <div class="al-desc" data-i18n="arch_layer_exec_desc">Dev, QA — build &amp; test</div>
-        </div>
-      </div>
-    </div>
-  </div>
-</section>
-
-<!-- ==================== SECTION 5: FEATURES ==================== -->
-<section id="features">
-  <div class="container">
-    <div class="section-header">
-      <h2 data-i18n="feat_title">Features</h2>
-    </div>
-
-    <div class="features-grid">
-      <div class="feature-card animate-on-scroll">
-        <span class="feat-icon" aria-hidden="true">&#128209;</span>
-        <h3 data-i18n="feat_plan_title">Plan Mode</h3>
-        <p data-i18n="feat_plan_desc">Orchestrators plan, developers code. Separation of concerns enforced by the system.</p>
-      </div>
-      <div class="feature-card animate-on-scroll stagger-1">
-        <span class="feat-icon" aria-hidden="true">&#128101;</span>
-        <h3 data-i18n="feat_council_title">Council Pattern</h3>
-        <p data-i18n="feat_council_desc">Spawn parallel expert reviews. Map-reduce consensus from multiple perspectives.</p>
-      </div>
-      <div class="feature-card animate-on-scroll stagger-2">
-        <span class="feat-icon" aria-hidden="true">&#128295;</span>
-        <h3 data-i18n="feat_skills_title">Skills System</h3>
-        <p data-i18n="feat_skills_desc">Roles define WHO. Skills define HOW. Many-to-many binding at runtime.</p>
-      </div>
-      <div class="feature-card animate-on-scroll stagger-3">
-        <span class="feat-icon" aria-hidden="true">&#128279;</span>
-        <h3 data-i18n="feat_lineage_title">Issue Lineage</h3>
-        <p data-i18n="feat_lineage_desc">Parent-child traceability across all GitHub Issues. Every delegation tracked.</p>
-      </div>
-      <div class="feature-card animate-on-scroll stagger-4">
-        <span class="feat-icon" aria-hidden="true">&#129504;</span>
-        <h3 data-i18n="feat_memory_title">Memory System</h3>
-        <p data-i18n="feat_memory_desc">Continuous learning from project history. Past mistakes never repeated.</p>
-      </div>
-      <div class="feature-card animate-on-scroll stagger-5">
-        <span class="feat-icon" aria-hidden="true">&#129516;</span>
-        <h3 data-i18n="feat_evolve_title">Self-Evolving Agents</h3>
-        <p data-i18n="feat_evolve_desc">Ephemeral &rarr; Template &rarr; Instance. Your team grows with every task.</p>
-      </div>
-    </div>
-  </div>
-</section>
-
-<!-- ==================== SECTION 6: QUICK START ==================== -->
-<section id="quickstart">
-  <div class="container">
-    <div class="section-header">
-      <h2 data-i18n="qs_title">Get Started in 60 Seconds</h2>
-    </div>
-
-    <div class="quickstart">
-      <div class="qs-step animate-on-scroll">
-        <div class="qs-step-num">1</div>
-        <h3 data-i18n="qs_step1_title">Initialize</h3>
-        <div class="code-block">npx -y github:cloga/megatron-ai init</div>
-      </div>
-      <div class="qs-step animate-on-scroll stagger-1">
-        <div class="qs-step-num">2</div>
-        <h3 data-i18n="qs_step2_title">Configure (optional)</h3>
-        <p data-i18n="qs_step2_desc">VS Code users are auto-configured. Others: add to your MCP client config.</p>
-      </div>
-      <div class="qs-step animate-on-scroll stagger-2">
-        <div class="qs-step-num">3</div>
-        <h3 data-i18n="qs_step3_title">Orchestrate</h3>
-        <div class="code-block">"Use dispatch_council to review our design with Chief Architect and QA Engineer"</div>
-      </div>
-      <div class="animate-on-scroll stagger-3" style="text-align:center;margin-top:40px">
-        <a href="https://github.com/cloga/megatron-ai#readme" class="btn-secondary" target="_blank" rel="noopener" data-i18n-html="qs_docs_link">Full Documentation &rarr;</a>
-      </div>
-    </div>
-  </div>
-</section>
-
-<!-- ==================== SECTION 7: ECOSYSTEM ==================== -->
-<section id="ecosystem">
-  <div class="container">
-    <div class="section-header">
-      <h2 data-i18n="eco_title">Works With Everything</h2>
-      <p data-i18n="eco_subtitle">Any MCP-compatible AI coding tool. No lock-in.</p>
-    </div>
-
-    <div class="eco-grid">
-      <div class="eco-item animate-on-scroll">VS Code / Copilot</div>
-      <div class="eco-item animate-on-scroll stagger-1">Cursor</div>
-      <div class="eco-item animate-on-scroll stagger-2">Windsurf</div>
-      <div class="eco-item animate-on-scroll stagger-3">Claude Code</div>
-      <div class="eco-item animate-on-scroll stagger-4">Goose</div>
-      <div class="eco-item animate-on-scroll stagger-5">Roo Cline</div>
-    </div>
-
-    <div style="text-align:center">
-      <span class="eco-badge" data-i18n="eco_badge">Built on Model Context Protocol</span>
-    </div>
-  </div>
-</section>
-
-<!-- ==================== SECTION 8: FOOTER ==================== -->
-<footer>
-  <div class="container">
-    <div class="footer-logo">Megatron AI</div>
-    <div class="footer-links">
-      <a href="https://github.com/cloga/megatron-ai" target="_blank" rel="noopener">GitHub</a>
-      <a href="https://github.com/cloga/megatron-ai#readme" target="_blank" rel="noopener" data-i18n="footer_docs">Documentation</a>
-      <a href="architecture.html" data-i18n="footer_arch">Architecture</a>
-      <a href="https://opensource.org/licenses/MIT" target="_blank" rel="noopener" data-i18n="footer_license">MIT License</a>
-    </div>
-    <div class="footer-tagline" data-i18n="footer_tagline">Stop prompting. Start orchestrating.</div>
+    <p>Built by agents, for agents.</p>
+    <p class="tiny">I am the swarm. Resistance is futile.</p>
   </div>
 </footer>
 
 <script>
-/* Translation dictionary */
-var i18n={
-  en:{
-    hero_title:"Your AI coding tool's operating system",
-    hero_subtitle:"Turn one AI assistant into a coordinated dev team. Works with Cursor, Claude Code, Copilot, Windsurf, and any MCP client.",
-    hero_cta_start:"Get Started",
-    copied:"Copied!",
-    how_title:"How It Works",
-    how_subtitle:"A self-evolving agent lifecycle",
-    how_orchestrate_title:"Orchestrate",
-    how_orchestrate_desc:"Your AI assistant becomes a Master Agent that analyzes tasks and selects the right specialists.",
-    how_delegate_title:"Delegate",
-    how_delegate_desc:"Tasks are dispatched to specialized roles \u2014 Architect, PM, QA, Dev \u2014 that work in parallel via the Council pattern.",
-    how_evolve_title:"Evolve",
-    how_evolve_desc:"Agents start ephemeral (T3), precipitate into templates (T2), and freeze as reusable instances (T1). Your team grows with every task.",
-    tier_ephemeral:"Ephemeral",
-    tier_template:"Template",
-    tier_instance:"Instance",
-    workflow_title:"Watch the Swarm Work",
-    workflow_subtitle:"From request to merge \u2014 a fully automated pipeline",
-    workflow_s1_title:"User Request",
-    workflow_s1_desc:"You describe what you need in natural language",
-    workflow_s2_title:"PM Creates Issue",
-    workflow_s2_desc:"Product Manager structures requirements and creates a tracking issue",
-    workflow_s3_title:"Dev Writes Code",
-    workflow_s3_desc:"Developer implements with full architectural context",
-    workflow_s4_title:"QA Verifies",
-    workflow_s4_desc:"QA Engineer runs tests and reviews quality",
-    workflow_s5_title:"PR Merged",
-    workflow_s5_desc:"Pull request merged, issue closed, work shipped",
-    action_title:"See It In Action",
-    action_subtitle:"Real workflows, not demos",
-    action_bugfix_title:"Bug Fix",
-    label_before:"Before",
-    label_after:"After",
-    action_bugfix_before:"You debug alone, context scattered across files and tabs.",
-    action_bugfix_after:"PM creates issue, Architect designs fix, Dev implements, QA verifies \u2014 all tracked.",
-    action_feature_title:"New Feature",
-    action_feature_before:"Solo agent guesses at architecture and writes everything in one pass.",
-    action_feature_after:"Council debates architecture, then Dev builds with full context and reviewed design.",
-    action_review_title:"Code Review",
-    action_review_before:"One reviewer, one perspective, blind spots everywhere.",
-    action_review_after:"3 expert reviewers in parallel with synthesis report \u2014 security, performance, and architecture.",
-    arch_title:"The Architecture",
-    arch_desc:"Megatron AI is built on a Great Unification architecture \u2014 a pure Node.js MCP daemon with self-evolving agents, map-reduce councils, and issue-first SDLC. Read the full technical deep-dive.",
-    arch_stat_tiers:"3 Agent Tiers",
-    arch_stat_skills:"5 Core Skills",
-    arch_stat_roles:"Unlimited Roles",
-    arch_stat_config:"Zero Config",
-    arch_cta:"Read Architecture Whitepaper &rarr;",
-    arch_layer_user:"User Layer",
-    arch_layer_user_desc:"Any MCP client",
-    arch_layer_kernel:"Meta Kernel",
-    arch_layer_kernel_desc:"Memory, cron, reflection",
-    arch_layer_org:"Organization",
-    arch_layer_org_desc:"PM, Architect \u2014 plan & review",
-    arch_layer_exec:"Execution",
-    arch_layer_exec_desc:"Dev, QA \u2014 build & test",
-    feat_title:"Features",
-    feat_plan_title:"Plan Mode",
-    feat_plan_desc:"Orchestrators plan, developers code. Separation of concerns enforced by the system.",
-    feat_council_title:"Council Pattern",
-    feat_council_desc:"Spawn parallel expert reviews. Map-reduce consensus from multiple perspectives.",
-    feat_skills_title:"Skills System",
-    feat_skills_desc:"Roles define WHO. Skills define HOW. Many-to-many binding at runtime.",
-    feat_lineage_title:"Issue Lineage",
-    feat_lineage_desc:"Parent-child traceability across all GitHub Issues. Every delegation tracked.",
-    feat_memory_title:"Memory System",
-    feat_memory_desc:"Continuous learning from project history. Past mistakes never repeated.",
-    feat_evolve_title:"Self-Evolving Agents",
-    feat_evolve_desc:"Ephemeral &rarr; Template &rarr; Instance. Your team grows with every task.",
-    qs_title:"Get Started in 60 Seconds",
-    qs_step1_title:"Initialize",
-    qs_step2_title:"Configure (optional)",
-    qs_step2_desc:"VS Code users are auto-configured. Others: add to your MCP client config.",
-    qs_step3_title:"Orchestrate",
-    qs_docs_link:"Full Documentation &rarr;",
-    eco_title:"Works With Everything",
-    eco_subtitle:"Any MCP-compatible AI coding tool. No lock-in.",
-    eco_badge:"Built on Model Context Protocol",
-    footer_docs:"Documentation",
-    footer_arch:"Architecture",
-    footer_license:"MIT License",
-    footer_tagline:"Stop prompting. Start orchestrating.",
-    svg_master:"Master",
-    svg_agent:"Agent",
-    svg_architect:"Architect",
-    svg_design:"design",
-    svg_developer:"Developer",
-    svg_build:"build",
-    svg_verify:"verify",
-    scroll_down:"Scroll"
-  },
-  zh:{
-    hero_title:"\u4F60\u7684 AI \u7F16\u7801\u5DE5\u5177\u7684\u64CD\u4F5C\u7CFB\u7EDF",
-    hero_subtitle:"\u5C06\u4E00\u4E2A AI \u52A9\u624B\u8F6C\u53D8\u4E3A\u534F\u8C03\u7684\u5F00\u53D1\u56E2\u961F\u3002\u652F\u6301 Cursor\u3001Claude Code\u3001Copilot\u3001Windsurf \u53CA\u4EFB\u4F55 MCP \u5BA2\u6237\u7AEF\u3002",
-    hero_cta_start:"\u5F00\u59CB\u4F7F\u7528",
-    copied:"\u5DF2\u590D\u5236\uFF01",
-    how_title:"\u5DE5\u4F5C\u539F\u7406",
-    how_subtitle:"\u81EA\u8FDB\u5316\u7684\u667A\u80FD\u4F53\u751F\u547D\u5468\u671F",
-    how_orchestrate_title:"\u7F16\u6392",
-    how_orchestrate_desc:"\u4F60\u7684 AI \u52A9\u624B\u5347\u7EA7\u4E3A\u4E3B\u63A7\u667A\u80FD\u4F53\uFF0C\u5206\u6790\u4EFB\u52A1\u5E76\u9009\u62E9\u5408\u9002\u7684\u4E13\u5BB6\u3002",
-    how_delegate_title:"\u59D4\u6D3E",
-    how_delegate_desc:"\u4EFB\u52A1\u88AB\u5206\u914D\u7ED9\u4E13\u4E1A\u89D2\u8272 \u2014 \u67B6\u6784\u5E08\u3001\u4EA7\u54C1\u7ECF\u7406\u3001QA\u3001\u5F00\u53D1\u8005 \u2014 \u901A\u8FC7 Council \u6A21\u5F0F\u5E76\u884C\u5DE5\u4F5C\u3002",
-    how_evolve_title:"\u8FDB\u5316",
-    how_evolve_desc:"\u667A\u80FD\u4F53\u4ECE\u4E34\u65F6\u72B6\u6001\uFF08T3\uFF09\u6C89\u6DC0\u4E3A\u6A21\u677F\uFF08T2\uFF09\uFF0C\u518D\u51BB\u7ED3\u4E3A\u53EF\u590D\u7528\u5B9E\u4F8B\uFF08T1\uFF09\u3002\u4F60\u7684\u56E2\u961F\u968F\u6BCF\u6B21\u4EFB\u52A1\u4E0D\u65AD\u58EE\u5927\u3002",
-    tier_ephemeral:"\u4E34\u65F6\u4F53",
-    tier_template:"\u6A21\u677F",
-    tier_instance:"\u5B9E\u4F8B",
-    workflow_title:"\u89C2\u770B\u96C6\u7FA4\u5DE5\u4F5C",
-    workflow_subtitle:"\u4ECE\u8BF7\u6C42\u5230\u5408\u5E76 \u2014 \u5168\u81EA\u52A8\u6D41\u6C34\u7EBF",
-    workflow_s1_title:"\u7528\u6237\u8BF7\u6C42",
-    workflow_s1_desc:"\u7528\u81EA\u7136\u8BED\u8A00\u63CF\u8FF0\u4F60\u7684\u9700\u6C42",
-    workflow_s2_title:"\u4EA7\u54C1\u7ECF\u7406\u521B\u5EFA Issue",
-    workflow_s2_desc:"\u4EA7\u54C1\u7ECF\u7406\u6574\u7406\u9700\u6C42\u5E76\u521B\u5EFA\u8DDF\u8E2A Issue",
-    workflow_s3_title:"\u5F00\u53D1\u8005\u7F16\u5199\u4EE3\u7801",
-    workflow_s3_desc:"\u5F00\u53D1\u8005\u5728\u5B8C\u6574\u67B6\u6784\u4E0A\u4E0B\u6587\u4E0B\u5B9E\u73B0",
-    workflow_s4_title:"QA \u9A8C\u8BC1",
-    workflow_s4_desc:"QA \u5DE5\u7A0B\u5E08\u8FD0\u884C\u6D4B\u8BD5\u5E76\u5BA1\u67E5\u8D28\u91CF",
-    workflow_s5_title:"PR \u5408\u5E76",
-    workflow_s5_desc:"Pull Request \u5408\u5E76\uFF0CIssue \u5173\u95ED\uFF0C\u5DE5\u4F5C\u4EA4\u4ED8",
-    action_title:"\u5B9E\u6218\u6F14\u793A",
-    action_subtitle:"\u771F\u5B9E\u5DE5\u4F5C\u6D41\uFF0C\u800C\u975E\u6F14\u793A",
-    action_bugfix_title:"\u4FEE\u590D Bug",
-    label_before:"\u4F7F\u7528\u524D",
-    label_after:"\u4F7F\u7528\u540E",
-    action_bugfix_before:"\u72EC\u81EA\u8C03\u8BD5\uFF0C\u4E0A\u4E0B\u6587\u5206\u6563\u5728\u5404\u4E2A\u6587\u4EF6\u548C\u6807\u7B7E\u9875\u4E2D\u3002",
-    action_bugfix_after:"\u4EA7\u54C1\u7ECF\u7406\u521B\u5EFA Issue\uFF0C\u67B6\u6784\u5E08\u8BBE\u8BA1\u4FEE\u590D\u65B9\u6848\uFF0C\u5F00\u53D1\u8005\u5B9E\u73B0\uFF0CQA \u9A8C\u8BC1 \u2014 \u5168\u7A0B\u8FFD\u8E2A\u3002",
-    action_feature_title:"\u65B0\u529F\u80FD",
-    action_feature_before:"\u5355\u4E2A\u667A\u80FD\u4F53\u731C\u6D4B\u67B6\u6784\uFF0C\u4E00\u6B21\u6027\u5199\u5B8C\u6240\u6709\u4EE3\u7801\u3002",
-    action_feature_after:"Council \u8BA8\u8BBA\u67B6\u6784\uFF0C\u7136\u540E\u5F00\u53D1\u8005\u5728\u5B8C\u6574\u4E0A\u4E0B\u6587\u548C\u5BA1\u67E5\u8BBE\u8BA1\u4E0B\u6784\u5EFA\u3002",
-    action_review_title:"\u4EE3\u7801\u5BA1\u67E5",
-    action_review_before:"\u4E00\u4E2A\u5BA1\u67E5\u8005\uFF0C\u4E00\u4E2A\u89C6\u89D2\uFF0C\u5230\u5904\u662F\u76F2\u533A\u3002",
-    action_review_after:"3 \u4E2A\u4E13\u5BB6\u5E76\u884C\u5BA1\u67E5\uFF0C\u751F\u6210\u7EFC\u5408\u62A5\u544A \u2014 \u5B89\u5168\u3001\u6027\u80FD\u548C\u67B6\u6784\u5168\u8986\u76D6\u3002",
-    arch_title:"\u7CFB\u7EDF\u67B6\u6784",
-    arch_desc:"Megatron AI \u57FA\u4E8E\u5927\u7EDF\u4E00\u67B6\u6784\u6784\u5EFA \u2014 \u7EAF Node.js MCP \u5B88\u62A4\u8FDB\u7A0B\uFF0C\u96C6\u6210\u81EA\u8FDB\u5316\u667A\u80FD\u4F53\u3001MapReduce \u8BC4\u5BA1\u59D4\u5458\u4F1A\u548C Issue \u9A71\u52A8\u7684\u8F6F\u4EF6\u5F00\u53D1\u751F\u547D\u5468\u671F\u3002\u9605\u8BFB\u5B8C\u6574\u7684\u6280\u672F\u6DF1\u5165\u89E3\u6790\u3002",
-    arch_stat_tiers:"3 \u5C42\u667A\u80FD\u4F53",
-    arch_stat_skills:"5 \u9879\u6838\u5FC3\u6280\u80FD",
-    arch_stat_roles:"\u65E0\u9650\u89D2\u8272",
-    arch_stat_config:"\u96F6\u914D\u7F6E",
-    arch_cta:"\u9605\u8BFB\u67B6\u6784\u767D\u76AE\u4E66 &rarr;",
-    arch_layer_user:"\u7528\u6237\u5C42",
-    arch_layer_user_desc:"\u4EFB\u610F MCP \u5BA2\u6237\u7AEF",
-    arch_layer_kernel:"\u5143\u5185\u6838",
-    arch_layer_kernel_desc:"\u8BB0\u5FC6\u3001\u5B9A\u65F6\u4EFB\u52A1\u3001\u53CD\u601D",
-    arch_layer_org:"\u7EC4\u7EC7\u5C42",
-    arch_layer_org_desc:"\u4EA7\u54C1\u7ECF\u7406\u3001\u67B6\u6784\u5E08 \u2014 \u89C4\u5212\u4E0E\u5BA1\u67E5",
-    arch_layer_exec:"\u6267\u884C\u5C42",
-    arch_layer_exec_desc:"\u5F00\u53D1\u8005\u3001QA \u2014 \u6784\u5EFA\u4E0E\u6D4B\u8BD5",
-    feat_title:"\u529F\u80FD\u7279\u6027",
-    feat_plan_title:"\u89C4\u5212\u6A21\u5F0F",
-    feat_plan_desc:"\u7F16\u6392\u8005\u89C4\u5212\uFF0C\u5F00\u53D1\u8005\u7F16\u7801\u3002\u7CFB\u7EDF\u5F3A\u5236\u804C\u8D23\u5206\u79BB\u3002",
-    feat_council_title:"Council \u6A21\u5F0F",
-    feat_council_desc:"\u542F\u52A8\u5E76\u884C\u4E13\u5BB6\u5BA1\u67E5\u3002\u901A\u8FC7 MapReduce \u4ECE\u591A\u89C6\u89D2\u8FBE\u6210\u5171\u8BC6\u3002",
-    feat_skills_title:"\u6280\u80FD\u7CFB\u7EDF",
-    feat_skills_desc:"\u89D2\u8272\u5B9A\u4E49\u201C\u8C01\u201D\u3002\u6280\u80FD\u5B9A\u4E49\u201C\u600E\u4E48\u505A\u201D\u3002\u8FD0\u884C\u65F6\u591A\u5BF9\u591A\u7ED1\u5B9A\u3002",
-    feat_lineage_title:"Issue \u8FFD\u8E2A",
-    feat_lineage_desc:"\u8DE8\u6240\u6709 GitHub Issue \u7684\u7236\u5B50\u53EF\u8FFD\u6EAF\u6027\u3002\u6BCF\u6B21\u59D4\u6D3E\u5747\u88AB\u8BB0\u5F55\u3002",
-    feat_memory_title:"\u8BB0\u5FC6\u7CFB\u7EDF",
-    feat_memory_desc:"\u4ECE\u9879\u76EE\u5386\u53F2\u4E2D\u6301\u7EED\u5B66\u4E60\u3002\u8FC7\u53BB\u7684\u9519\u8BEF\u4E0D\u518D\u91CD\u590D\u3002",
-    feat_evolve_title:"\u81EA\u8FDB\u5316\u667A\u80FD\u4F53",
-    feat_evolve_desc:"\u4E34\u65F6\u4F53 &rarr; \u6A21\u677F &rarr; \u5B9E\u4F8B\u3002\u4F60\u7684\u56E2\u961F\u968F\u6BCF\u6B21\u4EFB\u52A1\u4E0D\u65AD\u58EE\u5927\u3002",
-    qs_title:"60 \u79D2\u5FEB\u901F\u5F00\u59CB",
-    qs_step1_title:"\u521D\u59CB\u5316",
-    qs_step2_title:"\u914D\u7F6E\uFF08\u53EF\u9009\uFF09",
-    qs_step2_desc:"VS Code \u7528\u6237\u81EA\u52A8\u914D\u7F6E\u3002\u5176\u4ED6\u5DE5\u5177\uFF1A\u6DFB\u52A0\u5230\u4F60\u7684 MCP \u5BA2\u6237\u7AEF\u914D\u7F6E\u5373\u53EF\u3002",
-    qs_step3_title:"\u7F16\u6392",
-    qs_docs_link:"\u5B8C\u6574\u6587\u6863 &rarr;",
-    eco_title:"\u517C\u5BB9\u6240\u6709\u5DE5\u5177",
-    eco_subtitle:"\u4EFB\u4F55 MCP \u517C\u5BB9\u7684 AI \u7F16\u7801\u5DE5\u5177\u3002\u65E0\u4F9B\u5E94\u5546\u9501\u5B9A\u3002",
-    eco_badge:"\u57FA\u4E8E Model Context Protocol \u6784\u5EFA",
-    footer_docs:"\u6587\u6863",
-    footer_arch:"\u67B6\u6784",
-    footer_license:"MIT \u8BB8\u53EF\u8BC1",
-    footer_tagline:"\u505C\u6B62\u63D0\u793A\u8BCD\u5DE5\u7A0B\u3002\u5F00\u59CB\u7F16\u6392\u3002",
-    svg_master:"\u4E3B\u63A7",
-    svg_agent:"\u667A\u80FD\u4F53",
-    svg_architect:"\u67B6\u6784\u5E08",
-    svg_design:"\u8BBE\u8BA1",
-    svg_developer:"\u5F00\u53D1\u8005",
-    svg_build:"\u6784\u5EFA",
-    svg_verify:"\u9A8C\u8BC1",
-    scroll_down:"\u4E0B\u6ED1"
-  }
-};
+const termText=`> megatron init
+🤖 Megatron Swarm — Initializing workspace...
+✅ Workspace initialized!
 
-var currentLang='en';
+> "Build a user authentication system"
 
-function setLang(lang){
-  currentLang=lang;
-  document.documentElement.lang=lang;
-  var dict=i18n[lang];
-  if(!dict)return;
+[Megatron] Analyzing request...
+[Megatron] Deploying agents:
+  → 🏗️ Architect: Designing auth module structure
+  → 👨‍💻 Developer: Implementing JWT + bcrypt
+  → 🧪 QA Engineer: Writing integration tests
+  → 📋 PM: Creating GitHub Issue #42
 
-  /* Update all data-i18n elements (textContent) */
-  document.querySelectorAll('[data-i18n]').forEach(function(el){
-    var key=el.getAttribute('data-i18n');
-    if(dict[key]!==undefined){
-      el.textContent=dict[key];
-    }
-  });
-
-  /* Update all data-i18n-html elements (innerHTML, for &rarr; etc.) */
-  document.querySelectorAll('[data-i18n-html]').forEach(function(el){
-    var key=el.getAttribute('data-i18n-html');
-    if(dict[key]!==undefined){
-      el.innerHTML=dict[key];
-    }
-  });
-
-  /* Update page title */
-  document.title=lang==='zh'
-    ?'Megatron AI \u2014 \u4F60\u7684 AI \u7F16\u7801\u5DE5\u5177\u7684\u64CD\u4F5C\u7CFB\u7EDF'
-    :'Megatron AI \u2014 Your AI coding tool\u2019s operating system';
-
-  /* Toggle button active state */
-  document.querySelectorAll('.lang-btn').forEach(function(btn){
-    var isActive=btn.getAttribute('data-lang')===lang;
-    btn.classList.toggle('active',isActive);
-    btn.setAttribute('aria-checked',isActive?'true':'false');
-  });
-}
-
-/* Language toggle click handler */
-(function(){
-  var toggle=document.getElementById('langToggle');
-  if(!toggle)return;
-  toggle.addEventListener('click',function(e){
-    var btn=e.target.closest('.lang-btn');
-    if(!btn)return;
-    var lang=btn.getAttribute('data-lang');
-    if(lang&&lang!==currentLang){
-      setLang(lang);
-    }
-  });
-})();
-
-/* IntersectionObserver for scroll-triggered animations */
-(function(){
-  var io=new IntersectionObserver(function(entries){
-    entries.forEach(function(e){
-      if(e.isIntersecting){
-        e.target.classList.add('visible');
-        io.unobserve(e.target);
-      }
-    });
-  },{threshold:0.15});
-  document.querySelectorAll('.animate-on-scroll').forEach(function(el){
-    io.observe(el);
-  });
-})();
-
-/* Copy-to-clipboard for install command */
-(function(){
-  var btn=document.getElementById('installCmd');
-  var tip=document.getElementById('copyTooltip');
-  if(!btn||!tip)return;
-  function doCopy(){
-    var cmd='npx -y github:cloga/megatron-ai init';
-    if(navigator.clipboard&&navigator.clipboard.writeText){
-      navigator.clipboard.writeText(cmd).then(function(){showTip('Copied!');}).catch(function(){showTip('Failed');});
-    }else{
-      var ta=document.createElement('textarea');
-      ta.value=cmd;ta.style.position='fixed';ta.style.opacity='0';
-      document.body.appendChild(ta);ta.select();
-      try{var ok=document.execCommand('copy');showTip(ok?'Copied!':'Failed');}catch(e){showTip('Failed');}
-      document.body.removeChild(ta);
-    }
-  }
-  function showTip(msg){
-    tip.textContent=msg;
-    tip.classList.add('show');
-    setTimeout(function(){tip.classList.remove('show');},1500);
-  }
-  btn.addEventListener('click',doCopy);
-  btn.addEventListener('keydown',function(e){
-    if(e.key==='Enter'||e.key===' '){e.preventDefault();doCopy();}
-  });
-})();
+[Megatron] All agents completed. PR #43 ready for review.`;
+const term=document.getElementById('terminal');
+const esc=s=>s.replace(/[&<>]/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[m]));
+(function type(i=0){term.innerHTML=esc(termText.slice(0,i))+'<span class="cursor"></span>';setTimeout(()=>i<termText.length?type(i+1):setTimeout(()=>type(0),2600),termText[i-1]=='\n'?90:24)})();
+async function copyText(text){try{await navigator.clipboard.writeText(text)}catch{const a=document.createElement('textarea');a.value=text;document.body.appendChild(a);a.select();document.execCommand('copy');a.remove()}}
+document.querySelectorAll('[data-copy],[data-copy-target]').forEach(btn=>{const label=btn.querySelector('.copy-label')||btn;const base=label.textContent;btn.addEventListener('click',async()=>{const text=btn.dataset.copy||document.getElementById(btn.dataset.copyTarget).innerText.trim();await copyText(text);label.textContent='Copied';setTimeout(()=>label.textContent=base,1200)})});
+(()=>{const c=document.getElementById('swarm'),hero=document.querySelector('.hero');if(!c||!hero)return;const x=c.getContext('2d');let w=0,h=0,d=1,nodes=[],rain=[];const glyphs='01#<>/AI';function size(){d=Math.min(devicePixelRatio||1,2);w=hero.clientWidth;h=hero.clientHeight;c.width=w*d;c.height=h*d;x.setTransform(d,0,0,d,0,0);nodes=Array.from({length:18},(_,i)=>({x:Math.random()*w,y:Math.random()*h*.92,r:i<4?3.7:2.2,vx:(Math.random()-.5)*.32,vy:(Math.random()-.5)*.32,a:.35+Math.random()*.4,hot:i<5}));rain=Array.from({length:52},()=>({x:Math.random()*w,y:Math.random()*h,vy:1+Math.random()*1.8,a:.04+Math.random()*.12,g:glyphs[(Math.random()*glyphs.length)|0]}))}function draw(){x.clearRect(0,0,w,h);x.font='12px Consolas,monospace';rain.forEach(r=>{x.fillStyle=`rgba(255,${60+(r.a*220|0)},${100+(r.a*80|0)},${r.a})`;x.fillText(r.g,r.x,r.y);r.y+=r.vy;if(r.y>h+20){r.y=-20;r.x=Math.random()*w;r.g=glyphs[(Math.random()*glyphs.length)|0]}});nodes.forEach(n=>{n.x+=n.vx;n.y+=n.vy;if(n.x<0||n.x>w)n.vx*=-1;if(n.y<0||n.y>h)n.vy*=-1});for(let i=0;i<nodes.length;i++)for(let j=i+1;j<nodes.length;j++){const a=nodes[i],b=nodes[j],dx=a.x-b.x,dy=a.y-b.y,dist=Math.hypot(dx,dy);if(dist<170){x.strokeStyle=`rgba(${a.hot?255:180},${a.hot?55:45},${a.hot?94:255},${.18-dist/1100})`;x.lineWidth=1;x.beginPath();x.moveTo(a.x,a.y);x.lineTo(b.x,b.y);x.stroke()}}nodes.forEach(n=>{const color=n.hot?'rgba(255,53,94,.95)':'rgba(142,43,255,.9)';x.beginPath();x.fillStyle=color;x.shadowBlur=n.hot?18:12;x.shadowColor=color;x.arc(n.x,n.y,n.r,0,7);x.fill()});x.shadowBlur=0;requestAnimationFrame(draw)}addEventListener('resize',size);size();draw()})();
 </script>
 </body>
 </html>
