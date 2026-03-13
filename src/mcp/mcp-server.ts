@@ -493,7 +493,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
 
   if (request.params.name === "check_task_status") {
     let { taskId, workspace_path } = request.params.arguments as any;
-    if (!taskId || !workspace_path) throw new Error("Missing taskId or workspace_path");
+    requireParams("check_task_status", request.params.arguments as any, ["taskId", "workspace_path"]);
     
     TaskManifestManager.reapStaleTasks(workspace_path); // Trigger reaper
     const manifest = TaskManifestManager.loadManifest(workspace_path);
@@ -594,9 +594,9 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
   
   if (request.params.name === "dispatch_council_async") {
     let { proposal_path, roles, workspace_path, role_descriptions } = request.params.arguments as any;
-    if (!proposal_path || !Array.isArray(roles) || !workspace_path) {
-        const missing = [!proposal_path && "proposal_path", !Array.isArray(roles) && "roles (must be array)", !workspace_path && "workspace_path"].filter(Boolean).join(", ");
-        throw new McpError(ErrorCode.InvalidParams, "dispatch_council_async: missing required parameter(s): " + missing);
+    requireParams("dispatch_council_async", request.params.arguments as any, ["proposal_path", "workspace_path"]);
+    if (!Array.isArray(roles) || roles.length === 0) {
+        throw new McpError(ErrorCode.InvalidParams, "Invalid arguments for dispatch_council_async: 'roles' must be a non-empty array of expert role names (e.g., ['security-expert', 'performance-tyrant'])");
     }
 
     // Input validation gateway — reject model names passed as council roles
@@ -653,8 +653,9 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
 
     let { proposal_path, roles, workspace_path, role_descriptions } = request.params.arguments as any;
 
-    if (!proposal_path || !Array.isArray(roles) || roles.length === 0) {
-      throw new McpError(ErrorCode.InvalidParams, "Invalid arguments: requires proposal_path and an array of roles");
+    requireParams("dispatch_council", request.params.arguments as any, ["proposal_path"]);
+    if (!Array.isArray(roles) || roles.length === 0) {
+      throw new McpError(ErrorCode.InvalidParams, "Invalid arguments for dispatch_council: 'roles' must be a non-empty array of expert role names (e.g., ['security-expert', 'performance-tyrant'])");
     }
 
     // Input validation gateway — reject model names passed as council roles
@@ -706,6 +707,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
     };
         } else if (request.params.name === "append_memory") {
       let { category, tags, content } = request.params.arguments as any;
+      requireParams("append_memory", request.params.arguments as any, ["category", "content"]);
       const workspacePath = process.env.OPTIMUS_WORKSPACE_ROOT || process.cwd();
       const memoryDir = path.resolve(workspacePath, '.optimus', 'memory');
       const memoryFile = path.join(memoryDir, 'continuous-memory.md');
@@ -766,9 +768,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
   } else if (request.params.name === "roster_check") {
 
     const { workspace_path } = request.params.arguments as any;
-    if (!workspace_path) {
-      throw new McpError(ErrorCode.InvalidParams, "Invalid arguments: requires workspace_path");
-    }
+    requireParams("roster_check", request.params.arguments as any, ["workspace_path"]);
 
     const t1Dir = path.join(workspace_path, ".optimus", "agents");
     
@@ -913,9 +913,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
     const parentIssueNumber = (request.params.arguments as any).parent_issue_number
         ?? (Number.isNaN(rawParentSync) ? undefined : rawParentSync);
 
-    if (!role || !task_description || !output_path) {
-      throw new McpError(ErrorCode.InvalidParams, "Invalid arguments: requires role, task_description, output_path");
-    }
+    requireParams("delegate_task", request.params.arguments as any, ["role", "task_description", "output_path"]);
 
     if (!workspace_path) {
        // fallback to project root based on output_path or cwd
@@ -959,9 +957,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
   } else if (request.params.name === "vcs_create_work_item") {
     const { title, body, labels, work_item_type, workspace_path,
             iteration_path, area_path, assigned_to, parent_id, priority, agent_role } = request.params.arguments as any;
-    if (!title || !body || !workspace_path) {
-      throw new McpError(ErrorCode.InvalidParams, "Invalid arguments: requires title, body, and workspace_path");
-    }
+    requireParams("vcs_create_work_item", request.params.arguments as any, ["title", "body", "workspace_path"]);
 
     try {
       const vcsProvider = await VcsProviderFactory.getProvider(workspace_path);
@@ -985,9 +981,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
     }
   } else if (request.params.name === "vcs_create_pr") {
     const { title, body, head, base, workspace_path, agent_role } = request.params.arguments as any;
-    if (!title || !body || !head || !base || !workspace_path) {
-      throw new McpError(ErrorCode.InvalidParams, "Invalid arguments: requires title, body, head, base, and workspace_path");
-    }
+    requireParams("vcs_create_pr", request.params.arguments as any, ["title", "body", "head", "base", "workspace_path"]);
 
     try {
       const vcsProvider = await VcsProviderFactory.getProvider(workspace_path);
@@ -1005,9 +999,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
     }
   } else if (request.params.name === "vcs_merge_pr") {
     const { pull_request_id, commit_title, merge_method, workspace_path } = request.params.arguments as any;
-    if (!pull_request_id || !workspace_path) {
-      throw new McpError(ErrorCode.InvalidParams, "Invalid arguments: requires pull_request_id and workspace_path");
-    }
+    requireParams("vcs_merge_pr", request.params.arguments as any, ["pull_request_id", "workspace_path"]);
 
     const PROTECTED_BRANCHES = ['master', 'main', 'develop', 'release'];
 
@@ -1110,9 +1102,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
     }
   } else if (request.params.name === "vcs_add_comment") {
     const { item_type, item_id, comment, workspace_path, agent_role } = request.params.arguments as any;
-    if (!item_type || !item_id || !comment || !workspace_path) {
-      throw new McpError(ErrorCode.InvalidParams, "Invalid arguments: requires item_type, item_id, comment, and workspace_path");
-    }
+    requireParams("vcs_add_comment", request.params.arguments as any, ["item_type", "item_id", "comment", "workspace_path"]);
 
     try {
       const vcsProvider = await VcsProviderFactory.getProvider(workspace_path);
@@ -1130,8 +1120,9 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
     }
   } else if (request.params.name === "write_blackboard_artifact") {
     const { artifact_path, content, workspace_path } = request.params.arguments as any;
-    if (!artifact_path || content === undefined || content === null || !workspace_path) {
-        throw new McpError(ErrorCode.InvalidParams, "Missing required parameters: artifact_path, content, workspace_path");
+    requireParams("write_blackboard_artifact", request.params.arguments as any, ["artifact_path", "workspace_path"]);
+    if (content === undefined || content === null) {
+        throw new McpError(ErrorCode.InvalidParams, "Invalid arguments for write_blackboard_artifact: 'content' must be provided (can be empty string, but not null/undefined)");
     }
 
     // Resolve target path: workspace/.optimus/<artifact_path>
@@ -1170,15 +1161,11 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
     }
   } else if (request.params.name === "hello") {
     const { name } = request.params.arguments as any;
-    if (!name) {
-      throw new McpError(ErrorCode.InvalidParams, "Missing required parameter: name");
-    }
+    requireParams("hello", request.params.arguments as any, ["name"]);
     return { content: [{ type: "text", text: `Hello, ${name}! Optimus Swarm is running.` }] };
   } else if (request.params.name === "quarantine_role") {
     const { role, action, workspace_path } = request.params.arguments as any;
-    if (!role || !action || !workspace_path) {
-      throw new McpError(ErrorCode.InvalidParams, "Missing required parameters: role, action, workspace_path");
-    }
+    requireParams("quarantine_role", request.params.arguments as any, ["role", "action", "workspace_path"]);
 
     const t2Dir = path.join(workspace_path, '.optimus', 'roles');
     const rolePath = path.join(t2Dir, `${role}.md`);
@@ -1226,7 +1213,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
 
   if (request.params.name === "register_meta_cron") {
     const { id, cron_expression, role, required_skills, capability_tier, concurrency_policy, max_actions, dry_run_remaining, workspace_path } = request.params.arguments as any;
-    if (!id || !cron_expression || !role || !workspace_path) throw new Error("Missing required fields: id, cron_expression, role, workspace_path");
+    requireParams("register_meta_cron", request.params.arguments as any, ["id", "cron_expression", "role", "workspace_path"]);
     if (process.env.OPTIMUS_CRON_TRIGGERED === 'true') {
       return { content: [{ type: "text", text: "Self-registration denied: cron-triggered agents cannot register new Meta-Cron entries." }] };
     }
@@ -1251,7 +1238,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
 
   if (request.params.name === "list_meta_crons") {
     const { workspace_path } = request.params.arguments as any;
-    if (!workspace_path) throw new Error("Missing workspace_path");
+    requireParams("list_meta_crons", request.params.arguments as any, ["workspace_path"]);
     const crontab = loadCrontab(workspace_path);
     if (!crontab || crontab.crons.length === 0) {
       return { content: [{ type: "text", text: "No Meta-Cron entries registered." }] };
@@ -1265,7 +1252,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
 
   if (request.params.name === "remove_meta_cron") {
     const { id, workspace_path } = request.params.arguments as any;
-    if (!id || !workspace_path) throw new Error("Missing required fields: id, workspace_path");
+    requireParams("remove_meta_cron", request.params.arguments as any, ["id", "workspace_path"]);
     const crontab = loadCrontab(workspace_path);
     if (!crontab) return { content: [{ type: "text", text: "No crontab found." }] };
     const idx = crontab.crons.findIndex((cr: any) => cr.id === id);

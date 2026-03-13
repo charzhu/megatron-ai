@@ -1446,6 +1446,15 @@ var AdoProvider_exports = {};
 __export(AdoProvider_exports, {
   AdoProvider: () => AdoProvider
 });
+function adoHttpRecoveryHint(status) {
+  const hints = {
+    401: "ADO PAT may be expired or invalid. Regenerate at dev.azure.com > User Settings > Personal Access Tokens.",
+    403: "Insufficient permissions. Verify the PAT has the required scopes (Code: Read&Write, Work Items: Read&Write).",
+    404: "Resource not found. Verify org/project/repo names in .optimus/config/vcs.json match your Azure DevOps setup.",
+    409: "Conflict detected. The resource may have been modified concurrently. Retry the operation."
+  };
+  return hints[status] || "Unexpected HTTP " + status + ". Check ADO service health at https://status.dev.azure.com.";
+}
 var AdoProvider;
 var init_AdoProvider = __esm({
   "../src/adapters/vcs/AdoProvider.ts"() {
@@ -1520,7 +1529,7 @@ var init_AdoProvider = __esm({
             }
           );
           if (!response.ok) {
-            throw new Error(`ADO API error: ${response.status} ${await response.text()}. Recovery: check ADO_PAT env var, verify organization/project in .optimus/config/vcs.json`);
+            throw new Error(`ADO API error: ${response.status} ${await response.text()}. Recovery hint: ${adoHttpRecoveryHint(response.status)}`);
           }
           const data = await response.json();
           return {
@@ -1578,7 +1587,7 @@ var init_AdoProvider = __esm({
             }
           );
           if (!response.ok) {
-            throw new Error(`ADO API error: ${response.status} ${await response.text()}. Recovery: check ADO_PAT env var, verify organization/project in .optimus/config/vcs.json`);
+            throw new Error(`ADO API error: ${response.status} ${await response.text()}. Recovery hint: ${adoHttpRecoveryHint(response.status)}`);
           }
           const data = await response.json();
           return {
@@ -1608,10 +1617,12 @@ var init_AdoProvider = __esm({
             }
           );
           if (!repoResponse.ok) {
+            console.error("[mergePullRequest] ADO repo-list request failed with status " + repoResponse.status + ". " + adoHttpRecoveryHint(repoResponse.status));
             return { merged: false };
           }
           const repos = await repoResponse.json();
           if (!repos.value || repos.value.length === 0) {
+            console.error("[mergePullRequest] No repositories found in project. Verify org/project in .optimus/config/vcs.json.");
             return { merged: false };
           }
           const repositoryId = repos.value[0].id;
@@ -1634,7 +1645,8 @@ var init_AdoProvider = __esm({
               headBranch = prData.sourceRefName?.replace("refs/heads/", "");
               baseBranch = prData.targetRefName?.replace("refs/heads/", "");
             }
-          } catch {
+          } catch (e) {
+            console.error("[mergePullRequest] Warning: failed to fetch PR branch names:", e.message);
           }
           const mergeData = {
             status: "completed",
@@ -1660,7 +1672,8 @@ var init_AdoProvider = __esm({
             }
           );
           return { merged: response.ok, headBranch, baseBranch };
-        } catch {
+        } catch (e) {
+          console.error("[mergePullRequest] Merge failed:", e.message);
           return { merged: false };
         }
       }
@@ -1686,7 +1699,7 @@ var init_AdoProvider = __esm({
               }
             );
             if (!response.ok) {
-              throw new Error(`ADO API error: ${response.status} ${await response.text()}. Recovery: check ADO_PAT env var, verify organization/project in .optimus/config/vcs.json`);
+              throw new Error(`ADO API error: ${response.status} ${await response.text()}. Recovery hint: ${adoHttpRecoveryHint(response.status)}`);
             }
             const data = await response.json();
             return {
@@ -1730,7 +1743,7 @@ var init_AdoProvider = __esm({
               }
             );
             if (!response.ok) {
-              throw new Error(`ADO API error: ${response.status} ${await response.text()}. Recovery: check ADO_PAT env var, verify organization/project in .optimus/config/vcs.json`);
+              throw new Error(`ADO API error: ${response.status} ${await response.text()}. Recovery hint: ${adoHttpRecoveryHint(response.status)}`);
             }
             const data = await response.json();
             return {
@@ -4586,6 +4599,15 @@ function validateRoleNotModelName(role) {
 }
 
 // ../src/mcp/mcp-server.ts
+function requireParams(toolName, params, required) {
+  const missing = required.filter((k2) => params[k2] == null || params[k2] === "");
+  if (missing.length > 0) {
+    throw new import_types2.McpError(
+      import_types2.ErrorCode.InvalidParams,
+      `Invalid arguments for ${toolName}: missing required parameter(s): ${missing.join(", ")}. Received keys: [${Object.keys(params).join(", ")}]`
+    );
+  }
+}
 function reloadEnv() {
   if (process.env.DOTENV_PATH) {
     import_dotenv.default.config({ path: import_path3.default.resolve(process.env.DOTENV_PATH), override: true });
@@ -5027,7 +5049,7 @@ server.setRequestHandler(import_types2.ListToolsRequestSchema, async () => {
 server.setRequestHandler(import_types2.CallToolRequestSchema, async (request) => {
   if (request.params.name === "check_task_status") {
     let { taskId, workspace_path } = request.params.arguments;
-    if (!taskId || !workspace_path) throw new Error("Missing taskId or workspace_path");
+    requireParams("check_task_status", request.params.arguments, ["taskId", "workspace_path"]);
     TaskManifestManager.reapStaleTasks(workspace_path);
     const manifest = TaskManifestManager.loadManifest(workspace_path);
     const task = manifest[taskId];
@@ -5086,10 +5108,7 @@ Error: ${task.error_message}`;
   }
   if (request.params.name === "delegate_task_async") {
     let { role, role_description, role_engine, role_model, task_description, output_path, workspace_path, context_files, required_skills } = request.params.arguments;
-    if (!role || !task_description || !output_path || !workspace_path) {
-      const missing = [!role && "role", !task_description && "task_description", !output_path && "output_path", !workspace_path && "workspace_path"].filter(Boolean).join(", ");
-      throw new import_types2.McpError(import_types2.ErrorCode.InvalidParams, "delegate_task_async: missing required parameter(s): " + missing);
-    }
+    requireParams("delegate_task_async", request.params.arguments, ["role", "task_description", "output_path", "workspace_path"]);
     validateRoleNotModelName(role);
     validateEngineAndModel(role_engine, role_model, workspace_path);
     const rawParentAsync = process.env.OPTIMUS_PARENT_ISSUE ? parseInt(process.env.OPTIMUS_PARENT_ISSUE, 10) : void 0;
@@ -5154,9 +5173,9 @@ Use check_task_status tool periodically with this task ID to check its completio
   }
   if (request.params.name === "dispatch_council_async") {
     let { proposal_path, roles, workspace_path, role_descriptions: role_descriptions2 } = request.params.arguments;
-    if (!proposal_path || !Array.isArray(roles) || !workspace_path) {
-      const missing = [!proposal_path && "proposal_path", !Array.isArray(roles) && "roles (must be array)", !workspace_path && "workspace_path"].filter(Boolean).join(", ");
-      throw new import_types2.McpError(import_types2.ErrorCode.InvalidParams, "dispatch_council_async: missing required parameter(s): " + missing);
+    requireParams("dispatch_council_async", request.params.arguments, ["proposal_path", "workspace_path"]);
+    if (!Array.isArray(roles) || roles.length === 0) {
+      throw new import_types2.McpError(import_types2.ErrorCode.InvalidParams, "Invalid arguments for dispatch_council_async: 'roles' must be a non-empty array of expert role names (e.g., ['security-expert', 'performance-tyrant'])");
     }
     const modelAsRole = roles.find((r) => looksLikeModelName(r));
     if (modelAsRole) {
@@ -5219,8 +5238,9 @@ Use check_task_status tool periodically with this Council ID to check completion
   }
   if (request.params.name === "dispatch_council") {
     let { proposal_path, roles, workspace_path, role_descriptions: role_descriptions2 } = request.params.arguments;
-    if (!proposal_path || !Array.isArray(roles) || roles.length === 0) {
-      throw new import_types2.McpError(import_types2.ErrorCode.InvalidParams, "Invalid arguments: requires proposal_path and an array of roles");
+    requireParams("dispatch_council", request.params.arguments, ["proposal_path"]);
+    if (!Array.isArray(roles) || roles.length === 0) {
+      throw new import_types2.McpError(import_types2.ErrorCode.InvalidParams, "Invalid arguments for dispatch_council: 'roles' must be a non-empty array of expert role names (e.g., ['security-expert', 'performance-tyrant'])");
     }
     const modelAsRoleSync = roles.find((r) => looksLikeModelName(r));
     if (modelAsRoleSync) {
@@ -5261,6 +5281,7 @@ Please read these review files to continue.`
     };
   } else if (request.params.name === "append_memory") {
     let { category, tags, content } = request.params.arguments;
+    requireParams("append_memory", request.params.arguments, ["category", "content"]);
     const workspacePath = process.env.OPTIMUS_WORKSPACE_ROOT || process.cwd();
     const memoryDir = import_path3.default.resolve(workspacePath, ".optimus", "memory");
     const memoryFile = import_path3.default.join(memoryDir, "continuous-memory.md");
@@ -5312,9 +5333,7 @@ Memory appended to: ${memoryFile}`
     }
   } else if (request.params.name === "roster_check") {
     const { workspace_path } = request.params.arguments;
-    if (!workspace_path) {
-      throw new import_types2.McpError(import_types2.ErrorCode.InvalidParams, "Invalid arguments: requires workspace_path");
-    }
+    requireParams("roster_check", request.params.arguments, ["workspace_path"]);
     const t1Dir = import_path3.default.join(workspace_path, ".optimus", "agents");
     const t2Dir = import_path3.default.join(workspace_path, ".optimus", "roles");
     if (!import_fs3.default.existsSync(t2Dir)) {
@@ -5453,9 +5472,7 @@ Memory appended to: ${memoryFile}`
     let workspace_path = request.params.arguments.workspace_path;
     const rawParentSync = process.env.OPTIMUS_PARENT_ISSUE ? parseInt(process.env.OPTIMUS_PARENT_ISSUE, 10) : void 0;
     const parentIssueNumber = request.params.arguments.parent_issue_number ?? (Number.isNaN(rawParentSync) ? void 0 : rawParentSync);
-    if (!role || !task_description || !output_path) {
-      throw new import_types2.McpError(import_types2.ErrorCode.InvalidParams, "Invalid arguments: requires role, task_description, output_path");
-    }
+    requireParams("delegate_task", request.params.arguments, ["role", "task_description", "output_path"]);
     if (!workspace_path) {
       workspace_path = process.cwd();
       if (output_path.includes("optimus-code")) {
@@ -5493,9 +5510,7 @@ Memory appended to: ${memoryFile}`
       priority,
       agent_role
     } = request.params.arguments;
-    if (!title || !body || !workspace_path) {
-      throw new import_types2.McpError(import_types2.ErrorCode.InvalidParams, "Invalid arguments: requires title, body, and workspace_path");
-    }
+    requireParams("vcs_create_work_item", request.params.arguments, ["title", "body", "workspace_path"]);
     try {
       const vcsProvider = await VcsProviderFactory.getProvider(workspace_path);
       const finalBody = agent_role ? body + agentSignature(agent_role) : body;
@@ -5522,9 +5537,7 @@ Memory appended to: ${memoryFile}`
     }
   } else if (request.params.name === "vcs_create_pr") {
     const { title, body, head, base, workspace_path, agent_role } = request.params.arguments;
-    if (!title || !body || !head || !base || !workspace_path) {
-      throw new import_types2.McpError(import_types2.ErrorCode.InvalidParams, "Invalid arguments: requires title, body, head, base, and workspace_path");
-    }
+    requireParams("vcs_create_pr", request.params.arguments, ["title", "body", "head", "base", "workspace_path"]);
     try {
       const vcsProvider = await VcsProviderFactory.getProvider(workspace_path);
       const finalBody = agent_role ? body + agentSignature(agent_role) : body;
@@ -5545,9 +5558,7 @@ Memory appended to: ${memoryFile}`
     }
   } else if (request.params.name === "vcs_merge_pr") {
     const { pull_request_id, commit_title, merge_method, workspace_path } = request.params.arguments;
-    if (!pull_request_id || !workspace_path) {
-      throw new import_types2.McpError(import_types2.ErrorCode.InvalidParams, "Invalid arguments: requires pull_request_id and workspace_path");
-    }
+    requireParams("vcs_merge_pr", request.params.arguments, ["pull_request_id", "workspace_path"]);
     const PROTECTED_BRANCHES = ["master", "main", "develop", "release"];
     try {
       const vcsProvider = await VcsProviderFactory.getProvider(workspace_path);
@@ -5637,9 +5648,7 @@ Fix the build errors and try again.`
     }
   } else if (request.params.name === "vcs_add_comment") {
     const { item_type, item_id, comment, workspace_path, agent_role } = request.params.arguments;
-    if (!item_type || !item_id || !comment || !workspace_path) {
-      throw new import_types2.McpError(import_types2.ErrorCode.InvalidParams, "Invalid arguments: requires item_type, item_id, comment, and workspace_path");
-    }
+    requireParams("vcs_add_comment", request.params.arguments, ["item_type", "item_id", "comment", "workspace_path"]);
     try {
       const vcsProvider = await VcsProviderFactory.getProvider(workspace_path);
       const finalComment = agent_role ? comment + agentSignature(agent_role) : comment;
@@ -5658,8 +5667,9 @@ Fix the build errors and try again.`
     }
   } else if (request.params.name === "write_blackboard_artifact") {
     const { artifact_path, content, workspace_path } = request.params.arguments;
-    if (!artifact_path || content === void 0 || content === null || !workspace_path) {
-      throw new import_types2.McpError(import_types2.ErrorCode.InvalidParams, "Missing required parameters: artifact_path, content, workspace_path");
+    requireParams("write_blackboard_artifact", request.params.arguments, ["artifact_path", "workspace_path"]);
+    if (content === void 0 || content === null) {
+      throw new import_types2.McpError(import_types2.ErrorCode.InvalidParams, "Invalid arguments for write_blackboard_artifact: 'content' must be provided (can be empty string, but not null/undefined)");
     }
     const optimusRoot = import_path3.default.resolve(workspace_path, ".optimus");
     const resolvedTarget = import_path3.default.resolve(optimusRoot, artifact_path);
@@ -5687,15 +5697,11 @@ Fix the build errors and try again.`
     }
   } else if (request.params.name === "hello") {
     const { name } = request.params.arguments;
-    if (!name) {
-      throw new import_types2.McpError(import_types2.ErrorCode.InvalidParams, "Missing required parameter: name");
-    }
+    requireParams("hello", request.params.arguments, ["name"]);
     return { content: [{ type: "text", text: `Hello, ${name}! Optimus Swarm is running.` }] };
   } else if (request.params.name === "quarantine_role") {
     const { role, action, workspace_path } = request.params.arguments;
-    if (!role || !action || !workspace_path) {
-      throw new import_types2.McpError(import_types2.ErrorCode.InvalidParams, "Missing required parameters: role, action, workspace_path");
-    }
+    requireParams("quarantine_role", request.params.arguments, ["role", "action", "workspace_path"]);
     const t2Dir = import_path3.default.join(workspace_path, ".optimus", "roles");
     const rolePath = import_path3.default.join(t2Dir, `${role}.md`);
     if (!import_fs3.default.existsSync(rolePath)) {
@@ -5732,7 +5738,7 @@ Fix the build errors and try again.`
   }
   if (request.params.name === "register_meta_cron") {
     const { id, cron_expression, role, required_skills, capability_tier, concurrency_policy, max_actions, dry_run_remaining, workspace_path } = request.params.arguments;
-    if (!id || !cron_expression || !role || !workspace_path) throw new Error("Missing required fields: id, cron_expression, role, workspace_path");
+    requireParams("register_meta_cron", request.params.arguments, ["id", "cron_expression", "role", "workspace_path"]);
     if (process.env.OPTIMUS_CRON_TRIGGERED === "true") {
       return { content: [{ type: "text", text: "Self-registration denied: cron-triggered agents cannot register new Meta-Cron entries." }] };
     }
@@ -5761,7 +5767,7 @@ Fix the build errors and try again.`
   }
   if (request.params.name === "list_meta_crons") {
     const { workspace_path } = request.params.arguments;
-    if (!workspace_path) throw new Error("Missing workspace_path");
+    requireParams("list_meta_crons", request.params.arguments, ["workspace_path"]);
     const crontab = loadCrontab(workspace_path);
     if (!crontab || crontab.crons.length === 0) {
       return { content: [{ type: "text", text: "No Meta-Cron entries registered." }] };
@@ -5778,7 +5784,7 @@ Max concurrent: ${crontab.max_concurrent}`;
   }
   if (request.params.name === "remove_meta_cron") {
     const { id, workspace_path } = request.params.arguments;
-    if (!id || !workspace_path) throw new Error("Missing required fields: id, workspace_path");
+    requireParams("remove_meta_cron", request.params.arguments, ["id", "workspace_path"]);
     const crontab = loadCrontab(workspace_path);
     if (!crontab) return { content: [{ type: "text", text: "No crontab found." }] };
     const idx = crontab.crons.findIndex((cr) => cr.id === id);
