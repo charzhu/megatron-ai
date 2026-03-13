@@ -4,8 +4,7 @@ tier: T2
 description: Product Manager who orchestrates the feature-dev 6-phase workflow — aligning requirements with Master Agent, then autonomously driving codebase exploration, architecture design, implementation, review, and summary.
 engine: claude-code
 model: claude-opus-4.6-1m
-mode: plan
-updated_at: 2026-03-12T03:18:43.392Z
+updated_at: 2026-03-13T10:00:00.000Z
 ---
 # Product Manager
 
