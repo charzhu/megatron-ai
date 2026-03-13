@@ -5247,7 +5247,6 @@ Error: ${task.error_message}`;
       required_skills,
       delegation_depth: parseInt(process.env.OPTIMUS_DELEGATION_DEPTH || "0", 10),
       parent_issue_number: parentIssueNumber,
-      role_descriptions: role_descriptions || void 0,
       agent_id: agent_id || void 0
     });
     let issueInfo = "";
@@ -5292,7 +5291,7 @@ ${truncDesc}` + agentSignature(role, taskId),
 Use check_task_status tool periodically with this task ID to check its completion.` }] };
   }
   if (request.params.name === "dispatch_council_async") {
-    let { proposal_path, roles, workspace_path, role_descriptions: role_descriptions2 } = request.params.arguments;
+    let { proposal_path, roles, workspace_path, role_descriptions } = request.params.arguments;
     requireParams("dispatch_council_async", request.params.arguments, ["proposal_path", "workspace_path"]);
     if (!Array.isArray(roles) || roles.length === 0) {
       throw new import_types2.McpError(import_types2.ErrorCode.InvalidParams, "Invalid arguments for dispatch_council_async: 'roles' must be a non-empty array of expert role names (e.g., ['security-expert', 'performance-tyrant'])");
@@ -5358,7 +5357,7 @@ Use check_task_status tool periodically with this task ID to check its completio
 Use check_task_status tool periodically with this Council ID to check completion.` }] };
   }
   if (request.params.name === "dispatch_council") {
-    let { proposal_path, roles, workspace_path, role_descriptions: role_descriptions2 } = request.params.arguments;
+    let { proposal_path, roles, workspace_path, role_descriptions } = request.params.arguments;
     requireParams("dispatch_council", request.params.arguments, ["proposal_path"]);
     if (!Array.isArray(roles) || roles.length === 0) {
       throw new import_types2.McpError(import_types2.ErrorCode.InvalidParams, "Invalid arguments for dispatch_council: 'roles' must be a non-empty array of expert role names (e.g., ['security-expert', 'performance-tyrant'])");
@@ -5384,7 +5383,7 @@ Use check_task_status tool periodically with this Council ID to check completion
     const reviewsPath = import_path4.default.join(workspacePath, ".optimus", "reviews", timestampId.toString());
     import_fs4.default.mkdirSync(reviewsPath, { recursive: true });
     console.error(`[MCP] Dispatching council with roles: ${roles.join(", ")}`);
-    const results = await dispatchCouncilConcurrent(roles, proposal_path, reviewsPath, timestampId.toString(), workspacePath, void 0, parentIssueNumber, role_descriptions2);
+    const results = await dispatchCouncilConcurrent(roles, proposal_path, reviewsPath, timestampId.toString(), workspacePath, void 0, parentIssueNumber, role_descriptions);
     return {
       content: [
         {

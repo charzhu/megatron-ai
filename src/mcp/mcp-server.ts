@@ -574,7 +574,6 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
         role_description, role_engine, role_model, required_skills,
         delegation_depth: parseInt(process.env.OPTIMUS_DELEGATION_DEPTH || '0', 10),
         parent_issue_number: parentIssueNumber,
-        role_descriptions: role_descriptions || undefined,
         agent_id: agent_id || undefined
     });
 
