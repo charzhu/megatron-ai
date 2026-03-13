@@ -1,18 +1,18 @@
 <div align="center">
-  <h1>Optimus Code</h1>
+  <h1>Megatron AI</h1>
   <p><b>Universal Multi-Agent Orchestrator for any MCP-compatible AI coding tool.</b></p>
 
   [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
   [![Framework: Model Context Protocol](https://img.shields.io/badge/MCP-Native-brightgreen.svg)](#)
 
-  [Landing Page](https://cloga.github.io/optimus-code/) · [Architecture Whitepaper](docs/ARCHITECTURE.md)
+  [Landing Page](https://cloga.github.io/megatron-ai/) · [Architecture Whitepaper](docs/ARCHITECTURE.md)
 </div>
 
 ---
 
-## What is Optimus Code?
+## What is Megatron AI?
 
-Optimus Code is a **Multi-Agent Orchestration Engine** built on the [Model Context Protocol (MCP)](https://modelcontextprotocol.io). It works with **any MCP-compatible client** — VS Code (GitHub Copilot), Cursor, Windsurf, Claude Code, Goose, Roo Cline, and more.
+Megatron AI is a **Multi-Agent Orchestration Engine** built on the [Model Context Protocol (MCP)](https://modelcontextprotocol.io). It works with **any MCP-compatible client** — VS Code (GitHub Copilot), Cursor, Windsurf, Claude Code, Goose, Roo Cline, and more.
 
 It transforms a single AI assistant into a coordinated swarm of specialized agents (Architect, PM, QA, Dev…) that can collaborate, debate, and execute complex software engineering tasks.
 
@@ -27,14 +27,14 @@ It transforms a single AI assistant into a coordinated swarm of specialized agen
 ### Step 1: Initialize workspace
 
 ```bash
-npx -y github:cloga/optimus-code init
+npx -y github:cloga/megatron-ai init
 ```
 
-This creates a `.optimus/` folder with agent definitions, skills, and config in the current directory. It also auto-generates `.vscode/mcp.json` for VS Code / GitHub Copilot users.
+This creates a `.megatron/` folder with agent definitions, skills, and config in the current directory. It also auto-generates `.vscode/mcp.json` for VS Code / GitHub Copilot users.
 
 ### Step 2: (Optional) Configure MCP for non-VS-Code clients
 
-> **VS Code / GitHub Copilot users:** Skip this step. `optimus init` already configured your MCP server in `.vscode/mcp.json`.
+> **VS Code / GitHub Copilot users:** Skip this step. `megatron init` already configured your MCP server in `.vscode/mcp.json`.
 
 For Cursor, Windsurf, Claude Code, or other MCP clients, configure manually:
 
@@ -45,9 +45,9 @@ Create or edit `.cursor/mcp.json` (or equivalent) in the project root:
 ```json
 {
   "mcpServers": {
-    "optimus-swarm": {
+    "megatron-swarm": {
       "command": "npx",
-      "args": ["-y", "github:cloga/optimus-code", "serve"],
+      "args": ["-y", "github:cloga/megatron-ai", "serve"],
       "type": "stdio"
     }
   }
@@ -57,7 +57,7 @@ Create or edit `.cursor/mcp.json` (or equivalent) in the project root:
 #### Claude Code
 
 ```bash
-claude mcp add optimus-swarm -- npx -y github:cloga/optimus-code serve
+claude mcp add megatron-swarm -- npx -y github:cloga/megatron-ai serve
 ```
 
 #### Any other MCP client
@@ -66,9 +66,9 @@ Use these values in your client's MCP server configuration:
 
 | Field | Value |
 |---|---|
-| **name** | `optimus-swarm` |
+| **name** | `megatron-swarm` |
 | **command** | `npx` |
-| **args** | `["-y", "github:cloga/optimus-code", "serve"]` |
+| **args** | `["-y", "github:cloga/megatron-ai", "serve"]` |
 | **transport** | `stdio` |
 
 ### Upgrading an existing workspace
@@ -76,10 +76,10 @@ Use these values in your client's MCP server configuration:
 If you've previously initialized and want to update to the latest skills, roles, and config:
 
 ```bash
-npx -y github:cloga/optimus-code upgrade
+npx -y github:cloga/megatron-ai upgrade
 ```
 
-This force-updates skills, roles, and config from the latest release while preserving your agents (`.optimus/agents/`), runtime data (`.optimus/state/`), and memory.
+This force-updates skills, roles, and config from the latest release while preserving your agents (`.megatron/agents/`), runtime data (`.megatron/state/`), and memory.
 
 ### Step 3: (Optional) Enable GitHub integration
 
@@ -93,7 +93,7 @@ This enables automated Issue tracking and PR creation via the built-in PM agent.
 
 ### Step 3b: (Optional) Enable Azure DevOps integration
 
-Create `.optimus/config/vcs.json`:
+Create `.megatron/config/vcs.json`:
 
 ```json
 {
@@ -107,7 +107,7 @@ Create `.optimus/config/vcs.json`:
       "area_path": "Project\\Team\\Area",
       "iteration_path": "Project\\Sprint 1",
       "assigned_to": "user@example.com",
-      "auto_tags": ["created-by:optimus-code"]
+      "auto_tags": ["created-by:megatron-ai"]
     }
   }
 }
@@ -158,10 +158,10 @@ Once the server is running, your AI assistant gains these tools:
 ### v0.3.0 Highlights
 
 - **Plan Mode** — Orchestrator roles (PM, Architect) run with `mode: plan`, cannot write source code, and must delegate implementation to dev roles.
-- **Delegation Depth Control** — Maximum 3 layers of nested agent delegation, tracked via `OPTIMUS_DELEGATION_DEPTH` to prevent infinite recursion.
-- **Issue Lineage Tracking** — `OPTIMUS_PARENT_ISSUE` is automatically injected into child agent processes, maintaining parent-child relationships across GitHub Issues.
-- **`write_blackboard_artifact` Tool** — Allows plan-mode agents to write proposals, requirements, and reports to `.optimus/` without source code write access.
-- **`optimus upgrade` Command** — Safe incremental upgrade that refreshes skills, roles, and config while preserving user agents and runtime data.
+- **Delegation Depth Control** — Maximum 3 layers of nested agent delegation, tracked via `MEGATRON_DELEGATION_DEPTH` to prevent infinite recursion.
+- **Issue Lineage Tracking** — `MEGATRON_PARENT_ISSUE` is automatically injected into child agent processes, maintaining parent-child relationships across GitHub Issues.
+- **`write_blackboard_artifact` Tool** — Allows plan-mode agents to write proposals, requirements, and reports to `.megatron/` without source code write access.
+- **`megatron upgrade` Command** — Safe incremental upgrade that refreshes skills, roles, and config while preserving user agents and runtime data.
 - **Enhanced ADO Work Items** — `vcs_create_work_item` supports `area_path`, `iteration_path`, `assigned_to`, `parent_id`, `priority` with `vcs.json` defaults, Markdown→HTML conversion, and auto-tagging.
 - **Engine/Model Validation** — Engine and model names are validated against `available-agents.json` before being persisted to role templates.
 - **Auto-Skill Genesis** — Skills are auto-generated after successful T3 role execution.
@@ -190,8 +190,8 @@ User request → Master Agent
 | Tier | Location | What It Is | Created By |
 |------|----------|-----------|------------|
 | **T3** | *(ephemeral)* | Zero-shot dynamic worker, no file | Master Agent names it |
-| **T2** | `.optimus/roles/<name>.md` | Role template with engine/model binding | Auto-precipitated on first use, Master can evolve it |
-| **T1** | `.optimus/agents/<name>.md` | Frozen instance snapshot + session state | Auto-created when task completes with session_id |
+| **T2** | `.megatron/roles/<name>.md` | Role template with engine/model binding | Auto-precipitated on first use, Master can evolve it |
+| **T1** | `.megatron/agents/<name>.md` | Frozen instance snapshot + session state | Auto-created when task completes with session_id |
 
 **Key invariants:**
 - T2 ≥ T1 (every agent instance has a role template)
@@ -224,27 +224,27 @@ If `required_skills` is specified, the system verifies all skills exist before e
 
 ### Hybrid SDLC
 
-- **Local AI Blackboard**: Agents use `.optimus/` markdown files for drafting, debating, and long-term memory.
-- **GitHub Integration**: All Issues/PRs auto-tagged with `[Optimus]` prefix and `optimus-bot` label for traceability.
+- **Local AI Blackboard**: Agents use `.megatron/` markdown files for drafting, debating, and long-term memory.
+- **GitHub Integration**: All Issues/PRs auto-tagged with `[Megatron]` prefix and `megatron-bot` label for traceability.
 
 ---
 
 ## Alternative: Global Install
 
 ```bash
-npm install -g github:cloga/optimus-code
-optimus init
-optimus serve
+npm install -g github:cloga/megatron-ai
+megatron init
+megatron serve
 ```
 
 ## CLI Reference
 
 ```
-optimus init        Bootstrap .optimus/ workspace in current directory
-optimus serve       Start MCP server (stdio transport)
-optimus upgrade     Update skills, roles, and config to latest version (preserves agents and runtime data)
-optimus version     Print version
-optimus help        Show help
+megatron init        Bootstrap .megatron/ workspace in current directory
+megatron serve       Start MCP server (stdio transport)
+megatron upgrade     Update skills, roles, and config to latest version (preserves agents and runtime data)
+megatron version     Print version
+megatron help        Show help
 ```
 
 ---

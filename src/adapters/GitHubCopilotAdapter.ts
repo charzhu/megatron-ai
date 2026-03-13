@@ -76,7 +76,7 @@ export class GitHubCopilotAdapter extends PersistentAgentAdapter {
 
     /**
      * Strip GITHUB_TOKEN and GH_TOKEN from the spawn environment.
-     * Copilot CLI treats these as auth inputs, but in Optimus they contain
+     * Copilot CLI treats these as auth inputs, but in Megatron they contain
      * a generic GitHub PAT (from .env) for VCS operations — not a Copilot token.
      * This shadowing breaks Copilot's own keyring-based authentication.
      * Only forward if COPILOT_GITHUB_TOKEN is explicitly set.

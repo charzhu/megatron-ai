@@ -10,11 +10,11 @@
 - Inject auto-created issue ID into agent prompt to prevent duplicates (#166)
 - Implement agent retirement, quarantine and T1 GC (#161)
 - Role-skill decoupling, enhance roster_check (#163)
-- Ensure optimus-bot label on all auto-created issues (#153)
+- Ensure megatron-bot label on all auto-created issues (#153)
 - Auto-delete source branch after PR merge (#150)
 
 ### Fixes
-- Preserve user config during optimus upgrade (#175)
+- Preserve user config during megatron upgrade (#175)
 - Prevent async council tasks from getting stuck in running state (#64)
 
 ### Improvements
@@ -27,12 +27,12 @@
 ## [0.3.0] — 2026-03-12
 
 ### Features
-- **Delegation Depth Control** — `MAX_DELEGATION_DEPTH = 3` prevents infinite agent recursion. Tracked via `OPTIMUS_DELEGATION_DEPTH` env var.
+- **Delegation Depth Control** — `MAX_DELEGATION_DEPTH = 3` prevents infinite agent recursion. Tracked via `MEGATRON_DELEGATION_DEPTH` env var.
 - **Plan Mode for Orchestrators** — `mode: plan` strips write permissions from PM/orchestrator roles, forcing delegation instead of direct coding.
-- **`write_blackboard_artifact` MCP Tool** — Allows plan-mode agents to write exclusively to `.optimus/` directory with symlink-safe path validation.
-- **Issue Lineage Tracking** — `OPTIMUS_PARENT_ISSUE` env var injected into child agents, enabling GitHub Issue parent-child tree visualization.
-- **`optimus upgrade` CLI Command** — Safe incremental upgrade that force-updates skills/roles/config while preserving user agents and runtime data.
-- **Enhanced ADO `vcs_create_work_item`** — New params (`area_path`, `iteration_path`, `assigned_to`, `parent_id`, `priority`), `vcs.json` defaults section, auto-tag `created-by:optimus-code`, Markdown→HTML body conversion.
+- **`write_blackboard_artifact` MCP Tool** — Allows plan-mode agents to write exclusively to `.megatron/` directory with symlink-safe path validation.
+- **Issue Lineage Tracking** — `MEGATRON_PARENT_ISSUE` env var injected into child agents, enabling GitHub Issue parent-child tree visualization.
+- **`megatron upgrade` CLI Command** — Safe incremental upgrade that force-updates skills/roles/config while preserving user agents and runtime data.
+- **Enhanced ADO `vcs_create_work_item`** — New params (`area_path`, `iteration_path`, `assigned_to`, `parent_id`, `priority`), `vcs.json` defaults section, auto-tag `created-by:megatron-ai`, Markdown→HTML body conversion.
 - **Auto-Skill Genesis** — Auto-generate `SKILL.md` after successful T3 precipitation so new roles are born with operational playbooks.
 - **Rich T3→T2 Precipitation via `agent-creator`** — Replace thin `fs.writeFileSync` templates with full `agent-creator` invocation for professional-grade role definitions.
 - **Engine/Model Validation** — Validate engine and model names against `available-agents.json` before writing to T2 frontmatter, preventing invalid engine corruption.
@@ -47,8 +47,8 @@
 ## [Unreleased]
 
 ### Self-Evolving Agent System (T3→T2→T1 Complete Lifecycle)
-- **T3→T2 Immediate Precipitation**: First-time T3 role usage auto-creates a T2 role template in `.optimus/roles/`. No threshold — instant on first delegation.
-- **T2→T1 Session Instantiation**: When a task completes and returns a session_id, the system auto-creates a T1 agent instance in `.optimus/agents/` from the T2 template. T1 is frozen after creation.
+- **T3→T2 Immediate Precipitation**: First-time T3 role usage auto-creates a T2 role template in `.megatron/roles/`. No threshold — instant on first delegation.
+- **T2→T1 Session Instantiation**: When a task completes and returns a session_id, the system auto-creates a T1 agent instance in `.megatron/agents/` from the T2 template. T1 is frozen after creation.
 - **Master-Driven T2 Evolution**: Master Agent can update T2 templates with new `role_description`, `role_engine`, `role_model` via `delegate_task` params. T1 instances are never retroactively modified.
 - **Structured `delegate_task` Params**: Added `role_description`, `role_engine`, `role_model`, `required_skills` fields. Master Agent provides all T2 info — no more guessing.
 - **Engine/Model Fallback Chain**: Master override → frontmatter → `available-agents.json` → `claude-code` hardcoded fallback.
@@ -61,17 +61,17 @@
 
 ### Infrastructure
 - **DOTENV_PATH via `mcp.json` env mount**: Replaces hardcoded `.env` path. Users can point to any env file.
-- **Auto-generate `.vscode/mcp.json`**: `optimus init` creates or merges MCP config for VS Code/Copilot users.
-- **`[Optimus]` Auto-Tagging**: All Issues/PRs created via MCP tools get `[Optimus]` prefix and `optimus-bot` label.
-- **Zero-Config Scaffold**: `optimus init` ships no pre-built roles/agents. System bootstraps at runtime.
-- **Inject-Only Instruction Bridging**: `optimus init` appends reference to existing `CLAUDE.md`/`copilot-instructions.md` but never creates new ones.
+- **Auto-generate `.vscode/mcp.json`**: `megatron init` creates or merges MCP config for VS Code/Copilot users.
+- **`[Megatron]` Auto-Tagging**: All Issues/PRs created via MCP tools get `[Megatron]` prefix and `megatron-bot` label.
+- **Zero-Config Scaffold**: `megatron init` ships no pre-built roles/agents. System bootstraps at runtime.
+- **Inject-Only Instruction Bridging**: `megatron init` appends reference to existing `CLAUDE.md`/`copilot-instructions.md` but never creates new ones.
 - **Windows CRLF Fix**: `parseFrontmatter` normalizes `\r\n` for cross-platform compatibility.
 - **Path Traversal Prevention**: `sanitizeRoleName()` strips dangerous characters from role names.
 - **T3 Log File Mutex**: Prevents concurrent write corruption on `t3-usage-log.json`.
 - **`windowsHide: true`**: Background child processes no longer pop up terminal windows.
 
 ### Removed
-- Lazy-sync of built-in roles to user projects (was polluting `.optimus/roles/` with phantom T2 files)
+- Lazy-sync of built-in roles to user projects (was polluting `.megatron/roles/` with phantom T2 files)
 - Instruction bridging that copied full `system-instructions.md` content into `CLAUDE.md`
 - Threshold-based precipitation (was 3 invocations + 80% success rate, now immediate)
 
@@ -109,7 +109,7 @@
 - **Image Paste Support**: Users can paste images into the prompt bar; images are saved to global storage and their paths are injected into the prompt.
 - **Apply Code Block**: Executor output code blocks can be applied directly to workspace files via a one-click button.
 - **Task Resume / Rename / Delete / Pin**: Full task lifecycle management from the history panel.
-- **Debug Mode**: Optional `optimusCode.debugMode` setting surfaces per-adapter command, cwd, pid, and token usage in the UI.
+- **Debug Mode**: Optional `megatronCode.debugMode` setting surfaces per-adapter command, cwd, pid, and token usage in the UI.
 - **Code Quality Fixes**: Replaced inline ANSI regex with shared `ANSI_RE` utility; extracted `_buildDebugObject` helper to eliminate duplicate debug-info construction; fixed `ReturnType<...>[0]` type annotations to use `AgentAdapter`; removed TOCTOU race in image storage; capped history view at 20 turns; added random suffix to image filenames to prevent collisions.
 
 ## [0.0.3] - 2026-03-07

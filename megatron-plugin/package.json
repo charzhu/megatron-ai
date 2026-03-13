@@ -1,0 +1,46 @@
+{
+  "name": "@cloga/megatron-swarm-mcp",
+  "version": "0.4.0",
+  "description": "Megatron Swarm Orchestrator — a universal multi-agent MCP plugin",
+  "main": "dist/mcp-server.js",
+  "bin": {
+    "megatron": "./bin/cli.js"
+  },
+  "type": "commonjs",
+  "scripts": {
+    "build": "node esbuild.plugin.js",
+    "build:production": "node esbuild.plugin.js --production",
+    "prepublishOnly": "npm run build:production",
+    "postinstall": "node scripts/postinstall.js",
+    "prepare": "npm run build:production"
+  },
+  "files": [
+    "dist/",
+    "bin/",
+    "roles/",
+    "agents/",
+    "skills/",
+    "scaffold/",
+    "scripts/postinstall.js",
+    ".mcp.json",
+    ".claude-plugin/"
+  ],
+  "keywords": [
+    "mcp",
+    "multi-agent",
+    "swarm",
+    "orchestrator",
+    "ai-agents"
+  ],
+  "license": "MIT",
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.27.1",
+    "dotenv": "^16.4.5",
+    "iconv-lite": "^0.6.3",
+    "strip-ansi": "^7.2.0"
+  },
+  "devDependencies": {
+    "esbuild": "^0.25.0",
+    "typescript": "^5.8.2"
+  }
+}

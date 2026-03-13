@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * MCP Server: Optimus Agents
+ * MCP Server: Megatron Agents
  *
  * Exposes both Claude CLI and Copilot CLI as MCP tools.
  *
@@ -20,7 +20,7 @@ import * as cp from "child_process";
 // ---------------------------------------------------------------------------
 
 function getWorkspaceRoot(): string {
-    return process.env.OPTIMUS_WORKSPACE || process.cwd();
+    return process.env.MEGATRON_WORKSPACE || process.cwd();
 }
 
 function stripAnsi(text: string): string {
@@ -157,7 +157,7 @@ function makeError(error: string, output?: string) {
 // MCP Server
 // ---------------------------------------------------------------------------
 
-const server = new McpServer({ name: "optimus-agents", version: "1.1.0" });
+const server = new McpServer({ name: "megatron-agents", version: "1.1.0" });
 
 // ── Claude Code ──────────────────────────────────────────────────────────
 
@@ -265,7 +265,7 @@ server.tool(
 async function main() {
     const transport = new StdioServerTransport();
     await server.connect(transport);
-    console.error("Optimus Agents MCP server running (claude + copilot)");
+    console.error("Megatron Agents MCP server running (claude + copilot)");
 }
 
 main().catch((err) => {

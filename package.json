@@ -1,12 +1,12 @@
 {
-  "name": "optimus-code",
-  "displayName": "Optimus Code",
+  "name": "megatron-ai",
+  "displayName": "Megatron AI",
   "description": "The Ultimate Multi-Agent Orchestrator",
   "version": "0.4.0",
   "publisher": "Trinity-Alpha",
   "repository": {
     "type": "git",
-    "url": "https://github.com/cloga/optimus-code.git"
+    "url": "https://github.com/cloga/megatron-ai.git"
   },
   "scripts": {
     "compile": "tsc --noEmit",
@@ -16,7 +16,7 @@
     "pretest": "npm run compile && npm run lint",
     "lint": "eslint src --ext ts",
     "test": "node ./out/test/runTest.js",
-    "prepare": "cd optimus-plugin && npm install && npm run build:production"
+    "prepare": "cd megatron-plugin && npm install && npm run build:production"
   },
   "devDependencies": {
     "@types/marked": "^5.0.2",
@@ -35,8 +35,8 @@
     "node-fetch": "^3.3.2",
     "strip-ansi": "^7.2.0"
   },
-  "main": "optimus-plugin/dist/mcp-server.js",
+  "main": "megatron-plugin/dist/mcp-server.js",
   "bin": {
-    "optimus": "./optimus-plugin/bin/cli.js"
+    "megatron": "./megatron-plugin/bin/cli.js"
   }
 }

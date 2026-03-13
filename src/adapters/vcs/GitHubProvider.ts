@@ -27,11 +27,11 @@ export class GitHubProvider implements IVcsProvider {
             throw new Error('GitHub token not found in environment variables');
         }
 
-        // Auto-tag: prefix title and ensure optimus-bot label
-        const taggedTitle = title.startsWith('[Optimus]') ? title : `[Optimus] ${title}`;
+        // Auto-tag: prefix title and ensure megatron-bot label
+        const taggedTitle = title.startsWith('[Megatron]') ? title : `[Megatron] ${title}`;
         const issueLabels = Array.isArray(labels) ? [...labels] : [];
-        if (!issueLabels.includes('optimus-bot')) {
-            issueLabels.push('optimus-bot');
+        if (!issueLabels.includes('megatron-bot')) {
+            issueLabels.push('megatron-bot');
         }
 
         try {
@@ -41,7 +41,7 @@ export class GitHubProvider implements IVcsProvider {
                     'Authorization': `Bearer ${token}`,
                     'Accept': 'application/vnd.github.v3+json',
                     'Content-Type': 'application/json',
-                    'User-Agent': 'Optimus-Agent'
+                    'User-Agent': 'Megatron-Agent'
                 },
                 body: JSON.stringify({
                     title: taggedTitle,
@@ -79,7 +79,7 @@ export class GitHubProvider implements IVcsProvider {
         }
 
         // Auto-tag: prefix PR title
-        const taggedTitle = title.startsWith('[Optimus]') ? title : `[Optimus] ${title}`;
+        const taggedTitle = title.startsWith('[Megatron]') ? title : `[Megatron] ${title}`;
 
         try {
             const response = await fetch(`https://api.github.com/repos/${this.owner}/${this.repo}/pulls`, {
@@ -88,7 +88,7 @@ export class GitHubProvider implements IVcsProvider {
                     'Authorization': `Bearer ${token}`,
                     'Accept': 'application/vnd.github.v3+json',
                     'Content-Type': 'application/json',
-                    'User-Agent': 'Optimus-Agent'
+                    'User-Agent': 'Megatron-Agent'
                 },
                 body: JSON.stringify({
                     title: taggedTitle,
@@ -104,7 +104,7 @@ export class GitHubProvider implements IVcsProvider {
 
             const data = await response.json() as any;
 
-            // Auto-label: add optimus-bot label to the PR (best effort)
+            // Auto-label: add megatron-bot label to the PR (best effort)
             try {
                 await fetch(`https://api.github.com/repos/${this.owner}/${this.repo}/issues/${data.number}/labels`, {
                     method: 'POST',
@@ -112,9 +112,9 @@ export class GitHubProvider implements IVcsProvider {
                         'Authorization': `Bearer ${token}`,
                         'Accept': 'application/vnd.github.v3+json',
                         'Content-Type': 'application/json',
-                        'User-Agent': 'Optimus-Agent'
+                        'User-Agent': 'Megatron-Agent'
                     },
-                    body: JSON.stringify({ labels: ['optimus-bot'] })
+                    body: JSON.stringify({ labels: ['megatron-bot'] })
                 });
             } catch {
                 // Label is best-effort, don't fail the PR creation
@@ -150,7 +150,7 @@ export class GitHubProvider implements IVcsProvider {
                 headers: {
                     'Authorization': `Bearer ${token}`,
                     'Accept': 'application/vnd.github.v3+json',
-                    'User-Agent': 'Optimus-Agent'
+                    'User-Agent': 'Megatron-Agent'
                 }
             });
 
@@ -174,7 +174,7 @@ export class GitHubProvider implements IVcsProvider {
                     'Authorization': `Bearer ${token}`,
                     'Accept': 'application/vnd.github.v3+json',
                     'Content-Type': 'application/json',
-                    'User-Agent': 'Optimus-Agent'
+                    'User-Agent': 'Megatron-Agent'
                 },
                 body: JSON.stringify(payload)
             });
@@ -191,7 +191,7 @@ export class GitHubProvider implements IVcsProvider {
                         headers: {
                             'Authorization': `Bearer ${token}`,
                             'Accept': 'application/vnd.github.v3+json',
-                            'User-Agent': 'Optimus-Agent'
+                            'User-Agent': 'Megatron-Agent'
                         }
                     });
                 } catch {
@@ -225,7 +225,7 @@ export class GitHubProvider implements IVcsProvider {
                     'Authorization': `Bearer ${token}`,
                     'Accept': 'application/vnd.github.v3+json',
                     'Content-Type': 'application/json',
-                    'User-Agent': 'Optimus-Agent'
+                    'User-Agent': 'Megatron-Agent'
                 },
                 body: JSON.stringify({ body: comment })
             });
@@ -270,7 +270,7 @@ export class GitHubProvider implements IVcsProvider {
                     headers: {
                         'Authorization': `Bearer ${token}`,
                         'Accept': 'application/vnd.github.v3+json',
-                        'User-Agent': 'Optimus-Agent'
+                        'User-Agent': 'Megatron-Agent'
                     }
                 });
 

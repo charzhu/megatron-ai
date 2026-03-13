@@ -1,0 +1,16 @@
+{
+  "mcpServers": {
+    "megatron-swarm": {
+      "type": "stdio",
+      "command": "node",
+      "args": [
+        "c:/Users/lochen/megatron-ai/megatron-plugin/dist/mcp-server.js"
+      ],
+      "env": {
+        "MEGATRON_WORKSPACE_ROOT": "c:/Users/lochen/megatron-ai",
+        "DOTENV_PATH": "c:/Users/lochen/megatron-ai/.env",
+        "PATH": "${env:PATH}"
+      }
+    }
+  }
+}

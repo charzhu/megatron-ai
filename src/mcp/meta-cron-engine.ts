@@ -81,7 +81,7 @@ function matchesCronExpression(expression: string, now: Date): boolean {
 // ─── Lock File Management ───
 
 function getLockDir(workspacePath: string): string {
-    return path.join(workspacePath, '.optimus', 'system', 'cron-locks');
+    return path.join(workspacePath, '.megatron', 'system', 'cron-locks');
 }
 
 function getLockPath(workspacePath: string, id: string): string {
@@ -128,7 +128,7 @@ export function deleteLock(workspacePath: string, id: string): void {
 // ─── Crontab File I/O ───
 
 function getCrontabPath(workspacePath: string): string {
-    return path.join(workspacePath, '.optimus', 'system', 'meta-crontab.json');
+    return path.join(workspacePath, '.megatron', 'system', 'meta-crontab.json');
 }
 
 export function loadCrontab(workspacePath: string): CrontabData | null {
@@ -209,13 +209,13 @@ export class MetaCronEngine {
             }
             if (mutated) saveCrontab(this.workspacePath, crontab);
         } catch (e: any) {
-            console.error(`[Meta-Cron] Tick error during crontab evaluation: ${e.message}. Check .optimus/system/meta-crontab.json for syntax errors.`);
+            console.error(`[Meta-Cron] Tick error during crontab evaluation: ${e.message}. Check .megatron/system/meta-crontab.json for syntax errors.`);
         }
     }
 
     private static fire(entry: CronEntry, _crontab: CrontabData): void {
         if (!createLock(this.workspacePath, entry.id)) {
-            console.error(`[Meta-Cron] Failed to create lock for '${entry.id}'. Check permissions on .optimus/system/cron-locks/ directory.`);
+            console.error(`[Meta-Cron] Failed to create lock for '${entry.id}'. Check permissions on .megatron/system/cron-locks/ directory.`);
             return;
         }
         entry.last_run = new Date().toISOString();
@@ -236,7 +236,7 @@ export class MetaCronEngine {
             type: 'delegate_task' as const,
             role: entry.role,
             task_description: taskDescription,
-            output_path: `.optimus/reports/cron-${entry.id}-${new Date().toISOString().slice(0, 10)}.md`,
+            output_path: `.megatron/reports/cron-${entry.id}-${new Date().toISOString().slice(0, 10)}.md`,
             workspacePath: this.workspacePath,
             required_skills: entry.required_skills,
             delegation_depth: 0,
@@ -247,7 +247,7 @@ export class MetaCronEngine {
             '--run-task', taskId, this.workspacePath
         ], {
             detached: true, stdio: 'ignore', windowsHide: true,
-            env: { ...process.env, OPTIMUS_DELEGATION_DEPTH: '0', OPTIMUS_CRON_TRIGGERED: 'true' }
+            env: { ...process.env, MEGATRON_DELEGATION_DEPTH: '0', MEGATRON_CRON_TRIGGERED: 'true' }
         });
         child.unref();
 

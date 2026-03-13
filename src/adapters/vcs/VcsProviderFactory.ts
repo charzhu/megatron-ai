@@ -103,7 +103,7 @@ export class VcsProviderFactory {
     }
 
     private static getConfigPath(workspacePath: string): string {
-        return path.join(workspacePath, '.optimus', 'config', 'vcs.json');
+        return path.join(workspacePath, '.megatron', 'config', 'vcs.json');
     }
 
     private static loadConfig(workspacePath: string): VcsConfig {
@@ -176,7 +176,7 @@ export class VcsProviderFactory {
         } catch (error: any) {
             throw new Error(
                 'Failed to auto-detect GitHub info: git not found in PATH or not a git repository. ' +
-                'Set "owner" and "repo" explicitly in .optimus/config/vcs.json'
+                'Set "owner" and "repo" explicitly in .megatron/config/vcs.json'
             );
         }
     }
@@ -220,7 +220,7 @@ export class VcsProviderFactory {
         } catch (error: any) {
             throw new Error(
                 'Failed to auto-detect Azure DevOps info: git not found in PATH or not a git repository. ' +
-                'Set "organization" and "project" explicitly in .optimus/config/vcs.json'
+                'Set "organization" and "project" explicitly in .megatron/config/vcs.json'
             );
         }
     }

@@ -73,7 +73,7 @@ export class ClaudeCodeAdapter extends PersistentAgentAdapter {
                 const localMcp = JSON.parse(mcpContent);
                 // Normalize "servers" -> "mcpServers" for Claude
                 const claudeMcp = { mcpServers: localMcp.servers || localMcp.mcpServers || {} };
-                const proxyMcpPath = path.join(cwd, '.optimus', '.claude-mcp.json');
+                const proxyMcpPath = path.join(cwd, '.megatron', '.claude-mcp.json');
                 fs.mkdirSync(path.dirname(proxyMcpPath), { recursive: true });
                 fs.writeFileSync(proxyMcpPath, JSON.stringify(claudeMcp, null, 2));
                 args.push('--mcp-config', proxyMcpPath);

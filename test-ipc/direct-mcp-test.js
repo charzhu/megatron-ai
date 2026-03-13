@@ -4,7 +4,7 @@ import { StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js"
 async function main() {
     const transport = new StdioClientTransport({
         command: "node",
-        args: ["out/mcp/optimus-agents.js"]
+        args: ["out/mcp/megatron-agents.js"]
     });
 
     const client = new Client({

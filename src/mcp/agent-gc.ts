@@ -3,11 +3,11 @@ import * as path from 'path';
 
 /**
  * Garbage-collect stale T1 agent instances.
- * Scans .optimus/agents/*.md, deletes files where last_invoked > maxAgeDays
+ * Scans .megatron/agents/*.md, deletes files where last_invoked > maxAgeDays
  * or last_invoked is missing. Skips files with `persistent: true`.
  */
 export function cleanStaleAgents(workspacePath: string, maxAgeDays: number = 7): void {
-    const agentsDir = path.join(workspacePath, '.optimus', 'agents');
+    const agentsDir = path.join(workspacePath, '.megatron', 'agents');
     if (!fs.existsSync(agentsDir)) return;
 
     const files = fs.readdirSync(agentsDir).filter(f => f.endsWith('.md'));

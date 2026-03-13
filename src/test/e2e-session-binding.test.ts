@@ -7,7 +7,7 @@ import fs from 'fs';
 import path from 'path';
 
 const WORKSPACE = process.cwd();
-const PM_PATH = path.join(WORKSPACE, '.optimus', 'agents', 'pm.md');
+const PM_PATH = path.join(WORKSPACE, '.megatron', 'agents', 'pm.md');
 
 console.log('=== E2E Test: Native Session ID Binding via MCP ===\n');
 console.log('Workspace:', WORKSPACE);
@@ -31,10 +31,10 @@ console.log('\nClaude CLI found:', whereResult.stdout.trim().split('\n')[0]);
 
 // Spawn MCP server
 const serverProcess = spawn('node', [
-    path.join(WORKSPACE, 'optimus-plugin', 'dist', 'mcp-server.js')
+    path.join(WORKSPACE, 'megatron-plugin', 'dist', 'mcp-server.js')
 ], {
     cwd: WORKSPACE,
-    env: { ...process.env, OPTIMUS_WORKSPACE: WORKSPACE },
+    env: { ...process.env, MEGATRON_WORKSPACE: WORKSPACE },
     stdio: ['pipe', 'pipe', 'pipe']
 });
 
@@ -82,7 +82,7 @@ function handleResponse(response: any) {
                 arguments: {
                     role: 'pm',
                     task_description: 'Say exactly this: "QA test complete. Session binding verified." Nothing else.',
-                    output_path: path.join(WORKSPACE, '.optimus', 'results', 'qa-session-test.md'),
+                    output_path: path.join(WORKSPACE, '.megatron', 'results', 'qa-session-test.md'),
                     workspace_path: WORKSPACE
                 }
             }

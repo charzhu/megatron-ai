@@ -1,0 +1,5 @@
+# .megatron directories
+.megatron/reports/
+.megatron/reviews/
+.megatron/state/
+.megatron/memory/

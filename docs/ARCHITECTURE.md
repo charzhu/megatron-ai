@@ -1,4 +1,4 @@
-# Optimus Code — Architecture Whitepaper
+# Megatron AI — Architecture Whitepaper
 
 > A self-evolving multi-agent orchestration engine built on the Model Context Protocol.
 
@@ -9,7 +9,7 @@
 1. [Executive Summary](#1-executive-summary)
 2. [The Great Unification](#2-the-great-unification)
 3. [Self-Evolving Agent Lifecycle (T3→T2→T1)](#3-self-evolving-agent-lifecycle-t3t2t1)
-4. [The Spartan Swarm Protocol](#4-the-spartan-swarm-protocol)
+4. [The Megatron Swarm Protocol](#4-the-megatron-swarm-protocol)
 5. [Council Pattern (Map-Reduce)](#5-council-pattern-map-reduce)
 6. [Skills System](#6-skills-system)
 7. [Plan Mode & Separation of Concerns](#7-plan-mode--separation-of-concerns)
@@ -22,9 +22,9 @@
 
 ## 1. Executive Summary
 
-Optimus Code is a **multi-agent orchestration engine** that transforms any MCP-compatible AI coding tool into a coordinated development team. It works with VS Code (GitHub Copilot), Cursor, Windsurf, Claude Code, Goose, Roo Cline, and any other client that speaks the [Model Context Protocol](https://modelcontextprotocol.io).
+Megatron AI is a **multi-agent orchestration engine** that transforms any MCP-compatible AI coding tool into a coordinated development team. It works with VS Code (GitHub Copilot), Cursor, Windsurf, Claude Code, Goose, Roo Cline, and any other client that speaks the [Model Context Protocol](https://modelcontextprotocol.io).
 
-Rather than relying on a single AI assistant to handle every task — planning, coding, reviewing, testing — Optimus decomposes work across specialized agent roles: Product Manager, Architect, Developer, QA Engineer, and more. These agents are not preconfigured. They emerge dynamically as the system encounters new task types, evolve their role definitions through use, and accumulate project memory across sessions.
+Rather than relying on a single AI assistant to handle every task — planning, coding, reviewing, testing — Megatron decomposes work across specialized agent roles: Product Manager, Architect, Developer, QA Engineer, and more. These agents are not preconfigured. They emerge dynamically as the system encounters new task types, evolve their role definitions through use, and accumulate project memory across sessions.
 
 The result is a system where:
 
@@ -33,7 +33,7 @@ The result is a system where:
 - **Parallel expert councils** debate architectural decisions using a map-reduce pattern before any code is written.
 - **Project memory** ensures past mistakes and decisions persist, so the team improves with every task.
 
-Optimus is 100% editor-agnostic — a pure Node.js MCP daemon with no VS Code extension dependency.
+Megatron is 100% editor-agnostic — a pure Node.js MCP daemon with no VS Code extension dependency.
 
 ---
 
@@ -45,7 +45,7 @@ Traditional AI coding assistants are tightly coupled to a specific editor. Their
 
 ### Architecture Decision: Pure Node.js MCP Daemon
 
-Optimus Code follows a **"Great Unification" architecture**. The MCP Server (`optimus-plugin/dist/mcp-server.js`) is a standalone Node.js daemon that communicates via stdio transport. It has zero dependency on any editor's extension API.
+Megatron AI follows a **"Great Unification" architecture**. The MCP Server (`megatron-plugin/dist/mcp-server.js`) is a standalone Node.js daemon that communicates via stdio transport. It has zero dependency on any editor's extension API.
 
 ```
 ┌──────────────────────────────────────────────┐
@@ -53,7 +53,7 @@ Optimus Code follows a **"Great Unification" architecture**. The MCP Server (`op
 └──────────────────────┬───────────────────────┘
                        │ stdio (JSON-RPC)
 ┌──────────────────────▼───────────────────────┐
-│           Optimus MCP Server                 │
+│           Megatron MCP Server                 │
 │  ┌─────────┬──────────┬───────────────────┐  │
 │  │ Managers │ Adapters │ MCP Tool Handlers │  │
 │  └─────────┴──────────┴───────────────────┘  │
@@ -64,8 +64,8 @@ Optimus Code follows a **"Great Unification" architecture**. The MCP Server (`op
 **Key constraints enforced in the codebase:**
 
 - The `src/adapters/`, `src/mcp/`, and `src/managers/` directories must remain 100% environment-agnostic. No `vscode` namespace imports are permitted.
-- All agent artifacts (reports, tasks, memory, reviews) are stored in the `.optimus/` directory — never as loose files in the repository root.
-- The server is started with `npx -y github:cloga/optimus-code serve` and configured once — every MCP client connects to the same daemon.
+- All agent artifacts (reports, tasks, memory, reviews) are stored in the `.megatron/` directory — never as loose files in the repository root.
+- The server is started with `npx -y github:cloga/megatron-ai serve` and configured once — every MCP client connects to the same daemon.
 
 ### Dual-Codebase Structure
 
@@ -73,8 +73,8 @@ The repository itself contains two intertwined codebases:
 
 | Layer | Path | Purpose |
 |-------|------|---------|
-| **Host project** | Root (`src/`, `docs/`, `.optimus/`) | Optimus's own development workspace |
-| **Plugin package** | `optimus-plugin/` | The npm-publishable MCP server that ships to end-users |
+| **Host project** | Root (`src/`, `docs/`, `.megatron/`) | Megatron's own development workspace |
+| **Plugin package** | `megatron-plugin/` | The npm-publishable MCP server that ships to end-users |
 
 Changes to system instructions, skills, or config must be evaluated for propagation to the plugin scaffold. T1 agent instances, state files, and reports never ship in the plugin.
 
@@ -82,15 +82,15 @@ Changes to system instructions, skills, or config must be evaluated for propagat
 
 ## 3. Self-Evolving Agent Lifecycle (T3→T2→T1)
 
-Optimus uses a three-tier agent hierarchy that evolves automatically. No roles are pre-installed — the system starts empty and grows organically through use.
+Megatron uses a three-tier agent hierarchy that evolves automatically. No roles are pre-installed — the system starts empty and grows organically through use.
 
 ### The Three Tiers
 
 | Tier | Storage | Description | Created By |
 |------|---------|-------------|------------|
 | **T3** (Ephemeral) | In-memory only | Zero-shot dynamic worker with no persistent file. The Master Agent invents a descriptive role name (e.g., `security-auditor`) and the engine generates a worker on the fly. | Master Agent names it at delegation time |
-| **T2** (Template) | `.optimus/roles/<name>.md` | Role template with persona instructions, engine/model binding, and behavioral constraints. Created automatically on first T3 use — "precipitation". | Auto-precipitated from T3; Master Agent evolves it |
-| **T1** (Instance) | `.optimus/agents/<name>_<hash>.md` | Frozen snapshot of a T2 role after a completed task, including the session ID for context continuity. | Auto-created when a task completes with a session_id |
+| **T2** (Template) | `.megatron/roles/<name>.md` | Role template with persona instructions, engine/model binding, and behavioral constraints. Created automatically on first T3 use — "precipitation". | Auto-precipitated from T3; Master Agent evolves it |
+| **T1** (Instance) | `.megatron/agents/<name>_<hash>.md` | Frozen snapshot of a T2 role after a completed task, including the session ID for context continuity. | Auto-created when a task completes with a session_id |
 
 ### Lifecycle Flow
 
@@ -98,9 +98,9 @@ Optimus uses a three-tier agent hierarchy that evolves automatically. No roles a
 First delegation (T3):
   Master invents role name → worker-spawner creates ephemeral agent
       ↓
-  Task completes → T2 role template auto-created in .optimus/roles/
+  Task completes → T2 role template auto-created in .megatron/roles/
       ↓
-  Session ID captured → T1 instance created in .optimus/agents/
+  Session ID captured → T1 instance created in .megatron/agents/
       ↓
 Next delegation (T1 reuse):
   Master provides agent_id → system resumes the T1 session
@@ -121,9 +121,9 @@ T1 garbage collection removes stale instance files that haven't been referenced 
 
 ---
 
-## 4. The Spartan Swarm Protocol
+## 4. The Megatron Swarm Protocol
 
-The Spartan Swarm Protocol defines how the Master Agent discovers, selects, and dispatches work to specialized agents.
+The Megatron Swarm Protocol defines how the Master Agent discovers, selects, and dispatches work to specialized agents.
 
 ### The Delegation Pipeline
 
@@ -181,21 +181,21 @@ The Master Agent must **physically invoke** the `delegate_task` MCP tool when de
 
 ## 5. Council Pattern (Map-Reduce)
 
-When a decision requires multiple expert perspectives — architectural reviews, security audits, design evaluations — Optimus uses the **Council Pattern**.
+When a decision requires multiple expert perspectives — architectural reviews, security audits, design evaluations — Megatron uses the **Council Pattern**.
 
 ### How It Works
 
-1. **Proposal**: The orchestrator writes a proposal document to `.optimus/proposals/PROPOSAL_<topic>.md`.
+1. **Proposal**: The orchestrator writes a proposal document to `.megatron/proposals/PROPOSAL_<topic>.md`.
 2. **Dispatch**: `dispatch_council` (or `dispatch_council_async`) spawns multiple expert agents in parallel, each reviewing the same proposal from their specialized perspective.
-3. **Map phase**: Each council member writes an independent review to `.optimus/reviews/<council_id>/<role>.md`.
+3. **Map phase**: Each council member writes an independent review to `.megatron/reviews/<council_id>/<role>.md`.
 4. **Reduce phase**: The system generates a `COUNCIL_SYNTHESIS.md` that aggregates findings, identifies consensus, and surfaces conflicts.
-5. **Arbitration**: The orchestrator reads the synthesis. If no blockers exist, implementation proceeds. If fatal conflicts exist, a `.optimus/CONFLICTS.md` is created for resolution.
+5. **Arbitration**: The orchestrator reads the synthesis. If no blockers exist, implementation proceeds. If fatal conflicts exist, a `.megatron/CONFLICTS.md` is created for resolution.
 
 ### Example: Architecture Review Council
 
 ```
 dispatch_council({
-  proposal_path: ".optimus/proposals/PROPOSAL_auth_refactor.md",
+  proposal_path: ".megatron/proposals/PROPOSAL_auth_refactor.md",
   roles: ["security-expert", "performance-expert", "code-architect"]
 })
 ```
@@ -212,10 +212,10 @@ Councils are inherently async. `dispatch_council_async` returns immediately with
 
 ### Role vs. Skill Architecture
 
-Optimus decouples **identity** from **capability**:
+Megatron decouples **identity** from **capability**:
 
-- **Role** = WHO does the work (identity, constraints, permissions) — stored in `.optimus/roles/`
-- **Skill** = HOW to do the work (operational SOP, workflow steps, tool usage) — stored in `.optimus/skills/`
+- **Role** = WHO does the work (identity, constraints, permissions) — stored in `.megatron/roles/`
+- **Skill** = HOW to do the work (operational SOP, workflow steps, tool usage) — stored in `.megatron/skills/`
 
 Roles and Skills have a **many-to-many relationship**, bound at runtime via the `required_skills` parameter in `delegate_task`. A single role (e.g., `senior-full-stack-builder`) can be equipped with different skill combinations for different tasks.
 
@@ -223,7 +223,7 @@ Roles and Skills have a **many-to-many relationship**, bound at runtime via the 
 
 ### Skill Pre-Flight
 
-When `required_skills` is specified in a delegation, the system verifies that every skill file exists at `.optimus/skills/<name>/SKILL.md` before the agent process is spawned. Missing skills cause an immediate rejection with an actionable error — the Master must create them first.
+When `required_skills` is specified in a delegation, the system verifies that every skill file exists at `.megatron/skills/<name>/SKILL.md` before the agent process is spawned. Missing skills cause an immediate rejection with an actionable error — the Master must create them first.
 
 This pre-flight prevents agents from receiving tasks they aren't equipped to handle.
 
@@ -260,16 +260,16 @@ Without guardrails, orchestrator agents (PM, Architect) tend to write code thems
 
 Orchestrator roles run with **`mode: plan`** in their role definition. In plan mode:
 
-- The agent **cannot write to source code files**. File write operations are restricted to the `.optimus/` directory via the `write_blackboard_artifact` MCP tool.
+- The agent **cannot write to source code files**. File write operations are restricted to the `.megatron/` directory via the `write_blackboard_artifact` MCP tool.
 - The agent **must delegate** implementation work to developer roles (e.g., `senior-full-stack-builder`).
 - The agent can create proposals, requirements documents, task breakdowns, and review reports — but not code.
 
 ### write_blackboard_artifact
 
-This MCP tool allows plan-mode agents to write files exclusively to `.optimus/`. It enforces two layers of path validation:
+This MCP tool allows plan-mode agents to write files exclusively to `.megatron/`. It enforces two layers of path validation:
 
-1. **Lexical check**: `startsWith(optimusRoot + path.sep)` prevents `..` traversal and sibling directory escapes.
-2. **Symlink check**: `fs.realpathSync()` on the resolved path prefix prevents symlink-based escapes to directories outside `.optimus/`.
+1. **Lexical check**: `startsWith(megatronRoot + path.sep)` prevents `..` traversal and sibling directory escapes.
+2. **Symlink check**: `fs.realpathSync()` on the resolved path prefix prevents symlink-based escapes to directories outside `.megatron/`.
 
 Content validation uses `=== undefined || === null` (not `!content`) to allow legitimate empty-string writes.
 
@@ -281,7 +281,7 @@ Plan mode is a behavioral constraint enforced through the role template and skil
 
 ## 8. Issue-First SDLC
 
-All code changes in Optimus follow the **"Issue First" protocol**. No code is written without a tracked work item.
+All code changes in Megatron follow the **"Issue First" protocol**. No code is written without a tracked work item.
 
 ### The Complete Workflow
 
@@ -296,15 +296,15 @@ All code changes in Optimus follow the **"Issue First" protocol**. No code is wr
 
 ### Issue Lineage Tracking
 
-When an agent creates a GitHub Issue and then delegates sub-tasks, it passes its own Issue number as `parent_issue_number` to all subsequent `delegate_task` and `dispatch_council` calls. The system automatically injects `OPTIMUS_PARENT_ISSUE` into child agent processes, maintaining a parent-child tree across all Issues in a workflow.
+When an agent creates a GitHub Issue and then delegates sub-tasks, it passes its own Issue number as `parent_issue_number` to all subsequent `delegate_task` and `dispatch_council` calls. The system automatically injects `MEGATRON_PARENT_ISSUE` into child agent processes, maintaining a parent-child tree across all Issues in a workflow.
 
 This enables full traceability: from a high-level epic down to individual sub-task PRs.
 
 ### Auto-Tagging
 
 All Issues and PRs created via MCP tools are automatically tagged with:
-- `[Optimus]` prefix in the title
-- `optimus-bot` label for filtering
+- `[Megatron]` prefix in the title
+- `megatron-bot` label for filtering
 
 ### Protected Branch Rule
 
@@ -315,7 +315,7 @@ Direct `git push` to master/main is prohibited. All changes must go through PR m
 
 ### VCS Abstraction
 
-The `vcs_*` MCP tools provide a unified abstraction over GitHub and Azure DevOps. The same workflow works regardless of which platform hosts the repository. Configuration is stored in `.optimus/config/vcs.json`.
+The `vcs_*` MCP tools provide a unified abstraction over GitHub and Azure DevOps. The same workflow works regardless of which platform hosts the repository. Configuration is stored in `.megatron/config/vcs.json`.
 
 ---
 
@@ -323,7 +323,7 @@ The `vcs_*` MCP tools provide a unified abstraction over GitHub and Azure DevOps
 
 ### Continuous Memory
 
-Optimus maintains a **project memory** at `.optimus/memory/continuous-memory.md`. This is a structured append-only log of verified lessons, architectural decisions, bug postmortems, and workflow improvements.
+Megatron maintains a **project memory** at `.megatron/memory/continuous-memory.md`. This is a structured append-only log of verified lessons, architectural decisions, bug postmortems, and workflow improvements.
 
 Memory entries are created via the `append_memory` MCP tool with categorized metadata:
 
@@ -331,7 +331,7 @@ Memory entries are created via the `append_memory` MCP tool with categorized met
 {
   category: "bug-postmortem",
   tags: ["upgrade", "config-wipe", "vcs.json"],
-  content: "optimus upgrade force-overwrote vcs.json..."
+  content: "megatron upgrade force-overwrote vcs.json..."
 }
 ```
 
@@ -361,7 +361,7 @@ The Universal Reflection Protocol defines a progression:
 
 ### Meta-Cron Engine
 
-Optimus includes a **Meta-Cron** system for scheduled autonomous agent operations. Cron entries are registered via `register_meta_cron` with standard 5-field cron expressions.
+Megatron includes a **Meta-Cron** system for scheduled autonomous agent operations. Cron entries are registered via `register_meta_cron` with standard 5-field cron expressions.
 
 Each cron entry specifies:
 - A **role** to invoke
@@ -378,14 +378,14 @@ Example use cases:
 
 ### Async Task Architecture
 
-All delegation in Optimus is async-first. `delegate_task_async` and `dispatch_council_async` return immediately with a task ID. The `check_task_status` tool polls for completion. This prevents the Master Agent from blocking while workers execute.
+All delegation in Megatron is async-first. `delegate_task_async` and `dispatch_council_async` return immediately with a task ID. The `check_task_status` tool polls for completion. This prevents the Master Agent from blocking while workers execute.
 
 ### Async Feedback Channel (Proposed)
 
 When an agent encounters an ambiguous situation and cannot continue autonomously, the proposed workflow is:
 
 1. Agent posts a question via `vcs_add_comment` on its tracking Issue
-2. Agent adds a `needs-human-input` label and writes a checkpoint to `.optimus/reports/`
+2. Agent adds a `needs-human-input` label and writes a checkpoint to `.megatron/reports/`
 3. Agent exits (fire-and-forget — no process hanging)
 4. Human responds on their own schedule via GitHub comment
 5. A Meta-Cron patrol detects the response and spawns a continuation task with the same `agent_id` for context continuity
@@ -408,13 +408,13 @@ All MCP tool handlers validate inputs before any task creation, file writes, or 
 
 Agent delegation is capped at **3 nested layers** (`MAX_DELEGATION_DEPTH = 3`, defined in `src/constants.ts`). This prevents infinite recursion where agents delegate to agents indefinitely.
 
-- Tracked via the `OPTIMUS_DELEGATION_DEPTH` environment variable, automatically injected and incremented at each delegation.
+- Tracked via the `MEGATRON_DELEGATION_DEPTH` environment variable, automatically injected and incremented at each delegation.
 - At depth 3, MCP configuration is stripped from the child process, physically preventing further delegation.
 
 ### Path Traversal Prevention
 
 - `sanitizeRoleName()` strips dangerous characters from role names, preventing directory traversal via crafted role identifiers.
-- `write_blackboard_artifact` uses dual-layer validation (lexical + `fs.realpathSync()`) to prevent writes outside `.optimus/`. The symlink check was identified as a P0 gap during security review — `path.resolve()` and `path.normalize()` alone do not resolve symlinks.
+- `write_blackboard_artifact` uses dual-layer validation (lexical + `fs.realpathSync()`) to prevent writes outside `.megatron/`. The symlink check was identified as a P0 gap during security review — `path.resolve()` and `path.normalize()` alone do not resolve symlinks.
 
 ### Prompt Injection Defense
 
@@ -425,19 +425,19 @@ Agent delegation is capped at **3 nested layers** (`MAX_DELEGATION_DEPTH = 3`, d
 ### Secret Protection
 
 - `.env` files are never committed or shipped in the plugin package.
-- The `.gitignore` and plugin packaging rules exclude `.optimus/agents/`, `.optimus/state/`, and credential files.
+- The `.gitignore` and plugin packaging rules exclude `.megatron/agents/`, `.megatron/state/`, and credential files.
 - Agents are warned against committing files that may contain secrets.
 
 ### Plan Mode as Security Boundary
 
-Plan mode prevents orchestrator agents from writing arbitrary files. Even if a prompt injection convinced an orchestrator to "write a config file," the `write_blackboard_artifact` path validation would reject any target outside `.optimus/`.
+Plan mode prevents orchestrator agents from writing arbitrary files. Even if a prompt injection convinced an orchestrator to "write a config file," the `write_blackboard_artifact` path validation would reject any target outside `.megatron/`.
 
 ---
 
 ## Appendix: Project Structure
 
 ```
-.optimus/
+.megatron/
 ├── agents/          # T1 frozen instance snapshots
 ├── config/          # vcs.json, available-agents.json, system-instructions.md
 ├── memory/          # continuous-memory.md
@@ -449,7 +449,7 @@ Plan mode prevents orchestrator agents from writing arbitrary files. Even if a p
 ├── state/           # task-manifest.json, t3-usage-log.json
 └── system/          # System-level config
 
-optimus-plugin/
+megatron-plugin/
 ├── bin/             # CLI entry points (init, serve, upgrade)
 ├── dist/            # Compiled MCP server
 ├── scaffold/        # Template files shipped to end-users
@@ -458,4 +458,4 @@ optimus-plugin/
 
 ---
 
-*This document describes Optimus Code v0.4.0. For the latest updates, see the [CHANGELOG](../CHANGELOG.md).*
+*This document describes Megatron AI v0.4.0. For the latest updates, see the [CHANGELOG](../CHANGELOG.md).*

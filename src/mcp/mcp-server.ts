@@ -51,7 +51,7 @@ reloadEnv();
 // 1. Initialize the MCP Server (The Marionette Controller)
 const server = new Server(
   {
-    name: "optimus-facade",
+    name: "megatron-facade",
     version: "1.0.0",
   },
   {
@@ -67,9 +67,9 @@ server.setRequestHandler(ListResourcesRequestSchema, async () => {
   return {
     resources: [
       {
-        uri: "optimus://system/instructions",
-        name: "Optimus System Instructions",
-        description: "Master workflow protocols and agnostic system instructions for Optimus agents.",
+        uri: "megatron://system/instructions",
+        name: "Megatron System Instructions",
+        description: "Master workflow protocols and agnostic system instructions for Megatron agents.",
         mimeType: "text/markdown"
       }
     ]
@@ -77,10 +77,10 @@ server.setRequestHandler(ListResourcesRequestSchema, async () => {
 });
 
 server.setRequestHandler(ReadResourceRequestSchema, async (request) => {
-  if (request.params.uri === "optimus://system/instructions") {
+  if (request.params.uri === "megatron://system/instructions") {
     // Resolve workspace path securely
-    const workspacePath = process.env.OPTIMUS_WORKSPACE_ROOT || process.cwd();
-    const instructionsPath = path.resolve(workspacePath, '.optimus', 'config', 'system-instructions.md');
+    const workspacePath = process.env.MEGATRON_WORKSPACE_ROOT || process.cwd();
+    const instructionsPath = path.resolve(workspacePath, '.megatron', 'config', 'system-instructions.md');
     
     // Security check: Ensure it doesn't escape workspace
     if (!instructionsPath.startsWith(path.resolve(workspacePath))) {
@@ -104,7 +104,7 @@ server.setRequestHandler(ReadResourceRequestSchema, async (request) => {
         throw new McpError(ErrorCode.InvalidRequest, `The system-instructions.md file does not exist at ${instructionsPath}`);
       }
     } catch (e: any) {
-      throw new McpError(ErrorCode.InternalError, `Failed to read system instructions from '${instructionsPath}': ${e.message}. Ensure .optimus/config/system-instructions.md exists (run 'optimus init' or 'optimus upgrade').`);
+      throw new McpError(ErrorCode.InternalError, `Failed to read system instructions from '${instructionsPath}': ${e.message}. Ensure .megatron/config/system-instructions.md exists (run 'megatron init' or 'megatron upgrade').`);
     }
   }
   throw new McpError(ErrorCode.InvalidRequest, `Resource not found: ${request.params.uri}`);
@@ -152,7 +152,7 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
           type: "object",
           properties: {
             owner: { type: "string", description: "Repository owner (e.g. cloga)" },
-            repo: { type: "string", description: "Repository name (e.g. optimus-code)" },
+            repo: { type: "string", description: "Repository name (e.g. megatron-ai)" },
             workspace_path: { type: "string", description: "Absolute workspace path" }
           },
           required: ["owner", "repo", "workspace_path"]
@@ -161,7 +161,7 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
 
       {
         name: "dispatch_council",
-        description: "Trigger a map-reduce multi-expert review for an architectural proposal using the Spartan Swarm protocol.",
+        description: "Trigger a map-reduce multi-expert review for an architectural proposal using the Megatron Swarm protocol.",
         inputSchema: {
           type: "object",
           properties: {
@@ -229,7 +229,7 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
             },
             output_path: {
               type: "string",
-              description: "The file path where the agent should write its final result or report. If not already under the workspace's .optimus/ directory, it will be automatically scoped to .optimus/results/<filename> within the workspace.",
+              description: "The file path where the agent should write its final result or report. If not already under the workspace's .megatron/ directory, it will be automatically scoped to .megatron/results/<filename> within the workspace.",
             },
             workspace_path: {
               type: "string",
@@ -243,7 +243,7 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
             required_skills: {
               type: "array",
               items: { type: "string" },
-              description: "Optional array of skill names this role needs (e.g., ['council-review', 'git-workflow']). If any skill does not exist in .optimus/skills/<name>/SKILL.md, the task will be rejected with a list of missing skills so Master can create them first via a skill-creator delegation.",
+              description: "Optional array of skill names this role needs (e.g., ['council-review', 'git-workflow']). If any skill does not exist in .megatron/skills/<name>/SKILL.md, the task will be rejected with a list of missing skills so Master can create them first via a skill-creator delegation.",
             },
             parent_issue_number: {
               type: "number",
@@ -365,11 +365,11 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
       },
       {
         name: "write_blackboard_artifact",
-        description: "Write a file to the .optimus/ blackboard directory. Only paths within .optimus/ are allowed. Use this to create proposals, requirements docs, and other orchestration artifacts. artifact_path is relative to the .optimus/ directory (do NOT include the .optimus/ prefix).",
+        description: "Write a file to the .megatron/ blackboard directory. Only paths within .megatron/ are allowed. Use this to create proposals, requirements docs, and other orchestration artifacts. artifact_path is relative to the .megatron/ directory (do NOT include the .megatron/ prefix).",
         inputSchema: {
           type: "object",
           properties: {
-            artifact_path: { type: "string", description: "Relative path within .optimus/ directory (e.g. 'proposals/PROPOSAL_xxx.md', 'tasks/requirements_xxx.md'). Do NOT include the '.optimus/' prefix." },
+            artifact_path: { type: "string", description: "Relative path within .megatron/ directory (e.g. 'proposals/PROPOSAL_xxx.md', 'tasks/requirements_xxx.md'). Do NOT include the '.megatron/' prefix." },
             content: { type: "string", description: "The content to write to the file.", maxLength: 1048576 },
             workspace_path: { type: "string", description: "Absolute path to the project workspace root." }
           },
@@ -504,7 +504,7 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
             question: { type: "string", description: "The question or decision needed from the human" },
             context_summary: { type: "string", description: "Summary of work done so far and why the agent is blocked" },
             options: { type: "array", items: { type: "string" }, description: "Optional: suggested answer options for the human" },
-            task_id: { type: "string", description: "The task ID of the calling agent's task (from OPTIMUS_TASK_ID env var)" },
+            task_id: { type: "string", description: "The task ID of the calling agent's task (from MEGATRON_TASK_ID env var)" },
             workspace_path: { type: "string", description: "Absolute workspace path" }
           },
           required: ["question", "context_summary", "workspace_path"]
@@ -586,7 +586,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
     validateEngineAndModel(role_engine, role_model, workspace_path);
 
     // Resolve parent issue: explicit param > env var > undefined (with NaN guard)
-    const rawParentAsync = process.env.OPTIMUS_PARENT_ISSUE ? parseInt(process.env.OPTIMUS_PARENT_ISSUE, 10) : undefined;
+    const rawParentAsync = process.env.MEGATRON_PARENT_ISSUE ? parseInt(process.env.MEGATRON_PARENT_ISSUE, 10) : undefined;
     const parentIssueNumber = (request.params.arguments as any).parent_issue_number
         ?? (Number.isNaN(rawParentAsync) ? undefined : rawParentAsync);
 
@@ -594,7 +594,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
     TaskManifestManager.createTask(workspace_path, {
         taskId, type: "delegate_task", role, task_description, output_path, workspacePath: workspace_path, context_files: context_files || [],
         role_description, role_engine, role_model, required_skills,
-        delegation_depth: parseInt(process.env.OPTIMUS_DELEGATION_DEPTH || '0', 10),
+        delegation_depth: parseInt(process.env.MEGATRON_DELEGATION_DEPTH || '0', 10),
         parent_issue_number: parentIssueNumber,
         agent_id: agent_id || undefined
     });
@@ -609,7 +609,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
         const issue = await createGitHubIssue(remote.owner, remote.repo,
             `[Task] ${role}: ${shortTitle}...`,
             `${parentRef}## Auto-generated Swarm Task Tracker\n\n**Task ID:** \`${taskId}\`\n**Role:** \`${role}\`\n**Output Path:** \`${output_path}\`\n\n### Task Description\n${truncDesc}` + agentSignature(role, taskId),
-            ['swarm-task', 'optimus-bot']
+            ['swarm-task', 'megatron-bot']
         );
         if (issue) {
             TaskManifestManager.updateTask(workspace_path, taskId, { github_issue_number: issue.number });
@@ -648,15 +648,15 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
     }
 
     // Resolve parent issue: explicit param > env var > undefined (with NaN guard)
-    const rawParentAsync2 = process.env.OPTIMUS_PARENT_ISSUE ? parseInt(process.env.OPTIMUS_PARENT_ISSUE, 10) : undefined;
+    const rawParentAsync2 = process.env.MEGATRON_PARENT_ISSUE ? parseInt(process.env.MEGATRON_PARENT_ISSUE, 10) : undefined;
     const parentIssueNumber = (request.params.arguments as any).parent_issue_number
         ?? (Number.isNaN(rawParentAsync2) ? undefined : rawParentAsync2);
 
     const taskId = `council_${Date.now()}_${Math.random().toString(36).substring(2,8)}`;
-    const reviewsPath = path.join(workspace_path, ".optimus", "reviews", taskId);
+    const reviewsPath = path.join(workspace_path, ".megatron", "reviews", taskId);
     TaskManifestManager.createTask(workspace_path, {
         taskId, type: "dispatch_council", roles, proposal_path, output_path: reviewsPath, workspacePath: workspace_path,
-        delegation_depth: parseInt(process.env.OPTIMUS_DELEGATION_DEPTH || '0', 10),
+        delegation_depth: parseInt(process.env.MEGATRON_DELEGATION_DEPTH || '0', 10),
         parent_issue_number: parentIssueNumber
     });
 
@@ -669,7 +669,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
         const issue = await createGitHubIssue(remote.owner, remote.repo,
             `[Council] ${proposalName} (Review)`,
             `${parentRef}## Auto-generated Council Review Tracker\n\n**Council ID:** \`${taskId}\`\n**Roles:** ${roles.map((r: string) => `\`${r}\``).join(', ')}\n**Proposal:** \`${proposal_path}\`\n**Reviews Path:** \`${reviewsPath}\`` + agentSignature('council-orchestrator', taskId),
-            ['swarm-council', 'optimus-bot']
+            ['swarm-council', 'megatron-bot']
         );
         if (issue) {
             TaskManifestManager.updateTask(workspace_path, taskId, { github_issue_number: issue.number });
@@ -697,9 +697,9 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
 
     // Resolve workspace first (needed for alias resolution)
     let workspacePath: string;
-    const optimusIndex = proposal_path.indexOf('.optimus');
-    if (optimusIndex !== -1) {
-      workspacePath = proposal_path.substring(0, optimusIndex);
+    const megatronIndex = proposal_path.indexOf('.megatron');
+    if (megatronIndex !== -1) {
+      workspacePath = proposal_path.substring(0, megatronIndex);
     } else {
       workspacePath = path.resolve(path.dirname(proposal_path));
     }
@@ -719,12 +719,12 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
     }
 
     // Resolve parent issue: explicit param > env var > undefined
-    const rawParentSync = process.env.OPTIMUS_PARENT_ISSUE ? parseInt(process.env.OPTIMUS_PARENT_ISSUE, 10) : undefined;
+    const rawParentSync = process.env.MEGATRON_PARENT_ISSUE ? parseInt(process.env.MEGATRON_PARENT_ISSUE, 10) : undefined;
     const parentIssueNumber = (request.params.arguments as any).parent_issue_number
         ?? (Number.isNaN(rawParentSync) ? undefined : rawParentSync);
 
     const timestampId = Date.now();
-    const reviewsPath = path.join(workspacePath, ".optimus", "reviews", timestampId.toString());
+    const reviewsPath = path.join(workspacePath, ".megatron", "reviews", timestampId.toString());
     
     fs.mkdirSync(reviewsPath, { recursive: true });
 
@@ -744,8 +744,8 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
         } else if (request.params.name === "append_memory") {
       let { category, tags, content } = request.params.arguments as any;
       requireParams("append_memory", request.params.arguments as any, ["category", "content"]);
-      const workspacePath = process.env.OPTIMUS_WORKSPACE_ROOT || process.cwd();
-      const memoryDir = path.resolve(workspacePath, '.optimus', 'memory');
+      const workspacePath = process.env.MEGATRON_WORKSPACE_ROOT || process.cwd();
+      const memoryDir = path.resolve(workspacePath, '.megatron', 'memory');
       const memoryFile = path.join(memoryDir, 'continuous-memory.md');
 
       if (!fs.existsSync(memoryDir)) {
@@ -806,17 +806,17 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
     const { workspace_path } = request.params.arguments as any;
     requireParams("roster_check", request.params.arguments as any, ["workspace_path"]);
 
-    const t1Dir = path.join(workspace_path, ".optimus", "agents");
+    const t1Dir = path.join(workspace_path, ".megatron", "agents");
     
     // Check and create T2 project-level profile directory natively
-    const t2Dir = path.join(workspace_path, '.optimus', 'roles');
+    const t2Dir = path.join(workspace_path, '.megatron', 'roles');
     if (!fs.existsSync(t2Dir)) {
         fs.mkdirSync(t2Dir, { recursive: true });
     }
     // T2 roles are created ONLY via T3 precipitation or manual user creation.
     // No lazy-sync from plugin built-in roles.
 
-    let roster = "📋 **Spartan Swarm Active Roster**\n\n";
+    let roster = "📋 **Megatron Swarm Active Roster**\n\n";
 
     roster += "### T1: Local Project Experts\n";
     if (fs.existsSync(t1Dir)) {
@@ -827,7 +827,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
     }
 
     // --- Dynamic T3 Config Loading ---
-    const configPath = path.join(workspace_path, ".optimus", "config", "available-agents.json");
+    const configPath = path.join(workspace_path, ".megatron", "config", "available-agents.json");
     if (fs.existsSync(configPath)) {
       try {
         const config = JSON.parse(fs.readFileSync(configPath, 'utf8'));
@@ -902,7 +902,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
     }
 
     // Show T3 usage stats if available
-    const t3LogPath = path.join(workspace_path, '.optimus', 'state', 't3-usage-log.json');
+    const t3LogPath = path.join(workspace_path, '.megatron', 'state', 't3-usage-log.json');
     if (fs.existsSync(t3LogPath)) {
       try {
         const t3Log = JSON.parse(fs.readFileSync(t3LogPath, 'utf8'));
@@ -923,7 +923,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
     roster += "- T3 roles auto-precipitate to T2 immediately on first use.\n";
 
     // Show available skills
-    const skillsDir = path.join(workspace_path, '.optimus', 'skills');
+    const skillsDir = path.join(workspace_path, '.megatron', 'skills');
     if (fs.existsSync(skillsDir)) {
       const skillDirs = fs.readdirSync(skillsDir).filter(d => {
         try { return fs.statSync(path.join(skillsDir, d)).isDirectory() && fs.existsSync(path.join(skillsDir, d, 'SKILL.md')); } catch (e: any) { console.error("[roster_check] Warning: failed to stat skill dir " + d + ":", e.message); return false; }
@@ -965,7 +965,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
     let workspace_path = (request.params.arguments as any).workspace_path;
 
     // Resolve parent issue: explicit param > env var > undefined
-    const rawParentSync = process.env.OPTIMUS_PARENT_ISSUE ? parseInt(process.env.OPTIMUS_PARENT_ISSUE, 10) : undefined;
+    const rawParentSync = process.env.MEGATRON_PARENT_ISSUE ? parseInt(process.env.MEGATRON_PARENT_ISSUE, 10) : undefined;
     const parentIssueNumber = (request.params.arguments as any).parent_issue_number
         ?? (Number.isNaN(rawParentSync) ? undefined : rawParentSync);
 
@@ -974,8 +974,8 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
     if (!workspace_path) {
        // fallback to project root based on output_path or cwd
        workspace_path = process.cwd();
-       if (output_path.includes("optimus-code")) {
-         workspace_path = output_path.split("optimus-code")[0] + "optimus-code";
+       if (output_path.includes("megatron-ai")) {
+         workspace_path = output_path.split("megatron-ai")[0] + "megatron-ai";
        }
     }
 
@@ -989,26 +989,26 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
     const sessionId = crypto.randomUUID();
     const workspacePath = workspace_path;
 
-    // Canonicalize output_path: if it does not already live under this workspace's .optimus/,
-    // scope it to .optimus/results/<basename> so no files escape to the workspace root.
-    const optimusDir = path.join(workspacePath, ".optimus");
+    // Canonicalize output_path: if it does not already live under this workspace's .megatron/,
+    // scope it to .megatron/results/<basename> so no files escape to the workspace root.
+    const megatronDir = path.join(workspacePath, ".megatron");
     const resolvedOutputPath = path.resolve(workspacePath, output_path);
-    const canonicalOutputPath = resolvedOutputPath.startsWith(optimusDir)
+    const canonicalOutputPath = resolvedOutputPath.startsWith(megatronDir)
       ? resolvedOutputPath
-      : path.join(optimusDir, "results", path.basename(output_path));
+      : path.join(megatronDir, "results", path.basename(output_path));
 
     // 1. Write the task description into a Blackboard Artifact so the stateless worker can read it
-    const tasksDir = path.join(workspacePath, ".optimus", "tasks");
+    const tasksDir = path.join(workspacePath, ".megatron", "tasks");
     fs.mkdirSync(tasksDir, { recursive: true });
     const taskArtifactPath = path.join(tasksDir, `task_${sessionId}.md`);
     fs.writeFileSync(taskArtifactPath, task_description, 'utf8');
 
-    // Ensure the output directory exists (handles .optimus/results/ when auto-scoped)
+    // Ensure the output directory exists (handles .megatron/results/ when auto-scoped)
     fs.mkdirSync(path.dirname(canonicalOutputPath), { recursive: true });
 
     console.error(`[MCP] Delegating task to role: ${role}, output scoped to: ${canonicalOutputPath}`);
     
-    // 2. Delegate to the single worker pool (use canonicalOutputPath so agent writes inside .optimus/)
+    // 2. Delegate to the single worker pool (use canonicalOutputPath so agent writes inside .megatron/)
       const result = await delegateTaskSingle(role, taskArtifactPath, canonicalOutputPath, sessionId, workspacePath, context_files, { description: role_description, engine: role_engine, model: role_model, requiredSkills: required_skills }, undefined, parentIssueNumber, undefined, agent_id);
     return {
       content: [{ type: "text", text: result }]
@@ -1066,7 +1066,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
       const vcsProvider = await VcsProviderFactory.getProvider(workspace_path);
 
       // Pre-merge build verification (configurable physical gate)
-      const vcsConfigPath = path.join(workspace_path, '.optimus', 'config', 'vcs.json');
+      const vcsConfigPath = path.join(workspace_path, '.megatron', 'config', 'vcs.json');
       if (fs.existsSync(vcsConfigPath)) {
         try {
           const vcsConfig = JSON.parse(fs.readFileSync(vcsConfigPath, 'utf8'));
@@ -1184,14 +1184,14 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
         throw new McpError(ErrorCode.InvalidParams, "Invalid arguments for write_blackboard_artifact: 'content' must be provided (can be empty string, but not null/undefined)");
     }
 
-    // Resolve target path: workspace/.optimus/<artifact_path>
-    const optimusRoot = path.resolve(workspace_path, '.optimus');
-    const resolvedTarget = path.resolve(optimusRoot, artifact_path);
+    // Resolve target path: workspace/.megatron/<artifact_path>
+    const megatronRoot = path.resolve(workspace_path, '.megatron');
+    const resolvedTarget = path.resolve(megatronRoot, artifact_path);
 
-    // SECURITY: Validate path is strictly within .optimus/ directory
-    // Must use trailing separator to prevent sibling directory bypass (.optimus-evil/)
-    if (!resolvedTarget.startsWith(optimusRoot + path.sep) && resolvedTarget !== optimusRoot) {
-        throw new McpError(ErrorCode.InvalidParams, "artifact_path must resolve to within .optimus/ directory. Path traversal detected.");
+    // SECURITY: Validate path is strictly within .megatron/ directory
+    // Must use trailing separator to prevent sibling directory bypass (.megatron-evil/)
+    if (!resolvedTarget.startsWith(megatronRoot + path.sep) && resolvedTarget !== megatronRoot) {
+        throw new McpError(ErrorCode.InvalidParams, "artifact_path must resolve to within .megatron/ directory. Path traversal detected.");
     }
 
     // SECURITY: Resolve symlinks on the existing portion of the path
@@ -1204,9 +1204,9 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
     }
     const realExisting = fs.realpathSync(existingPath);
     const realTarget = path.join(realExisting, suffix);
-    const realOptimus = fs.existsSync(optimusRoot) ? fs.realpathSync(optimusRoot) : optimusRoot;
-    if (!realTarget.startsWith(realOptimus + path.sep) && realTarget !== realOptimus) {
-        throw new McpError(ErrorCode.InvalidParams, "artifact_path resolves outside .optimus/ via symlink. Path traversal detected.");
+    const realMegatron = fs.existsSync(megatronRoot) ? fs.realpathSync(megatronRoot) : megatronRoot;
+    if (!realTarget.startsWith(realMegatron + path.sep) && realTarget !== realMegatron) {
+        throw new McpError(ErrorCode.InvalidParams, "artifact_path resolves outside .megatron/ via symlink. Path traversal detected.");
     }
 
     try {
@@ -1221,12 +1221,12 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
   } else if (request.params.name === "hello") {
     const { name } = request.params.arguments as any;
     requireParams("hello", request.params.arguments as any, ["name"]);
-    return { content: [{ type: "text", text: `Hello, ${name}! Optimus Swarm is running.` }] };
+    return { content: [{ type: "text", text: `Hello, ${name}! Megatron Swarm is running.` }] };
   } else if (request.params.name === "quarantine_role") {
     const { role, action, workspace_path } = request.params.arguments as any;
     requireParams("quarantine_role", request.params.arguments as any, ["role", "action", "workspace_path"]);
 
-    const t2Dir = path.join(workspace_path, '.optimus', 'roles');
+    const t2Dir = path.join(workspace_path, '.megatron', 'roles');
     const rolePath = path.join(t2Dir, `${role}.md`);
     if (!fs.existsSync(rolePath)) {
       return { content: [{ type: "text", text: `Role '${role}' not found at ${rolePath}` }] };
@@ -1273,7 +1273,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
   if (request.params.name === "register_meta_cron") {
     const { id, cron_expression, role, required_skills, capability_tier, concurrency_policy, max_actions, dry_run_remaining, workspace_path } = request.params.arguments as any;
     requireParams("register_meta_cron", request.params.arguments as any, ["id", "cron_expression", "role", "workspace_path"]);
-    if (process.env.OPTIMUS_CRON_TRIGGERED === 'true') {
+    if (process.env.MEGATRON_CRON_TRIGGERED === 'true') {
       return { content: [{ type: "text", text: "Self-registration denied: cron-triggered agents cannot register new Meta-Cron entries." }] };
     }
     const crontab = loadCrontab(workspace_path) || { max_concurrent: 3, crons: [] };
@@ -1318,7 +1318,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
     if (idx === -1) return { content: [{ type: "text", text: `Cron entry '${id}' not found.` }] };
     crontab.crons.splice(idx, 1);
     saveCrontab(workspace_path, crontab);
-    const lockPath = path.join(workspace_path, '.optimus', 'system', 'cron-locks', id + '.lock');
+    const lockPath = path.join(workspace_path, '.megatron', 'system', 'cron-locks', id + '.lock');
     try { if (fs.existsSync(lockPath)) fs.unlinkSync(lockPath); } catch (e: any) { console.error(`[MCP] Warning: operation failed: ${e.message}`); }
     return { content: [{ type: "text", text: `Removed Meta-Cron entry '${id}' and cleaned up lock file.` }] };
   }
@@ -1330,9 +1330,9 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
     const MAX_PAUSE_CYCLES = 3;
 
     // Resolve task ID: explicit param > env var
-    const resolvedTaskId = task_id || process.env.OPTIMUS_TASK_ID;
+    const resolvedTaskId = task_id || process.env.MEGATRON_TASK_ID;
     if (!resolvedTaskId) {
-      throw new McpError(ErrorCode.InvalidParams, "Cannot determine task ID. Provide task_id parameter or ensure OPTIMUS_TASK_ID env var is set.");
+      throw new McpError(ErrorCode.InvalidParams, "Cannot determine task ID. Provide task_id parameter or ensure MEGATRON_TASK_ID env var is set.");
     }
 
     // Look up the task in manifest
@@ -1411,10 +1411,10 @@ if (process.argv.includes("--run-task")) {
   async function main() {
     const transport = new StdioServerTransport();
     await server.connect(transport);
-    console.error("Optimus Spartan Swarm MCP server running on stdio");
+    console.error("Megatron Swarm MCP server running on stdio");
 
     // Agent GC: clean up stale T1 instances on startup
-    const workspaceRoot = process.env.OPTIMUS_WORKSPACE_ROOT || process.cwd();
+    const workspaceRoot = process.env.MEGATRON_WORKSPACE_ROOT || process.cwd();
     try {
       cleanStaleAgents(workspaceRoot);
     } catch (e: any) {
@@ -1423,7 +1423,7 @@ if (process.argv.includes("--run-task")) {
 
     // Thin T2 template scanner: warn about templates that will be regenerated
     try {
-      const rolesDir = path.join(workspaceRoot, '.optimus', 'roles');
+      const rolesDir = path.join(workspaceRoot, '.megatron', 'roles');
       if (fs.existsSync(rolesDir)) {
         const roleFiles = fs.readdirSync(rolesDir).filter(f => f.endsWith('.md'));
         for (const file of roleFiles) {

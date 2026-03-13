@@ -37,7 +37,7 @@ interface T3UsageEntry {
 }
 
 function getT3UsageLogPath(wp: string): string {
-    return path.join(wp, '.optimus', 'state', 't3-usage-log.json');
+    return path.join(wp, '.megatron', 'state', 't3-usage-log.json');
 }
 function loadT3UsageLog(wp: string): Record<string, T3UsageEntry> {
     const p = getT3UsageLogPath(wp);
@@ -61,7 +61,7 @@ function trackT3Usage(wp: string, role: string, success: boolean, engine: string
     saveT3UsageLog(wp, log);
 }
 function checkAndPrecipitate(wp: string, role: string, engine: string, model?: string): string | null {
-    const t2Dir = path.join(wp, '.optimus', 'roles');
+    const t2Dir = path.join(wp, '.megatron', 'roles');
     const t2Path = path.join(t2Dir, `${role}.md`);
     if (fs.existsSync(t2Path)) return null; // Already a T2
     if (!fs.existsSync(t2Dir)) fs.mkdirSync(t2Dir, { recursive: true });
@@ -81,7 +81,7 @@ function assert(label: string, condition: boolean) {
 }
 
 // Create temp workspace
-const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'optimus-test-'));
+const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'megatron-test-'));
 console.log(`\n🧪 Test workspace: ${tmpDir}\n`);
 
 // ─── TEST 1: T3 Usage Tracking ───
@@ -98,7 +98,7 @@ assert('Records model', log['security-auditor']?.model === 'claude-opus-4.6-1m')
 // ─── TEST 2: Immediate precipitation on first use ───
 console.log('\n━━━ Test 2: Immediate Precipitation (no T2 exists) ━━━');
 let result = checkAndPrecipitate(tmpDir, 'security-auditor', 'claude-code', 'claude-opus-4.6-1m');
-const t2Path = path.join(tmpDir, '.optimus', 'roles', 'security-auditor.md');
+const t2Path = path.join(tmpDir, '.megatron', 'roles', 'security-auditor.md');
 assert('Precipitates immediately on first call', result !== null);
 assert('T2 file created', fs.existsSync(t2Path));
 const t2Content = fs.readFileSync(t2Path, 'utf8');
@@ -117,7 +117,7 @@ assert('Does NOT re-precipitate existing T2', result === null);
 console.log('\n━━━ Test 4: Precipitation with copilot-cli engine ━━━');
 result = checkAndPrecipitate(tmpDir, 'frontend-dev', 'copilot-cli', 'gpt-5.4');
 assert('Precipitates new role immediately', result !== null);
-const frontendFm = parseFrontmatter(fs.readFileSync(path.join(tmpDir, '.optimus', 'roles', 'frontend-dev.md'), 'utf8'));
+const frontendFm = parseFrontmatter(fs.readFileSync(path.join(tmpDir, '.megatron', 'roles', 'frontend-dev.md'), 'utf8'));
 assert('Uses copilot-cli engine', frontendFm.frontmatter.engine === 'copilot-cli');
 assert('Uses gpt-5.4 model', frontendFm.frontmatter.model === 'gpt-5.4');
 
@@ -125,25 +125,25 @@ assert('Uses gpt-5.4 model', frontendFm.frontmatter.model === 'gpt-5.4');
 console.log('\n━━━ Test 5: Precipitation Without Model (optional) ━━━');
 result = checkAndPrecipitate(tmpDir, 'data-analyst', 'claude-code');
 assert('Precipitates without model', result !== null);
-const daFm = parseFrontmatter(fs.readFileSync(path.join(tmpDir, '.optimus', 'roles', 'data-analyst.md'), 'utf8'));
+const daFm = parseFrontmatter(fs.readFileSync(path.join(tmpDir, '.megatron', 'roles', 'data-analyst.md'), 'utf8'));
 assert('Engine is set', daFm.frontmatter.engine === 'claude-code');
 assert('Model is empty string (optional)', daFm.frontmatter.model === '');
 
 // ─── TEST 6: T2 Frontmatter Reading (existing roles) ───
 console.log('\n━━━ Test 6: T2 Frontmatter Engine/Model Reading ━━━');
-const realChiefArchitect = fs.readFileSync(path.join(process.cwd(), '.optimus', 'roles', 'chief-architect.md'), 'utf8');
+const realChiefArchitect = fs.readFileSync(path.join(process.cwd(), '.megatron', 'roles', 'chief-architect.md'), 'utf8');
 const caFm = parseFrontmatter(realChiefArchitect);
 assert('chief-architect has engine in frontmatter', caFm.frontmatter.engine === 'claude-code');
 assert('chief-architect has model in frontmatter', caFm.frontmatter.model === 'claude-opus-4.6-1m');
-const realQa = fs.readFileSync(path.join(process.cwd(), '.optimus', 'roles', 'qa-engineer.md'), 'utf8');
+const realQa = fs.readFileSync(path.join(process.cwd(), '.megatron', 'roles', 'qa-engineer.md'), 'utf8');
 const qaFm = parseFrontmatter(realQa);
 assert('qa-engineer has engine in frontmatter', qaFm.frontmatter.engine === 'claude-code');
 assert('qa-engineer has model in frontmatter', qaFm.frontmatter.model === 'claude-opus-4.6-1m');
 
 // ─── TEST 8: Corrupted JSON resilience ───
 console.log('\n━━━ Test 8: Corrupted JSON Resilience ━━━');
-const corruptDir = fs.mkdtempSync(path.join(os.tmpdir(), 'optimus-corrupt-'));
-const corruptLogDir = path.join(corruptDir, '.optimus', 'state');
+const corruptDir = fs.mkdtempSync(path.join(os.tmpdir(), 'megatron-corrupt-'));
+const corruptLogDir = path.join(corruptDir, '.megatron', 'state');
 fs.mkdirSync(corruptLogDir, { recursive: true });
 fs.writeFileSync(path.join(corruptLogDir, 't3-usage-log.json'), '{invalid json!!!', 'utf8');
 const corruptLog = loadT3UsageLog(corruptDir);
@@ -155,8 +155,8 @@ assert('Overwrites corrupted log with valid data', fixedLog['test-role']?.invoca
 
 // ─── TEST 9: T3→T2→T1 Hierarchy Integrity ───
 console.log('\n━━━ Test 9: T3→T2→T1 Hierarchy Integrity ━━━');
-const rolesDir = path.join(process.cwd(), '.optimus', 'roles');
-const agentsDir = path.join(process.cwd(), '.optimus', 'agents');
+const rolesDir = path.join(process.cwd(), '.megatron', 'roles');
+const agentsDir = path.join(process.cwd(), '.megatron', 'agents');
 const t2Files = fs.readdirSync(rolesDir).filter(f => f.endsWith('.md')).map(f => f.replace('.md', ''));
 const t1Files = fs.readdirSync(agentsDir).filter(f => f.endsWith('.md')).map(f => f.replace('.md', ''));
 assert(`T2 role count (${t2Files.length}) >= T1 agent count (${t1Files.length})`, t2Files.length >= t1Files.length);
@@ -180,8 +180,8 @@ for (const role of t2Files) {
 
 // ─── TEST 10b: Engine/Model Fallback Logic ───
 console.log('\n━━━ Test 10b: Engine/Model Fallback from available-agents.json ━━━');
-const fallbackDir = fs.mkdtempSync(path.join(os.tmpdir(), 'optimus-fallback-'));
-const fbConfigDir = path.join(fallbackDir, '.optimus', 'config');
+const fallbackDir = fs.mkdtempSync(path.join(os.tmpdir(), 'megatron-fallback-'));
+const fbConfigDir = path.join(fallbackDir, '.megatron', 'config');
 fs.mkdirSync(fbConfigDir, { recursive: true });
 // Write a mock available-agents.json
 fs.writeFileSync(path.join(fbConfigDir, 'available-agents.json'), JSON.stringify({
@@ -193,7 +193,7 @@ fs.writeFileSync(path.join(fbConfigDir, 'available-agents.json'), JSON.stringify
 }), 'utf8');
 // Simulate the fallback logic inline
 function resolveEngineFallback(workspacePath: string): { engine: string, model?: string } {
-    const configPath = path.join(workspacePath, '.optimus', 'config', 'available-agents.json');
+    const configPath = path.join(workspacePath, '.megatron', 'config', 'available-agents.json');
     try {
         if (fs.existsSync(configPath)) {
             const config = JSON.parse(fs.readFileSync(configPath, 'utf8'));
@@ -214,16 +214,16 @@ const fb = resolveEngineFallback(fallbackDir);
 assert('Fallback picks first non-demo engine', fb.engine === 'copilot-cli');
 assert('Fallback picks first model from engine', fb.model === 'gpt-5.4');
 // Test with no config
-const emptyDir = fs.mkdtempSync(path.join(os.tmpdir(), 'optimus-empty-'));
+const emptyDir = fs.mkdtempSync(path.join(os.tmpdir(), 'megatron-empty-'));
 const fbEmpty = resolveEngineFallback(emptyDir);
 assert('Ultimate fallback is claude-code', fbEmpty.engine === 'claude-code');
 assert('No model when no config', fbEmpty.model === undefined);
 
 // ─── TEST 11: T3→T2 Full Lifecycle Simulation ───
 console.log('\n━━━ Test 11: T3→T2 Full Lifecycle (new role end-to-end) ━━━');
-const lifecycleDir = fs.mkdtempSync(path.join(os.tmpdir(), 'optimus-lifecycle-'));
-const lcRolesDir = path.join(lifecycleDir, '.optimus', 'roles');
-const lcAgentsDir = path.join(lifecycleDir, '.optimus', 'agents');
+const lifecycleDir = fs.mkdtempSync(path.join(os.tmpdir(), 'megatron-lifecycle-'));
+const lcRolesDir = path.join(lifecycleDir, '.megatron', 'roles');
+const lcAgentsDir = path.join(lifecycleDir, '.megatron', 'agents');
 fs.mkdirSync(lcRolesDir, { recursive: true });
 fs.mkdirSync(lcAgentsDir, { recursive: true });
 

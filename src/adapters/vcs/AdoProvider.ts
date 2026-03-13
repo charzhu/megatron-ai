@@ -11,7 +11,7 @@ function adoHttpRecoveryHint(status: number): string {
     const hints: Record<number, string> = {
         401: "ADO PAT may be expired or invalid. Regenerate at dev.azure.com > User Settings > Personal Access Tokens.",
         403: "Insufficient permissions. Verify the PAT has the required scopes (Code: Read&Write, Work Items: Read&Write).",
-        404: "Resource not found. Verify org/project/repo names in .optimus/config/vcs.json match your Azure DevOps setup.",
+        404: "Resource not found. Verify org/project/repo names in .megatron/config/vcs.json match your Azure DevOps setup.",
         409: "Conflict detected. The resource may have been modified concurrently. Retry the operation."
     };
     return hints[status] || "Unexpected HTTP " + status + ". Check ADO service health at https://status.dev.azure.com.";
@@ -67,7 +67,7 @@ export class AdoProvider implements IVcsProvider {
             // Merge tags: user labels + auto_tags from config (deduplicated)
             const autoTags = this.defaults?.auto_tags || [];
             const userTags = labels || [];
-            const uniqueTags = [...new Set([...userTags, ...autoTags, 'optimus-bot'])];
+            const uniqueTags = [...new Set([...userTags, ...autoTags, 'megatron-bot'])];
 
             // Build JSON Patch document
             const patchDocument: Array<{op: string, path: string, value: any}> = [
@@ -99,7 +99,7 @@ export class AdoProvider implements IVcsProvider {
                     value: {
                         rel: 'System.LinkTypes.Hierarchy-Reverse',
                         url: `https://dev.azure.com/${this.organization}/${this.project}/_apis/wit/workItems/${resolvedParentId}`,
-                        attributes: { comment: 'Auto-linked by Optimus Swarm' }
+                        attributes: { comment: 'Auto-linked by Megatron Swarm' }
                     }
                 });
             }
@@ -112,7 +112,7 @@ export class AdoProvider implements IVcsProvider {
                         'Authorization': `Basic ${Buffer.from(`:${token}`).toString('base64')}`,
                         'Content-Type': 'application/json-patch+json',
                         'Accept': 'application/json',
-                        'User-Agent': 'Optimus-Agent'
+                        'User-Agent': 'Megatron-Agent'
                     },
                     body: JSON.stringify(patchDocument)
                 }
@@ -154,7 +154,7 @@ export class AdoProvider implements IVcsProvider {
                     headers: {
                         'Authorization': `Basic ${Buffer.from(`:${token}`).toString('base64')}`,
                         'Accept': 'application/json',
-                        'User-Agent': 'Optimus-Agent'
+                        'User-Agent': 'Megatron-Agent'
                     }
                 }
             );
@@ -187,7 +187,7 @@ export class AdoProvider implements IVcsProvider {
                         'Authorization': `Basic ${Buffer.from(`:${token}`).toString('base64')}`,
                         'Content-Type': 'application/json',
                         'Accept': 'application/json',
-                        'User-Agent': 'Optimus-Agent'
+                        'User-Agent': 'Megatron-Agent'
                     },
                     body: JSON.stringify(pullRequestData)
                 }
@@ -228,7 +228,7 @@ export class AdoProvider implements IVcsProvider {
                     headers: {
                         'Authorization': `Basic ${Buffer.from(`:${token}`).toString('base64')}`,
                         'Accept': 'application/json',
-                        'User-Agent': 'Optimus-Agent'
+                        'User-Agent': 'Megatron-Agent'
                     }
                 }
             );
@@ -240,7 +240,7 @@ export class AdoProvider implements IVcsProvider {
 
             const repos = await repoResponse.json() as any;
             if (!repos.value || repos.value.length === 0) {
-                console.error("[mergePullRequest] No repositories found in project. Verify org/project in .optimus/config/vcs.json.");
+                console.error("[mergePullRequest] No repositories found in project. Verify org/project in .megatron/config/vcs.json.");
                 return { merged: false };
             }
 
@@ -257,7 +257,7 @@ export class AdoProvider implements IVcsProvider {
                         headers: {
                             'Authorization': `Basic ${Buffer.from(`:${token}`).toString('base64')}`,
                             'Accept': 'application/json',
-                            'User-Agent': 'Optimus-Agent'
+                            'User-Agent': 'Megatron-Agent'
                         }
                     }
                 );
@@ -292,7 +292,7 @@ export class AdoProvider implements IVcsProvider {
                         'Authorization': `Basic ${Buffer.from(`:${token}`).toString('base64')}`,
                         'Content-Type': 'application/json',
                         'Accept': 'application/json',
-                        'User-Agent': 'Optimus-Agent'
+                        'User-Agent': 'Megatron-Agent'
                     },
                     body: JSON.stringify(mergeData)
                 }
@@ -328,7 +328,7 @@ export class AdoProvider implements IVcsProvider {
                             'Authorization': `Basic ${Buffer.from(`:${token}`).toString('base64')}`,
                             'Content-Type': 'application/json',
                             'Accept': 'application/json',
-                            'User-Agent': 'Optimus-Agent'
+                            'User-Agent': 'Megatron-Agent'
                         },
                         body: JSON.stringify({ text: comment })
                     }
@@ -352,7 +352,7 @@ export class AdoProvider implements IVcsProvider {
                         headers: {
                             'Authorization': `Basic ${Buffer.from(`:${token}`).toString('base64')}`,
                             'Accept': 'application/json',
-                            'User-Agent': 'Optimus-Agent'
+                            'User-Agent': 'Megatron-Agent'
                         }
                     }
                 );
@@ -372,7 +372,7 @@ export class AdoProvider implements IVcsProvider {
                             'Authorization': `Basic ${Buffer.from(`:${token}`).toString('base64')}`,
                             'Content-Type': 'application/json',
                             'Accept': 'application/json',
-                            'User-Agent': 'Optimus-Agent'
+                            'User-Agent': 'Megatron-Agent'
                         },
                         body: JSON.stringify({
                             comments: [{

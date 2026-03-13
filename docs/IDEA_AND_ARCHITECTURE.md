@@ -1,4 +1,4 @@
-# Optimus Code 🚀
+# Megatron AI 🚀
 
 > *The Ultimate Multi-Agent Orchestrator. Let models debate, you make the final call.*
 
@@ -10,7 +10,7 @@ How do we force top-tier models from mega-corporations to work together and "deb
 
 **The Core Concept: Hijacking the OS CLI Layer.**
 Since these autonomous Coding Agents act as closed ecosystems, they refuse to be subservient servers to one another.
-The solution was to build an omniscient **Orchestrator** — **Optimus Code**.
+The solution was to build an omniscient **Orchestrator** — **Megatron AI**.
 
 It operates as a **VS Code Extension** where at its foundation it forcefully converts existing first-party CLI abilities (like `@github/copilot` and `claude-code`) into headless, raw computation threads ("Workers") executed via Node.js standard subprocesses (`child_process`).
 
@@ -27,23 +27,23 @@ To maintain clarity as the project scales, the codebase enforces the following o
 ### 1. Top Layer: Native VS Code Extension UI (Webview & Context Layer)
 Operates as the geeks' command center, directly attached to your editor's sidebar.
 *   **Context Extraction**: It reads the active code you've selected, cursor positions, and project context.
-*   **Side-by-Side Asynchronous "Kanban" Chat**: The traditional top-down chat flow limits reviewing parallel model data. Optimus renders a dynamically scrolling horizontally-aligned Webview where every summoned agent writes its output side-by-side. 
+*   **Side-by-Side Asynchronous "Kanban" Chat**: The traditional top-down chat flow limits reviewing parallel model data. Megatron renders a dynamically scrolling horizontally-aligned Webview where every summoned agent writes its output side-by-side. 
 *   **Rich Client Representation**: Employs real-time markdown parsing (`marked.js`) overlaying native VS Code themes.
 
 ### 2. Middle Layer: The Thin Orchestrator & Session Tree
-Optimus Code embraces a **"Thin Client"** architecture. Instead of manually parsing histories or enforcing token limits, the extension delegates memory, state persistence, and context isolation entirely to the external CLI coding agents (e.g., Claude Code, GitHub Copilot CLI).
+Megatron AI embraces a **"Thin Client"** architecture. Instead of manually parsing histories or enforcing token limits, the extension delegates memory, state persistence, and context isolation entirely to the external CLI coding agents (e.g., Claude Code, GitHub Copilot CLI).
 
 #### 2.1 The "Session Tree" (Logical vs. Physical Sessions)
-To the end-user, there is only one tracking entity: the **Logical Session** (e.g., "Feature_Login_Refactor"). Internally, Optimus manages a mapping to a sub-space of multiple **Physical CLI Sessions**:
+To the end-user, there is only one tracking entity: the **Logical Session** (e.g., "Feature_Login_Refactor"). Internally, Megatron manages a mapping to a sub-space of multiple **Physical CLI Sessions**:
 * **The Main/PM Agent**: Maintains the macro-level context, thinks about architecture, and interacts with the user. The Main Agent's **CLI Engine Type (e.g., Copilot vs. Claude) is fixed for the lifetime of a specific logical session**, but the end-user can freely hot-swap the **Model** (e.g., swapping `claude-3-opus` to `claude-3.5-sonnet`) mid-conversation without dropping context.
 * **Worker Agents (牛马)**: Sub-agents operating on their own isolated `cli_session_id`. They handle context-heavy "dirty work" (e.g., reading 100 files, running compilations, brute-force debugging) without polluting the Main Agent's context window. They can be paused, resumed, or discarded cleanly.
 
 #### 2.2 The Sub-Agent Formula (牛马配方)
-Capabilities and pipelines are no longer hardcoded in TypeScript. An Agent instance in Optimus is dynamically instantiated with a pure configuration formula:
+Capabilities and pipelines are no longer hardcoded in TypeScript. An Agent instance in Megatron is dynamically instantiated with a pure configuration formula:
 `Agent = [CLI Engine] + [Session ID] + [System Prompt/Persona] + [Working Dir]`
 * **CLI Engine**: `claude_code` or `copilot_cli`.
   * **Session ID (Episodic Memory / 物理记忆记忆体)**: The physical thread ID that binds the Agent's episodic memory and execution lifecycle to a dedicated SQLite/LevelDB database.
-  * **System Prompt/Persona (Core Identity / 人格记忆)**: An initial payload granting its rigid rules, expertise, and goals (e.g., from `.optimus/agents/<role>.md` for T1 stateful agents, or `.optimus/roles/<role>.md` for T2 read-only templates).
+  * **System Prompt/Persona (Core Identity / 人格记忆)**: An initial payload granting its rigid rules, expertise, and goals (e.g., from `.megatron/agents/<role>.md` for T1 stateful agents, or `.megatron/roles/<role>.md` for T2 read-only templates).
 
 #### 2.3 Dynamic Skill Binding (Hot-Swappable)
 Because underlying Agents operate via CLI initialization sequences, tools and Skills (instructions) are bound at the **Workspace / Directory Environment** layer.
@@ -67,7 +67,7 @@ Node.js sub-processors invoking official tools (e.g., `@github/copilot`, `claude
 
 ### Phase 1: MVP Scaffolding ✅
 *   [x] Run `npx yo code` to generate a Typescript extension.
-*   [x] Register the `OptimusCode.chatView` component inside the Activity Bar.
+*   [x] Register the `MegatronCode.chatView` component inside the Activity Bar.
 *   [x] Abstract a `child_process` wrapper utilizing `spawn` to successfully hijack binaries while forcing `TERM=dumb`, avoiding color code leaks.
 
 ### Phase 2: Complete the Streaming Loop ✅
@@ -98,26 +98,26 @@ To ensure the Orchestrator truly acts as a Chief Architect (老板/包工头), w
    - **Simple Tasks**: The Orchestrator handles small fixes directly or delegates to a single Worker instantly.
    - **Epic Tasks**: The Orchestrator dynamically summons a Master Agent (PM/Tech Lead) to analyze requirements and orchestrate the Swarm.
 2. **The "Blackboard" Pattern (Artifact-Driven Handoff)**: 
-   - Instead of passing massive conversational prompts back and forth (which poisons context), all sub-agents communicate purely via reading and writing Markdown files in the workspace (e.g., dynamically named `.optimus/PROPOSAL_<topic>.md`, `TODO.md`).
+   - Instead of passing massive conversational prompts back and forth (which poisons context), all sub-agents communicate purely via reading and writing Markdown files in the workspace (e.g., dynamically named `.megatron/PROPOSAL_<topic>.md`, `TODO.md`).
 
-#### Spartan Swarm (斯巴达虫群) & MCP Facade Architecture
-As the project evolves, the multi-agent topology has definitively transitioned into a disciplined, highly autonomous engineering workforce known as the **Spartan Swarm (斯巴达虫群)**. 
+#### Megatron Swarm (斯巴达虫群) & MCP Facade Architecture
+As the project evolves, the multi-agent topology has definitively transitioned into a disciplined, highly autonomous engineering workforce known as the **Megatron Swarm (斯巴达虫群)**. 
 
 **Strategic Pivot (2026-03)**: The project has shifted its primary focus entirely to the **MCP (Model Context Protocol) Server as the absolute underlying API layer**. The earlier custom VS Code Extension frontend is now considered just a "Thin Client"—a downstream consumer of this MCP foundation. By focusing solely on the MCP API, our Swarm Orchestrator becomes universally compatible not just with our extension, but with official Copilot Edits, standard Claude Code, Cursor, and any other IDE supporting the open MCP standard.
 
-To bypass the limitations of Stateful CLI Coding Agents (which are designed for human interaction and struggle with stdin/stdout hijacking, long-connection management, and DB write-locks), Optimus employs this **Orchestrator MCP Facade**.
+To bypass the limitations of Stateful CLI Coding Agents (which are designed for human interaction and struggle with stdin/stdout hijacking, long-connection management, and DB write-locks), Megatron employs this **Orchestrator MCP Facade**.
 
-1. **The Core MCP Engine (`spartan-swarm` API)**: Instead of directly hacking CLI backends tightly coupled to VS Code UI components, we package our swarm orchestrator as a standalone, global MCP Server (`optimus-plugin`).
+1. **The Core MCP Engine (`megatron-swarm` API)**: Instead of directly hacking CLI backends tightly coupled to VS Code UI components, we package our swarm orchestrator as a standalone, global MCP Server (`megatron-plugin`).
 2. **Master Agent (纯粹调用)**: A Master Agent (whether inside Copilot, Claude CLI, or Web) purely executes standard JSON Tool Calls (e.g., `dispatch_council` or `delegate_task`) across the MCP wire, completely oblivious to how jobs are physically executed locally.
 3. **The Facade Server (提线木偶大师)**: Our Node.js MCP server receives these RPC calls. It acts as the ultimate controller, spinning up isolated, stateless CLI subprocesses (Headless Workers) under the hood. It strictly enforces the Singleton Worker Rule and parses all outputs.
 4. **Thin UI Decoupling**: Because the heavy lifting (concurrency, logging, error handling, worker spawning) is entirely encapsulated within the Local MCP Node daemon, front-end chat views no longer need to parse messy XML tags or manage state. They just render standard MCP tool invocation JSONs.
 
-#### The Spartan Registry: Expert Definition & Routing (专家定义与路由调度)
+#### The Megatron Registry: Expert Definition & Routing (专家定义与路由调度)
 In the MCP Facade paradigm, the Master Agent commands the Swarm by roles (e.g., `["security", "db-tyrant"]`), but it doesn't need to know *how* those experts are built. The Node.js MCP Controller uses a **Three-Tier Cascade Assembly (三层级联装配策略)** to construct the expert's ultimate System Prompt. Rather than a simple mutual exclusion (fallback), the tiers can optionally merge to form a deeply contextualized worker:
 
-1. **T3 - Computational Resource Pool (物理算力池: Engine + Model)**: T3 represents the raw, zero-shot AI capabilities available to the Swarm. It defines the combinations of Execution Engines (e.g., Claude Code, Copilot CLI) and Models (e.g., Claude 3.7 Sonnet, GPT-4o). When a completely made-up role is called (e.g., `graphql-performance-specialist`), the Controller falls back to T3 by assigning a default engine/model pair from `.optimus/registry/available-agents.json` and injecting a dynamically generated zero-shot prompt.
-2. **T2 - Role Templates (标准模板: T3 + Role Instruction)**: The Controller checks the workspace's `.optimus/roles/<role>.md` directory. T2 binds specific personality instructions, workflows, and preferred engines/models to form a standard **Role**. These are **read-only default templates** hydrated into the project on `optimus init`, enabling Git-tracked, team-shareable best practices.
-3. **T1 - Local Session Agents (实体特工: T2 + Memory/Session)**: The Controller checks the workspace for `.optimus/agents/<role>.md`. T1 elevates a pristine Role (T2) into an active, stateful worker by persisting memory and context. **T1 agents are stateful**: when executed, `worker-spawner.ts` natively intercepts and persists the agent's `session_id`, `engine`, and `model` configuration using **YAML frontmatter** at the top of the Markdown file:
+1. **T3 - Computational Resource Pool (物理算力池: Engine + Model)**: T3 represents the raw, zero-shot AI capabilities available to the Swarm. It defines the combinations of Execution Engines (e.g., Claude Code, Copilot CLI) and Models (e.g., Claude 3.7 Sonnet, GPT-4o). When a completely made-up role is called (e.g., `graphql-performance-specialist`), the Controller falls back to T3 by assigning a default engine/model pair from `.megatron/registry/available-agents.json` and injecting a dynamically generated zero-shot prompt.
+2. **T2 - Role Templates (标准模板: T3 + Role Instruction)**: The Controller checks the workspace's `.megatron/roles/<role>.md` directory. T2 binds specific personality instructions, workflows, and preferred engines/models to form a standard **Role**. These are **read-only default templates** hydrated into the project on `megatron init`, enabling Git-tracked, team-shareable best practices.
+3. **T1 - Local Session Agents (实体特工: T2 + Memory/Session)**: The Controller checks the workspace for `.megatron/agents/<role>.md`. T1 elevates a pristine Role (T2) into an active, stateful worker by persisting memory and context. **T1 agents are stateful**: when executed, `worker-spawner.ts` natively intercepts and persists the agent's `session_id`, `engine`, and `model` configuration using **YAML frontmatter** at the top of the Markdown file:
 
    ```yaml
    ---
@@ -136,15 +136,15 @@ In the MCP Facade paradigm, the Master Agent commands the Swarm by roles (e.g., 
 - **T2** = T3 + Role Context
 - **T1** = T2 + Memory (Session State + Overrides)
 
-This allows a locally defined `.optimus/agents/security.md` (T1) to be extremely short, simply persisting the `session_id`, while delegating the intelligence to the engine (T3) and inheriting role instructions if needed.
+This allows a locally defined `.megatron/agents/security.md` (T1) to be extremely short, simply persisting the `session_id`, while delegating the intelligence to the engine (T3) and inheriting role instructions if needed.
 
 #### Swarm Autonomous Evolution (自主进化与动态招募机制)
-Crucially, the entire Spartan Registry is **not statically hardcoded by humans**. It is a dynamic ecosystem driven entirely by the Master Agent's autonomy. In the beginning, a project may exist with ZERO predefined roles—everything starts as a generic T3. 
+Crucially, the entire Megatron Registry is **not statically hardcoded by humans**. It is a dynamic ecosystem driven entirely by the Master Agent's autonomy. In the beginning, a project may exist with ZERO predefined roles—everything starts as a generic T3. 
 
 The Master Agent governs the lifecycle of these agents autonomously:
 1. **Dynamic Recruitment (T3 临时征用)**: When faced with a novel problem, the Master Agent calculates the necessary domain expertise and invents a role title (e.g., `dispatch_council(roles: ["webgl-shader-guru"])`). It relies on the T3 Zero-Shot fallback to test this new worker directly on the battlefield.
-2. **Project-Scoped Solidification (T1 本地提拔)**: If the Master Agent notices project-specific idiosyncrasies causing the T3 worker to fail or hallucinate, it uses file I/O to synthesize and write a `.optimus/agents/webgl-shader-guru.md` (T1). The frontmatter will automatically capture the agent's `session_id` and `engine` on first execution, making it a persistent, project-aware local expert.
-3. **Template Promotion (T2 通用固化与复用)**: Once a T1 agent definition proves to contain highly reusable, standard-industry logic that transcends the current project (e.g., a pristine `react-hooks-reviewer`), those universal principles can be extracted into a read-only T2 template at `.optimus/roles/react-hooks-reviewer.md`. On future `optimus init` runs in other workspaces, this template is hydrated automatically for the team.
+2. **Project-Scoped Solidification (T1 本地提拔)**: If the Master Agent notices project-specific idiosyncrasies causing the T3 worker to fail or hallucinate, it uses file I/O to synthesize and write a `.megatron/agents/webgl-shader-guru.md` (T1). The frontmatter will automatically capture the agent's `session_id` and `engine` on first execution, making it a persistent, project-aware local expert.
+3. **Template Promotion (T2 通用固化与复用)**: Once a T1 agent definition proves to contain highly reusable, standard-industry logic that transcends the current project (e.g., a pristine `react-hooks-reviewer`), those universal principles can be extracted into a read-only T2 template at `.megatron/roles/react-hooks-reviewer.md`. On future `megatron init` runs in other workspaces, this template is hydrated automatically for the team.
 
 **Important: T1 and T2 remain independent tiers.** The orchestration logic in `worker-spawner.ts` no longer forcibly "promotes" or clones T2 templates into T1 agents automatically. T2 serves as a standard fallback layer of read-only templates; T1 serves as stateful session-bound overrides. They coexist without automatic conversion.
 
@@ -155,14 +155,14 @@ When a massive refactoring or architectural task is triggered, the Orchestrator 
 
 3. **Phase A: Map-Reduce Council Review (并发专家会审 - Validation & Design)**
    - *Topology: Parallel Consensus (1-to-Many-to-1).*
-   - **Scatter (发散)**: Master Agent drafts an initial proposal dynamically (e.g., `.optimus/PROPOSAL_auth.md`). The Orchestrator parallel-spawns multiple specialized CLI workers (e.g., Security, Database, Refactoring experts) at the exact same time, pointing them to the specific proposal file.
+   - **Scatter (发散)**: Master Agent drafts an initial proposal dynamically (e.g., `.megatron/PROPOSAL_auth.md`). The Orchestrator parallel-spawns multiple specialized CLI workers (e.g., Security, Database, Refactoring experts) at the exact same time, pointing them to the specific proposal file.
    - **Model Diversity (模型多样性)**: To prevent groupthink and systemic blind spots, the Orchestrator should intentionally dispatch different foundation models to different experts if configured. For example, routing the `security-expert` to Claude 3.5 Sonnet (for strict rules) and the `refactoring-architect` to OpenAI o1 (for out-of-the-box structural thinking).
-   - **Isolate**: Each expert analyzes the proposal and writes strictly formatted reviews to dedicated isolated artifacts (e.g., `.optimus/reviews/<timestamp>/security_review.md`).
-   - **Gather (收敛)**: The Master waits for all processes to exit (`Promise.all`), digests the reviews, and generates the final actionable `.optimus/TODO.md` (or pauses to generate `CONFLICTS.md` for human arbitration).
+   - **Isolate**: Each expert analyzes the proposal and writes strictly formatted reviews to dedicated isolated artifacts (e.g., `.megatron/reviews/<timestamp>/security_review.md`).
+   - **Gather (收敛)**: The Master waits for all processes to exit (`Promise.all`), digests the reviews, and generates the final actionable `.megatron/TODO.md` (or pauses to generate `CONFLICTS.md` for human arbitration).
 
 4. **Phase B: Task Delegation & Pipeline (串行流水线执行 - Execution)**
    - *Topology: Sequential Pipeline (Waterfall).*
-   - Once the `.optimus/TODO.md` blueprint is finalized, the Orchestrator uses the `delegate_task` tool to assign execution work.
+   - Once the `.megatron/TODO.md` blueprint is finalized, the Orchestrator uses the `delegate_task` tool to assign execution work.
    - Sub-agents are dispatched sequentially to do the heavy lifting. A "Dev" worker reads the first unchecked ticket, writes the actual implementation code, and exits. Then a "QA" worker reads the diff, runs tests, and ticks the box `[x]`.
    
 5. **The Singleton Worker Rule & Circuit Breakers**:
@@ -177,13 +177,13 @@ When a massive refactoring or architectural task is triggered, the Orchestrator 
 ## Configuration & Context Management
 **The Multi-Tiered Memory & Blackboard System**: To maintain a "Single Source of Truth" (SSOT) across all multi-agent backends (Copilot, Claude, etc.), we explicitly split memory into **Static Persona Configs (人格/经验记忆)** managed as plain text, and **Dynamic Flow State (事件/短期记忆)** managed via the underlying CLI's native SQLite stores mapped to `--session-id`. 
 
-Crucially, Optimus Code is now **entirely project-scoped**. All agent and role definitions live within the workspace's `.optimus/` directory:
+Crucially, Megatron AI is now **entirely project-scoped**. All agent and role definitions live within the workspace's `.megatron/` directory:
 
-#### 1. Local Workspace Project Plane (`<workspace>/.optimus/`)
-- **Local Blackboard (`.optimus/PROPOSAL.md`, `TODO.md`)**: The artifact-driven communication bus confined to the specific project being edited.
-- **Local Memory (`.optimus/memory.md`)**: Long-term agent memory hot cache specific to this codebase's architecture and quirks.
-- **T2 Role Templates (`.optimus/roles/`)**: Read-only default role templates, hydrated into the workspace on `optimus init`. These provide standardized best-practice prompts (e.g., security, architecture review) and are intended to be Git-tracked alongside the project for team-wide consistency. The orchestrator reads these purely as read-only templates and never modifies them at runtime.
-- **T1 Session Agents (`.optimus/agents/`)**: Stateful, per-project agent definitions that override or augment T2 templates for this specific repository. Each T1 agent file uses **YAML frontmatter** to persist its `session_id`, `engine`, and `model` across executions:
+#### 1. Local Workspace Project Plane (`<workspace>/.megatron/`)
+- **Local Blackboard (`.megatron/PROPOSAL.md`, `TODO.md`)**: The artifact-driven communication bus confined to the specific project being edited.
+- **Local Memory (`.megatron/memory.md`)**: Long-term agent memory hot cache specific to this codebase's architecture and quirks.
+- **T2 Role Templates (`.megatron/roles/`)**: Read-only default role templates, hydrated into the workspace on `megatron init`. These provide standardized best-practice prompts (e.g., security, architecture review) and are intended to be Git-tracked alongside the project for team-wide consistency. The orchestrator reads these purely as read-only templates and never modifies them at runtime.
+- **T1 Session Agents (`.megatron/agents/`)**: Stateful, per-project agent definitions that override or augment T2 templates for this specific repository. Each T1 agent file uses **YAML frontmatter** to persist its `session_id`, `engine`, and `model` across executions:
 
   ```yaml
   ---
@@ -196,19 +196,19 @@ Crucially, Optimus Code is now **entirely project-scoped**. All agent and role d
   ```
 
   This frontmatter-based persistence eliminates "amnesia" — agents resume exactly where they left off, with full episodic memory intact.
-- **Local Rules (`.optimus/rules.md`)**: Additional configurations that override generic behaviors strictly for this repository.
+- **Local Rules (`.megatron/rules.md`)**: Additional configurations that override generic behaviors strictly for this repository.
 
-> **Note on Global State**: The previous architecture stored global agent profiles at `~/.optimus/` (including `~/.optimus/global_memory.md`, `~/.optimus/global_bus/`, and `~/.optimus/personas/`). This global OS-level directory is **no longer used**. All role and agent definitions are now strictly project-scoped within `<workspace>/.optimus/`. T2 default templates are hydrated directly into each workspace's `.optimus/roles/` directory, making them Git-trackable and eliminating cross-project implicit state.
+> **Note on Global State**: The previous architecture stored global agent profiles at `~/.megatron/` (including `~/.megatron/global_memory.md`, `~/.megatron/global_bus/`, and `~/.megatron/personas/`). This global OS-level directory is **no longer used**. All role and agent definitions are now strictly project-scoped within `<workspace>/.megatron/`. T2 default templates are hydrated directly into each workspace's `.megatron/roles/` directory, making them Git-trackable and eliminating cross-project implicit state.
 
 ---
 
-## 🔌 Core Layer: The Spartan Swarm MCP API
+## 🔌 Core Layer: The Megatron Swarm MCP API
 
-To achieve true CLI independence, cross-IDE compatibility, and stateless concurrency, the Orchestrator has been officially re-architected as a standard MCP Server (`optimus-plugin`). **This MCP API is now the definitive foundation of the entire Optimus schema; UI plugins are purely optional secondary layers.**
+To achieve true CLI independence, cross-IDE compatibility, and stateless concurrency, the Orchestrator has been officially re-architected as a standard MCP Server (`megatron-plugin`). **This MCP API is now the definitive foundation of the entire Megatron schema; UI plugins are purely optional secondary layers.**
 
 ### Directory Structure & Component Mapping
 ```text
-optimus-plugin/
+megatron-plugin/
 ├── .claude-plugin/
 │   └── plugin.json              # Plugin manifest and definitions
 ├── .mcp.json                    # MCP Server definition (Registers the Node.js backend)
@@ -220,7 +220,7 @@ optimus-plugin/
     ├── controller.js            # Implements T3->T2->T1 Cascade Assembly and Singleton Locks
     └── worker-spawner.ts        # Spawns headless sub-CLI instances; persists T1 YAML frontmatter
 
-<workspace>/.optimus/            # Project-scoped data (created by `optimus init`)
+<workspace>/.megatron/            # Project-scoped data (created by `megatron init`)
 ├── roles/                       # T2 Layer: Read-only default templates (hydrated on init)
 │   ├── security-expert.md
 │   └── refactoring-architect.md
@@ -240,6 +240,6 @@ optimus-plugin/
 During the transition to MCP, we discovered a core design pattern for Agentic systems: **Do not write complex state machines or routing logic in code (TypeScript/Node); write them in Prompts (Skills).**
 
 * **Anti-Pattern (Hardcoded Logic)**: Building a massive `delegate_task` tool that automatically scans the directory, tries to guess what the user meant, runs an internal heuristics engine to pick a developer, and then spawns it. 
-* **The Optimus Pattern**: The MCP layer provides highly atomic, "dumb" tools: `roster_check` (returns a text list of available personas) and `delegate_task` (executes a specific role with a specific task). The complex routing logic—the "3-Step Pre-Dispatch Doctrine" (Camp Inspection -> Manpower Assessment -> Deployment)—is written purely in natural language inside `skills/delegate-task/SKILL.md`.
+* **The Megatron Pattern**: The MCP layer provides highly atomic, "dumb" tools: `roster_check` (returns a text list of available personas) and `delegate_task` (executes a specific role with a specific task). The complex routing logic—the "3-Step Pre-Dispatch Doctrine" (Camp Inspection -> Manpower Assessment -> Deployment)—is written purely in natural language inside `skills/delegate-task/SKILL.md`.
 
 This outsources the heavy computational routing to the Master Agent's LLM brain. It allows the Orchestrator to dynamically invent new titles (T3 Outsourcing) or make intelligent personnel decisions based on the actual conversation context, all without requiring a single line of traditional front-end control-flow code.

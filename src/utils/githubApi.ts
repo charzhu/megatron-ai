@@ -29,10 +29,10 @@ export async function createGitHubIssue(
     const token = getToken();
     if (!token) return null;
 
-    // Defense-in-depth: ensure optimus-bot label is always present
+    // Defense-in-depth: ensure megatron-bot label is always present
     const issueLabels = Array.isArray(labels) ? [...labels] : [];
-    if (!issueLabels.includes('optimus-bot')) {
-        issueLabels.push('optimus-bot');
+    if (!issueLabels.includes('megatron-bot')) {
+        issueLabels.push('megatron-bot');
     }
 
     try {
@@ -42,7 +42,7 @@ export async function createGitHubIssue(
                 "Authorization": `Bearer ${token}`,
                 "Accept": "application/vnd.github.v3+json",
                 "Content-Type": "application/json",
-                "User-Agent": "Optimus-Agent"
+                "User-Agent": "Megatron-Agent"
             },
             body: JSON.stringify({ title, body, labels: issueLabels })
         });
@@ -72,7 +72,7 @@ export async function commentOnGitHubIssue(
                 "Authorization": `Bearer ${token}`,
                 "Accept": "application/vnd.github.v3+json",
                 "Content-Type": "application/json",
-                "User-Agent": "Optimus-Agent"
+                "User-Agent": "Megatron-Agent"
             },
             body: JSON.stringify({ body })
         });
@@ -95,7 +95,7 @@ export async function closeGitHubIssue(
                 "Authorization": `Bearer ${token}`,
                 "Accept": "application/vnd.github.v3+json",
                 "Content-Type": "application/json",
-                "User-Agent": "Optimus-Agent"
+                "User-Agent": "Megatron-Agent"
             },
             body: JSON.stringify({ state: "closed" })
         });
@@ -131,7 +131,7 @@ export async function getIssueComments(
                 headers: {
                     "Authorization": `Bearer ${token}`,
                     "Accept": "application/vnd.github.v3+json",
-                    "User-Agent": "Optimus-Agent"
+                    "User-Agent": "Megatron-Agent"
                 }
             });
 

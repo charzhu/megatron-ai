@@ -15,7 +15,7 @@ export interface StateStore {
     update(key: string, value: any): Promise<void>;
 }
 
-export interface OptimusConfig {
+export interface MegatronConfig {
     get<T>(key: string): T | undefined;
 }
 
@@ -24,7 +24,7 @@ export class FileSystemStateStore implements StateStore {
     private cache: Record<string, any> | undefined;
 
     constructor(workspacePath: string) {
-        const dir = path.join(workspacePath, '.optimus', 'state');
+        const dir = path.join(workspacePath, '.megatron', 'state');
         if (!fs.existsSync(dir)) {
             fs.mkdirSync(dir, { recursive: true });
         }
@@ -58,7 +58,7 @@ export class FileSystemStateStore implements StateStore {
     }
 }
 
-export class FileSystemConfig implements OptimusConfig {
+export class FileSystemConfig implements MegatronConfig {
     private filePath: string;
     private cache: Record<string, any> | undefined;
 
@@ -87,24 +87,24 @@ export class FileSystemConfig implements OptimusConfig {
         try {
             if (fs.existsSync(settingsPath)) {
                 const settings = JSON.parse(fs.readFileSync(settingsPath, 'utf8'));
-                if (settings[`optimusCode.${key}`] !== undefined) {
-                    return settings[`optimusCode.${key}`] as T;
+                if (settings[`megatronCode.${key}`] !== undefined) {
+                    return settings[`megatronCode.${key}`] as T;
                 }
             }
         } catch {
             // ignore
         }
-        return data[`optimusCode.${key}`]?.default as T | undefined;
+        return data[`megatronCode.${key}`]?.default as T | undefined;
     }
 }
 
 export class SharedTaskStateManager {
-    private static readonly storageKey = 'optimusTaskStates';
+    private static readonly storageKey = 'megatronTaskStates';
     private static readonly maxTasks = 25;
     private static readonly defaultCompactThreshold = 800000;
     
     private globalState: StateStore;
-    private config: OptimusConfig;
+    private config: MegatronConfig;
 
     constructor(workspacePath?: string) {
         const resolvedWorkspace = workspacePath || PersistentAgentAdapter.getWorkspacePath();
@@ -221,7 +221,7 @@ export class SharedTaskStateManager {
         const referencedContext = this.buildReferencedTurnsContext(taskState, turnRecord.referencedTurnSequences);
 
         const parts: string[] = [
-            'You are a planner agent for Optimus Code.',
+            'You are a planner agent for Megatron AI.',
             'Your role is read-only analysis and planning.',
             'Do not modify files, do not attempt to call edit/write/apply_patch/create/delete tools, and do not describe failed edit attempts or permission workarounds.',
             'If implementation is needed, propose the concrete next steps for the executor instead of trying to perform them yourself.',
@@ -303,7 +303,7 @@ export class SharedTaskStateManager {
         const referencedContext = this.buildReferencedTurnsContext(taskState, turnRecord.referencedTurnSequences);
 
         const parts = [
-            'You are the executor agent for Optimus Code.',
+            'You are the executor agent for Megatron AI.',
             '',
             'RESPONSE GUIDELINES:',
             '- Lead with the direct answer or result first.',
@@ -358,7 +358,7 @@ export class SharedTaskStateManager {
             'After completing your work, append a concise progress summary wrapped in <task-summary> tags. This summary should capture what was accomplished in this turn and the overall task status in 2-3 sentences. Example:',
             '<task-summary>Refactored the auth module to use JWT tokens. All tests pass. Remaining: update API docs.</task-summary>',
             '',
-            'IMPORTANT: At the end of each turn, evaluate whether you learned any important project-level facts, architecture decisions, user preferences, or key technical constraints that should persist across sessions. If so, you MUST wrap them in <memory-update> tags. The orchestrator will merge this into .optimus/memory.md automatically. Example:',
+            'IMPORTANT: At the end of each turn, evaluate whether you learned any important project-level facts, architecture decisions, user preferences, or key technical constraints that should persist across sessions. If so, you MUST wrap them in <memory-update> tags. The orchestrator will merge this into .megatron/memory.md automatically. Example:',
             '<memory-update>This project uses esbuild bundling. Always run `npm run compile` after code changes to rebuild `out/extension.js`. `npx tsc --noEmit` is type-check only.</memory-update>',
         );
 
@@ -372,7 +372,7 @@ export class SharedTaskStateManager {
             : [];
 
         const parts = [
-            'You are SYNTHESIZER for Optimus Code.',
+            'You are SYNTHESIZER for Megatron AI.',
             'Multiple planners have analyzed the user\'s request. Your ONLY job is to merge their analyses into a single, coherent response.',
             'Do NOT execute code, modify files, or call any tools. Output a unified answer only.',
             ...rulesParts,
@@ -428,7 +428,7 @@ export class SharedTaskStateManager {
         const referencedContext = this.buildReferencedTurnsContext(taskState, turnRecord.referencedTurnSequences);
 
         const parts = [
-            'You are the executor agent for Optimus Code.',
+            'You are the executor agent for Megatron AI.',
             'This task was initially routed as DIRECT EXECUTION, but a validation planner detected it requires more careful planning.',
             '',
             'RESPONSE GUIDELINES:',
@@ -483,7 +483,7 @@ export class SharedTaskStateManager {
             'After completing your work, append a concise progress summary wrapped in <task-summary> tags. This summary should capture what was accomplished in this turn and the overall task status in 2-3 sentences. Example:',
             '<task-summary>Refactored the auth module to use JWT tokens. All tests pass. Remaining: update API docs.</task-summary>',
             '',
-            'IMPORTANT: At the end of each turn, evaluate whether you learned any important project-level facts, architecture decisions, user preferences, or key technical constraints that should persist across sessions. If so, you MUST wrap them in <memory-update> tags. The orchestrator will merge this into .optimus/memory.md automatically. Example:',
+            'IMPORTANT: At the end of each turn, evaluate whether you learned any important project-level facts, architecture decisions, user preferences, or key technical constraints that should persist across sessions. If so, you MUST wrap them in <memory-update> tags. The orchestrator will merge this into .megatron/memory.md automatically. Example:',
             '<memory-update>This project uses esbuild bundling. Always run `npm run compile` after code changes to rebuild `out/extension.js`. `npx tsc --noEmit` is type-check only.</memory-update>',
         );
 
@@ -518,7 +518,7 @@ export class SharedTaskStateManager {
         const referencedContext = this.buildReferencedTurnsContext(taskState, turnRecord.referencedTurnSequences);
 
         const parts = [
-            'You are the executor agent for Optimus Code.',
+            'You are the executor agent for Megatron AI.',
             'This is a DIRECT EXECUTION turn — no planner analysis was performed. Execute the user request directly.',
             '',
             'RESPONSE GUIDELINES:',
@@ -569,7 +569,7 @@ export class SharedTaskStateManager {
             'After completing your work, append a concise progress summary wrapped in <task-summary> tags. This summary should capture what was accomplished in this turn and the overall task status in 2-3 sentences. Example:',
             '<task-summary>Refactored the auth module to use JWT tokens. All tests pass. Remaining: update API docs.</task-summary>',
             '',
-            'IMPORTANT: At the end of each turn, evaluate whether you learned any important project-level facts, architecture decisions, user preferences, or key technical constraints that should persist across sessions. If so, you MUST wrap them in <memory-update> tags. The orchestrator will merge this into .optimus/memory.md automatically. Example:',
+            'IMPORTANT: At the end of each turn, evaluate whether you learned any important project-level facts, architecture decisions, user preferences, or key technical constraints that should persist across sessions. If so, you MUST wrap them in <memory-update> tags. The orchestrator will merge this into .megatron/memory.md automatically. Example:',
             '<memory-update>This project uses esbuild bundling. Always run `npm run compile` after code changes to rebuild `out/extension.js`. `npx tsc --noEmit` is type-check only.</memory-update>',
         );
 
@@ -869,7 +869,7 @@ export class SharedTaskStateManager {
         try {
             const rootPath = PersistentAgentAdapter.getWorkspacePath();
             if (!rootPath) { return null; }
-            const rulesPath = path.join(rootPath, '.optimus', 'config', 'system-instructions.md');
+            const rulesPath = path.join(rootPath, '.megatron', 'config', 'system-instructions.md');
             
             let rulesContent = "";
             if (fs.existsSync(rulesPath)) {
@@ -904,7 +904,7 @@ export class SharedTaskStateManager {
         try {
             const rootPath = PersistentAgentAdapter.getWorkspacePath();
             if (!rootPath) { return null; }
-            const memPath = path.join(rootPath, '.optimus', 'state', 'memory.md');
+            const memPath = path.join(rootPath, '.megatron', 'state', 'memory.md');
             if (!fs.existsSync(memPath)) { return null; }
             return fs.readFileSync(memPath, 'utf8');
         } catch {
@@ -916,9 +916,9 @@ export class SharedTaskStateManager {
         try {
             const rootPath = PersistentAgentAdapter.getWorkspacePath();
             if (!rootPath) { return; }
-            const optimusDir = path.join(rootPath, '.optimus');
-            if (!fs.existsSync(optimusDir)) { fs.mkdirSync(optimusDir, { recursive: true }); }
-            const memPath = path.join(optimusDir, 'state', 'memory.md');
+            const megatronDir = path.join(rootPath, '.megatron');
+            if (!fs.existsSync(megatronDir)) { fs.mkdirSync(megatronDir, { recursive: true }); }
+            const memPath = path.join(megatronDir, 'state', 'memory.md');
             fs.writeFileSync(memPath, newContent, 'utf8');
         } catch {
             // non-fatal: memory write failure should never block turn completion

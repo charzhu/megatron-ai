@@ -20,6 +20,6 @@ temp_debug/
 .env.*
 
 /temp_scripts/
-/.optimus/reports/
-/.optimus/reviews/
+/.megatron/reports/
+/.megatron/reviews/
 temp_data/

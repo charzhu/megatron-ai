@@ -68,7 +68,7 @@ export async function runAsyncWorker(taskId: string, workspacePath: string) {
     // Fall back to task.parent_issue_number (grandparent) when GitHub issue creation failed.
     const parentIssueNumber = task.github_issue_number ?? task.parent_issue_number;
     if (parentIssueNumber !== undefined) {
-        console.error(`[Runner] Setting OPTIMUS_PARENT_ISSUE=${parentIssueNumber} for child agents (source: ${task.github_issue_number !== undefined ? 'own issue' : 'inherited parent'})`);
+        console.error(`[Runner] Setting MEGATRON_PARENT_ISSUE=${parentIssueNumber} for child agents (source: ${task.github_issue_number !== undefined ? 'own issue' : 'inherited parent'})`);
     }
 
     TaskManifestManager.updateTask(workspacePath, taskId, { status: 'running', pid: process.pid });
@@ -137,7 +137,7 @@ export async function runAsyncWorker(taskId: string, workspacePath: string) {
                 } else {
                     synthesisFailedRoles.push(role);
                     synthesisContent += `## ${i + 1}. Review from ${role}\n\n`;
-                    synthesisContent += `*Worker '${role}' failed to produce a valid review artifact (Status: ${status}). Check .optimus/agents/ for the worker's T1 instance file — it may contain error context in its frontmatter.*\n\n---\n\n`;
+                    synthesisContent += `*Worker '${role}' failed to produce a valid review artifact (Status: ${status}). Check .megatron/agents/ for the worker's T1 instance file — it may contain error context in its frontmatter.*\n\n---\n\n`;
                 }
             }
 

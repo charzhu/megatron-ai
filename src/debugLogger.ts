@@ -1,6 +1,6 @@
 // Core logging implementation without vscode dependencies
 let customLogger: ((message: string) => void) | undefined;
-let cachedDebugMode: boolean = process.env.OPTIMUS_DEBUG === '1';
+let cachedDebugMode: boolean = process.env.MEGATRON_DEBUG === '1';
 
 export function setCustomLogger(logger: (message: string) => void) {
     customLogger = logger;

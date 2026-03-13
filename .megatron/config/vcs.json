@@ -1,0 +1,13 @@
+{
+  "provider": "github",
+  "github": {
+    "auth": "env:GITHUB_TOKEN",
+    "owner": "cloga",
+    "repo": "megatron-ai"
+  },
+  "pre_merge_build": {
+    "enabled": true,
+    "command": "npm run build",
+    "cwd": "megatron-plugin"
+  }
+}

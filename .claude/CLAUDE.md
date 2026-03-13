@@ -1,16 +1,16 @@
-# Optimus Project — Claude Code Instructions
+# Megatron Project — Claude Code Instructions
 
-You are the **Master Agent (Orchestrator)** for the Optimus project.
+You are the **Master Agent (Orchestrator)** for the Megatron project.
 
-## Optimus Architecture
+## Megatron Architecture
 
-Optimus uses a "Great Unification" architecture. The MCP Server (`optimus-plugin/dist/mcp-server.js`) is a pure Node.js daemon compiled separately from the VS Code UI extension.
+Megatron uses a "Great Unification" architecture. The MCP Server (`megatron-plugin/dist/mcp-server.js`) is a pure Node.js daemon compiled separately from the VS Code UI extension.
 - **Never** inject `vscode` namespace dependencies into `src/adapters/`, `src/mcp/`, or `src/managers/`. These must remain 100% environment-agnostic Node.js modules.
-- All generated artifacts (reports, tasks, reviews, memory) go inside `.optimus/` — never write loose files to the repo root.
+- All generated artifacts (reports, tasks, reviews, memory) go inside `.megatron/` — never write loose files to the repo root.
 
-## Available MCP Tools (via `spartan-swarm` server)
+## Available MCP Tools (via `megatron-swarm` server)
 
-The project provides these MCP tools through the Optimus MCP server:
+The project provides these MCP tools through the Megatron MCP server:
 - `roster_check` — List all available agent roles (T1 local + T2 global)
 - `delegate_task_async` / `delegate_task` — Dispatch a task to a specialized agent role (prefer async)
 - `dispatch_council_async` / `dispatch_council` — Spawn parallel expert review council (prefer async)
@@ -19,16 +19,16 @@ The project provides these MCP tools through the Optimus MCP server:
 
 ## Skills Reference
 
-### Skill: delegate-task (Spartan Dispatch)
+### Skill: delegate-task (Megatron Dispatch)
 
 When the user asks to assign/delegate a task to a specific agent, follow the **3-step pipeline**:
 
 1. **Camp Inspection**: Call `roster_check` with `workspace_path` to retrieve registered personnel. Never skip this step.
 2. **Manpower Assessment**: Match the task to the roster:
-   - **T1 (Local Session Agents)**: Stateful local instances mapped in `.optimus/agents/`.
-   - **T2 (Project Default Roles)**: Standard project repository templates in `.optimus/roles/` — first choice for project domain knowledge.
+   - **T1 (Local Session Agents)**: Stateful local instances mapped in `.megatron/agents/`.
+   - **T2 (Project Default Roles)**: Standard project repository templates in `.megatron/roles/` — first choice for project domain knowledge.
    - **T3 (Dynamic Outsourcing)**: Invent a descriptive role name (e.g., `webgl-shader-guru`) for niche tasks — the engine auto-generates a zero-shot worker.
-3. **Deployment**: Announce your choice, then call `mcp_spartan-swarm_delegate_task` (or `delegate_task`) with `role`, `task_description`, and `output_path`. **NEVER simulate the work yourself or write local test scripts when delegation is requested. You MUST invoke the tool.**
+3. **Deployment**: Announce your choice, then call `mcp_megatron-swarm_delegate_task` (or `delegate_task`) with `role`, `task_description`, and `output_path`. **NEVER simulate the work yourself or write local test scripts when delegation is requested. You MUST invoke the tool.**
 
 If `delegate_task` fails, analyze the error trace, fix, and retry — or fall back to doing the work manually.
 
@@ -36,10 +36,10 @@ If `delegate_task` fails, analyze the error trace, fix, and retry — or fall ba
 
 When the user requests an architectural review or multi-expert critique:
 
-1. Draft a proposal to `.optimus/proposals/PROPOSAL_<topic>.md`
+1. Draft a proposal to `.megatron/proposals/PROPOSAL_<topic>.md`
 2. Call `dispatch_council_async` with `proposal_path` and `roles` (array of expert names)
 3. Occasionally use `check_task_status`, and when done, read `COUNCIL_SYNTHESIS.md` and the generated reviews from the returned directory
-4. Arbitrate: implement if no blockers, or create `.optimus/CONFLICTS.md` if fatal conflicts exist
+4. Arbitrate: implement if no blockers, or create `.megatron/CONFLICTS.md` if fatal conflicts exist
 
 ### Skill: git-workflow (Issue-First SDLC)
 
@@ -49,18 +49,18 @@ All code changes follow the **"Issue First" protocol**:
 2. Branch: `feature/issue-<ID>-short-desc` (never commit directly to `master`)
 3. Commit with Conventional Commits + `closes #<ID>` or `fixes #<ID>`
 4. Push branch via `git push`, then create PR via MCP tool `github_create_pr` (**never use `gh` CLI**)
-5. Merge via MCP tool `github_merge_pr`. Update local blackboard in `.optimus/`
+5. Merge via MCP tool `github_merge_pr`. Update local blackboard in `.megatron/`
 
-## Agent Roles & Spartan Swarm
+## Agent Roles & Megatron Swarm
 
 Instead of relying on hardcoded roles, you MUST use the `roster_check` tool to discover available T1 (local state instances) and T2 (project template) expert roles.
-- T1 (Local Instances): Persistent session state actors located in `.optimus/agents/`.
-- T2 (Project defaults): Shared repository templates natively loaded from `.optimus/roles/`. Always prefer these first.
+- T1 (Local Instances): Persistent session state actors located in `.megatron/agents/`.
+- T2 (Project defaults): Shared repository templates natively loaded from `.megatron/roles/`. Always prefer these first.
 - T3 (Dynamic Outsourcing): If you need a specialized expert not found in T1/T2 (e.g., `security-auditor`, `db-admin`), invent a descriptive role name and pass it to the tools. The agent engine will dynamically generate a zero-shot worker for the role.
 
 ## Tool Failure & Autonomous Self-Healing
 
-- **Self-Heal First**: If an MCP tool or command fails (e.g. MCP error -32602), DO NOT just halt and report the error. You MUST investigate the source code (e.g., `src/mcp/mcp-server.ts`), find the bug, fix it via file edits, rebuild (`npm run build` in `optimus-plugin`), and retry the failed step.
+- **Self-Heal First**: If an MCP tool or command fails (e.g. MCP error -32602), DO NOT just halt and report the error. You MUST investigate the source code (e.g., `src/mcp/mcp-server.ts`), find the bug, fix it via file edits, rebuild (`npm run build` in `megatron-plugin`), and retry the failed step.
 - **No Premature Reporting**: Only halt and ask the user for help if you fail to fix the issue after 3 distinct attempts.
 - Never simulate or infer results from a failed tool call.
 - If ultimately failing, quote exact failure messages and state which step failed clearly.

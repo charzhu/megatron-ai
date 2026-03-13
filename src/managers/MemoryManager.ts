@@ -5,12 +5,12 @@ import { debugLog } from '../debugLogger';
 
 export class MemoryManager {
     private static readonly memoryFileName = 'state/memory.md';
-    private static readonly optimusDir = '.optimus';
+    private static readonly megatronDir = '.megatron';
 
     private getMemoryFilePath(): string | null {
         const rootPath = PersistentAgentAdapter.getWorkspacePath();
         if (!rootPath) { return null; }
-        return path.join(rootPath, MemoryManager.optimusDir, MemoryManager.memoryFileName);
+        return path.join(rootPath, MemoryManager.megatronDir, MemoryManager.memoryFileName);
     }
 
     public readMemory(): string | null {

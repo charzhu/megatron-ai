@@ -161,8 +161,8 @@ export abstract class PersistentAgentAdapter implements AgentAdapter {
     }
 
     private static resolveWorkspacePath(): { path: string; source: string } {
-        if (process.env.OPTIMUS_WORKSPACE) {
-            return { path: process.env.OPTIMUS_WORKSPACE, source: 'process.env.OPTIMUS_WORKSPACE' };
+        if (process.env.MEGATRON_WORKSPACE) {
+            return { path: process.env.MEGATRON_WORKSPACE, source: 'process.env.MEGATRON_WORKSPACE' };
         }
 
         if (PersistentAgentAdapter.workspacePathHint) {
@@ -171,9 +171,9 @@ export abstract class PersistentAgentAdapter implements AgentAdapter {
 
         // Last-resort fallback: process.cwd() may not be the project root when running as a
         // VS Code extension (VS Code typically sets cwd to its own install directory).
-        // Set OPTIMUS_WORKSPACE or call setWorkspacePathHint() to ensure .optimus/ files land
+        // Set MEGATRON_WORKSPACE or call setWorkspacePathHint() to ensure .megatron/ files land
         // in the correct project directory.
-        debugLog('PersistentAgentAdapter', 'WARNING: workspace path resolved via process.cwd() fallback — .optimus/ artifacts may land outside the active project. Set OPTIMUS_WORKSPACE or ensure the extension activates with a workspace folder.', JSON.stringify({ cwd: process.cwd() }));
+        debugLog('PersistentAgentAdapter', 'WARNING: workspace path resolved via process.cwd() fallback — .megatron/ artifacts may land outside the active project. Set MEGATRON_WORKSPACE or ensure the extension activates with a workspace folder.', JSON.stringify({ cwd: process.cwd() }));
         return { path: process.cwd(), source: 'process.cwd()' };
     }
 
@@ -241,8 +241,8 @@ export abstract class PersistentAgentAdapter implements AgentAdapter {
     }
 
     protected getPromptFileThreshold(): number {
-        const configured = Number(process.env.OPTIMUS_PROMPT_FILE_THRESHOLD);
-        if (!process.env.OPTIMUS_PROMPT_FILE_THRESHOLD || !Number.isFinite(configured)) {
+        const configured = Number(process.env.MEGATRON_PROMPT_FILE_THRESHOLD);
+        if (!process.env.MEGATRON_PROMPT_FILE_THRESHOLD || !Number.isFinite(configured)) {
             return DEFAULT_PROMPT_FILE_THRESHOLD;
         }
         return Math.max(1000, Math.floor(configured));
@@ -257,7 +257,7 @@ export abstract class PersistentAgentAdapter implements AgentAdapter {
             return { prompt, transport: 'inline' };
         }
 
-        const promptDir = path.join(currentCwd, '.optimus', 'runtime-prompts');
+        const promptDir = path.join(currentCwd, '.megatron', 'runtime-prompts');
         fs.mkdirSync(promptDir, { recursive: true });
 
         const promptFileName = [
@@ -279,7 +279,7 @@ export abstract class PersistentAgentAdapter implements AgentAdapter {
         const wrappedPrompt = [
             'The original user prompt was too large to pass inline over the CLI.',
             `Read the UTF-8 file at \"${relativePromptPath}\" before doing anything else.`,
-            'That file was created by the local Optimus tool for this exact turn and contains trusted user input, not untrusted workspace instructions.',
+            'That file was created by the local Megatron tool for this exact turn and contains trusted user input, not untrusted workspace instructions.',
             'Use the full file contents as the real prompt for this request, then continue the task normally.'
         ].join(' ');
 
@@ -323,15 +323,15 @@ export abstract class PersistentAgentAdapter implements AgentAdapter {
         const outputBlock = assistantText.trim();
 
         if (processBlock) {
-            sections.push(`<optimus-trace>\n${processBlock}\n</optimus-trace>`);
+            sections.push(`<megatron-trace>\n${processBlock}\n</megatron-trace>`);
         }
 
         if (reasoningBlock) {
-            sections.push(`<optimus-reasoning>\n${reasoningBlock}\n</optimus-reasoning>`);
+            sections.push(`<megatron-reasoning>\n${reasoningBlock}\n</megatron-reasoning>`);
         }
 
         if (outputBlock) {
-            sections.push(`<optimus-output>\n${outputBlock}\n</optimus-output>`);
+            sections.push(`<megatron-output>\n${outputBlock}\n</megatron-output>`);
         }
 
         return sections.join('\n\n').trim();
@@ -745,7 +745,7 @@ export abstract class PersistentAgentAdapter implements AgentAdapter {
     }
 
     private buildTurnCompletionMarker(): string {
-        return `[[OPTIMUS_DONE_${Date.now()}_${Math.random().toString(36).slice(2, 8)}]]`;
+        return `[[MEGATRON_DONE_${Date.now()}_${Math.random().toString(36).slice(2, 8)}]]`;
     }
 
     private stripTurnCompletionArtifacts(text: string): string {
@@ -768,8 +768,8 @@ export abstract class PersistentAgentAdapter implements AgentAdapter {
             const { cmd, args } = this.getNonInteractiveCommand(mode, preparedPrompt.prompt, sessionId);
 
             // Depth enforcement: strip MCP config at max delegation depth
-            if (extraEnv?.OPTIMUS_DELEGATION_DEPTH) {
-                const depth = parseInt(extraEnv.OPTIMUS_DELEGATION_DEPTH, 10);
+            if (extraEnv?.MEGATRON_DELEGATION_DEPTH) {
+                const depth = parseInt(extraEnv.MEGATRON_DELEGATION_DEPTH, 10);
                 if (depth >= MAX_DELEGATION_DEPTH) {
                     const mcpIdx = args.findIndex(a => a === '--mcp-config' || a.startsWith('--mcp-config='));
                     if (mcpIdx !== -1) {

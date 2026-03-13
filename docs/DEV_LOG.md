@@ -1,6 +1,6 @@
 # Development Log & Decision Records
 
-This document captures the context, rationale, and meaningful discussions (the "Why") behind technical decisions and architectural shifts in Optimus Code.
+This document captures the context, rationale, and meaningful discussions (the "Why") behind technical decisions and architectural shifts in Megatron AI.
 
 ## [2026-03-10] - Strategic Pivot: The MCP Foundation
 
@@ -15,14 +15,14 @@ However, doing this inside a VS Code frontend extension led to:
 ### Decision
 Halt all internal `ChatViewProvider.ts` development. Extract the entire Swarm Orchestration logic and rewrite it as a standalone, headless **Model Context Protocol (MCP) Server** mapped to the user environment (Global `mcp.json`).
 
-### Implementation Details: The `spartan-swarm` Native Integration
-1. **Created `optimus-plugin/` directory** containing an independent Node.js module utilizing `@modelcontextprotocol/sdk`.
+### Implementation Details: The `megatron-swarm` Native Integration
+1. **Created `megatron-plugin/` directory** containing an independent Node.js module utilizing `@modelcontextprotocol/sdk`.
 2. **Schema Definition**: Registered `dispatch_council` as a strict JSON Schema MCP Tool. This completely bypasses LLM XML hallucination because the Host IDE now enforces strict JSON arguments.
-3. **Workspace Path Resolution**: Since Global MCP servers boot in the home directory (`~`), we implemented a dynamic path traversal algorithm `proposal_path.indexOf('.optimus')` to reliably calculate the targeted project's workspace workspace.
+3. **Workspace Path Resolution**: Since Global MCP servers boot in the home directory (`~`), we implemented a dynamic path traversal algorithm `proposal_path.indexOf('.megatron')` to reliably calculate the targeted project's workspace workspace.
 4. **Mocked Worker Spawner (Verification)**: We completely replaced the frontend `Promise.all` loops with the new `worker-spawner.js` backend, utilizing `child_process.spawn("node", ["mock-worker.js"])` to simulate concurrent stateless workers creating files simultaneously. Result: Flawless map-reduce isolated to project directories.
 
 ### Why this is a Massive Upgrade
-By turning "Optimus Swarm" into an official MCP API:
+By turning "Megatron Swarm" into an official MCP API:
 - Any AI assistant (VS Code Copilot, Cursor Shell, local Claude Code) can natively call `dispatch_council` via standard UI overlays.
 - We offload the heavy context-window management and UI rendering to massive corporations' front-ends.
 - We act purely as the "Puppet Master (Proxy)" that translates clean MCP JSON payloads into physical sub-CLI commands (the `Code 0 / Code 1` execution outputs are returned robustly as structured plaintext strings back to the LLM).
@@ -220,7 +220,7 @@ The executor intentionally requires no changes — it already handles both plann
 ## [2026-03-08] - Session-Workspace Soft Binding
 
 ### Context
-Sessions and tasks in Optimus Code were stored globally in VS Code `globalState` with no workspace association. When users worked across multiple projects, all session history was mixed together with no way to distinguish which workspace a task belonged to. Resuming a task could also operate in the wrong directory if the workspace had changed.
+Sessions and tasks in Megatron AI were stored globally in VS Code `globalState` with no workspace association. When users worked across multiple projects, all session history was mixed together with no way to distinguish which workspace a task belonged to. Resuming a task could also operate in the wrong directory if the workspace had changed.
 
 ### Decision
 Implemented **workspace soft-binding**: each task and session now records the `workspacePath` where it was created. The History panel filters sessions to the current workspace by default, with a toggle button to show all workspaces. Old data without `workspacePath` remains visible everywhere (backward compatible).
@@ -253,7 +253,7 @@ This project ships a bundled extension entrypoint, so successful type-checking a
 The chat Webview still rendered a dedicated "Webview Diagnostics" panel even though ongoing diagnostics had already moved to the OutputChannel-based debug logger and per-agent debug panels. The user explicitly asked to hide or remove this panel because it no longer matched the current workflow.
 
 ### Decision
-Removed the dedicated diagnostics panel from the Webview template and deleted the companion frontend logging helpers (`setDiagnosticStatus`, `addDiagnosticLine`, `showBootFailure`) plus host-to-webview `hostDebug` messages. Kept the `optimusCode.debugMode` setting itself because it still controls existing debug panels and additional debug logging.
+Removed the dedicated diagnostics panel from the Webview template and deleted the companion frontend logging helpers (`setDiagnosticStatus`, `addDiagnosticLine`, `showBootFailure`) plus host-to-webview `hostDebug` messages. Kept the `megatronCode.debugMode` setting itself because it still controls existing debug panels and additional debug logging.
 
 ### Why
 The standalone diagnostics panel duplicated newer debugging surfaces and added UI noise without providing unique value. Keeping `debugMode` while narrowing its scope preserves useful debugging controls without carrying obsolete Webview-specific plumbing.
@@ -352,19 +352,19 @@ The Auto mode (planner → executor two-phase pipeline) was the only execution p
 - `resources/chatView.js`: Added `submitMode` state variable; mode button click handler; `submitPrompt()`, `submitFromQueue()`, `addToQueue()`, `syncQueueToHost()` now carry mode
 - `src/managers/SharedTaskStateManager.ts`: Added `buildDirectExecutorPrompt()` method
 - `IDEA_AND_ARCHITECTURE.md`: Updated Section 2.1 to document three-mode routing
-- `.optimus/rules.md`: Updated architecture direction rule
+- `.megatron/rules.md`: Updated architecture direction rule
 
 ### Architecture Note
 Queue items now include a `mode` field, persisted to globalState. Older queued items without mode default to `'auto'`.
 
-## [2026-03-08] - Feature: OpenClaw-inspired Memory System (.optimus/memory.md)
+## [2026-03-08] - Feature: OpenClaw-inspired Memory System (.megatron/memory.md)
 
 ### Motivation
-Optimus Code's `SharedTaskStateManager` provides per-task multi-turn context, but it lacks cross-task durable memory. Insights discovered in one task (e.g., user preferences, architecture decisions, recurring patterns) are lost when a new task starts. OpenClaw's two-layer memory architecture inspired a minimal hot-cache solution.
+Megatron AI's `SharedTaskStateManager` provides per-task multi-turn context, but it lacks cross-task durable memory. Insights discovered in one task (e.g., user preferences, architecture decisions, recurring patterns) are lost when a new task starts. OpenClaw's two-layer memory architecture inspired a minimal hot-cache solution.
 
 ### Design Decisions
 
-**File-based hot cache**: `.optimus/memory.md` stores durable facts as a human-readable/editable markdown file — consistent with the existing `.optimus/rules.md` pattern. No external dependencies needed.
+**File-based hot cache**: `.megatron/memory.md` stores durable facts as a human-readable/editable markdown file — consistent with the existing `.megatron/rules.md` pattern. No external dependencies needed.
 
 **Injection via `<project-memory>` tags**: Both planner and executor prompts receive memory content each turn, alongside `<project-rules>`. This keeps agents aware of accumulated project knowledge.
 
@@ -373,12 +373,12 @@ Optimus Code's `SharedTaskStateManager` provides per-task multi-turn context, bu
 **Non-fatal writes**: Memory persistence failures are logged but never block turn completion.
 
 ### Files Changed
-- `src/managers/MemoryManager.ts` (new): Encapsulates read/append/clear operations for `.optimus/memory.md`
+- `src/managers/MemoryManager.ts` (new): Encapsulates read/append/clear operations for `.megatron/memory.md`
 - `src/managers/SharedTaskStateManager.ts`: Added `readMemoryMd()` and `writeMemoryMd()` methods; injects `<project-memory>` into both `buildPlannerPrompt` and `buildExecutorPrompt`; added `<memory-update>` instruction to executor prompt
 - `src/providers/ChatViewProvider.ts`: Added `_extractMemoryUpdate()` method; integrated memory extraction and persistence after executor success; added `MemoryManager` dependency
 
 ### Architecture Note
-This corresponds to OpenClaw's "durable layer" concept. The deeper storage layer (per-entity files under `.optimus/memory/`) is a future extension. Current `SharedTaskState` handles task-level context; `memory.md` handles cross-task knowledge.
+This corresponds to OpenClaw's "durable layer" concept. The deeper storage layer (per-entity files under `.megatron/memory/`) is a future extension. Current `SharedTaskState` handles task-level context; `memory.md` handles cross-task knowledge.
 
 ## [2026-03-08] - Fix: Token Count Badge Not Updating After Compact Context
 
@@ -418,10 +418,10 @@ In multi-turn conversations, agent context only includes the last 3 turns automa
 ## [2026-03-08] - Fix: Queue Is Session-Scoped Instead of Persisted Across Webview Restarts
 
 ### Context
-The previous queue implementation persisted `pendingQueue` into VS Code `globalState` under `optimusQueue` and restored it on every `webviewReady`. That caused two user-visible problems: queued items leaked across restarts instead of behaving like session state, and restored image attachments no longer had a reliable rendering path, so they degraded into text-only placeholders.
+The previous queue implementation persisted `pendingQueue` into VS Code `globalState` under `megatronQueue` and restored it on every `webviewReady`. That caused two user-visible problems: queued items leaked across restarts instead of behaving like session state, and restored image attachments no longer had a reliable rendering path, so they degraded into text-only placeholders.
 
 ### Decision
-Removed host-side queue persistence and restore entirely. `ChatViewProvider.ts` no longer handles `saveQueue`, no longer clears queue state via `globalState` on `newChat`, and now only performs a one-time cleanup of the legacy `optimusQueue` key during `webviewReady`. `resources/chatView.js` now treats `pendingQueue` as in-memory-only state and no longer syncs queue mutations back to the host.
+Removed host-side queue persistence and restore entirely. `ChatViewProvider.ts` no longer handles `saveQueue`, no longer clears queue state via `globalState` on `newChat`, and now only performs a one-time cleanup of the legacy `megatronQueue` key during `webviewReady`. `resources/chatView.js` now treats `pendingQueue` as in-memory-only state and no longer syncs queue mutations back to the host.
 
 ### Why
 This aligns queue behavior with user expectations: queue contents belong to the current chat/webview session and should disappear when that session ends. It also fixes the restored-image regression at the root by removing the broken persistence path rather than layering special-case image rehydration logic on top.
@@ -433,7 +433,7 @@ The `pendingQueue` array in `chatView.js` was purely in-memory. If VS Code close
 
 ### Design Decisions
 
-**Persistence via `globalState`**: The queue is serialized (including image `dataUrl`) and stored in VS Code's `globalState` under key `'optimusQueue'`. This was chosen over `workspaceState` because the queue is user-intent data (not project-specific) and survives workspace changes. The host clears this on `newChat`.
+**Persistence via `globalState`**: The queue is serialized (including image `dataUrl`) and stored in VS Code's `globalState` under key `'megatronQueue'`. This was chosen over `workspaceState` because the queue is user-intent data (not project-specific) and survives workspace changes. The host clears this on `newChat`.
 
 **Sync strategy**: The webview sends a `saveQueue` message to the host after every mutation (add, auto-dequeue, manual remove). The host writes to `globalState`. On `webviewReady`, the host sends `initQueue` with the saved array. This avoids complexity of debouncing or batching.
 
@@ -489,7 +489,7 @@ Defense-in-depth: even if an adapter's `extractThinking` misses a trace line, `_
 ## [2026-03-08] - Replace File Sync with Runtime Prompt Injection (Plan C)
 
 ### Context
-Previously, `.optimus/rules.md` was distributed to agents via two parallel mechanisms:
+Previously, `.megatron/rules.md` was distributed to agents via two parallel mechanisms:
 1. **File sync** — `configSync.ts` copied content to `.claude/CLAUDE.md` and `.github/copilot-instructions.md` on extension activation.
 2. **Prompt injection** — `buildExecutorPrompt()` read `rules.md` fresh each turn and injected it inside `<project-rules>` tags.
 
@@ -500,9 +500,9 @@ This dual-track approach had drawbacks:
 
 ### Changes Made
 1. **`SharedTaskStateManager.ts`** — Added `readRulesMd()` + `<project-rules>` injection to `buildPlannerPrompt()`, matching the existing executor pattern. Both planner and executor now receive rules via prompt injection.
-2. **`extension.ts`** — Removed `syncOptimusInstructions()` import and call.
+2. **`extension.ts`** — Removed `syncMegatronInstructions()` import and call.
 3. **`src/utils/configSync.ts`** — Deleted entirely (no remaining references).
-4. **`.optimus/rules.md`** — Updated header to reflect the new injection-only mechanism.
+4. **`.megatron/rules.md`** — Updated header to reflect the new injection-only mechanism.
 
 ### Design Decision
 - Chose **single-track prompt injection** over file sync because:
@@ -512,7 +512,7 @@ This dual-track approach had drawbacks:
   - Aligns with "adapters stay thin and deterministic" architecture
 
 ### Note
-- Existing `.claude/CLAUDE.md` and `.github/copilot-instructions.md` on disk are now stale artifacts. They will no longer be updated by Optimus but can be manually removed or left as-is.
+- Existing `.claude/CLAUDE.md` and `.github/copilot-instructions.md` on disk are now stale artifacts. They will no longer be updated by Megatron but can be manually removed or left as-is.
 
 ## [2026-03-08] - Execution Trace Leak Fixes
 
@@ -532,17 +532,17 @@ Two data-leak issues were identified in the Execution Trace pipeline:
 - Chose to add an optional parameter rather than modifying the existing `text` argument to keep `rawText` intact for Execution Trace panel rendering (which needs the full tool trace).
 - The `preview=` label unification is purely cosmetic but aligns the webview badge parsing with the already-established `preview=` convention in tool-specific summarizers.
 
-## [2026-03-08] - Inject .optimus/rules.md into Executor Agent Prompt
+## [2026-03-08] - Inject .megatron/rules.md into Executor Agent Prompt
 
 ### Context
-`.optimus/rules.md` was only synced to external adapter config files (`.claude/CLAUDE.md`, `.github/copilot-instructions.md`) at extension activation via `configSync.ts`. The executor agent's runtime prompt (`buildExecutorPrompt()`) did not include these project rules, so the executor relied solely on each CLI adapter externally reading its own instructions file.
+`.megatron/rules.md` was only synced to external adapter config files (`.claude/CLAUDE.md`, `.github/copilot-instructions.md`) at extension activation via `configSync.ts`. The executor agent's runtime prompt (`buildExecutorPrompt()`) did not include these project rules, so the executor relied solely on each CLI adapter externally reading its own instructions file.
 
 ### Problem
 When the executor runs, especially through Claude Code, the rules might not take effect reliably if the adapter's CLI does not process the synced instructions file. Directly embedding rules into the prompt ensures they are always present regardless of adapter behavior.
 
 ### Changes Made
 1. **Added `fs` and `path` imports** to `SharedTaskStateManager.ts`.
-2. **Added `readRulesMd()` private method** — reads `.optimus/rules.md` from the workspace root at runtime, with graceful fallback to `null` if absent.
+2. **Added `readRulesMd()` private method** — reads `.megatron/rules.md` from the workspace root at runtime, with graceful fallback to `null` if absent.
 3. **Injected rules into `buildExecutorPrompt()`** — rules content is wrapped in `<project-rules>` tags and placed immediately after the role declaration, before the task context. When no rules file exists, the prompt is unchanged.
 
 ### Design Decision
@@ -703,7 +703,7 @@ A council of three planner agents (Gemini 3.0 Pro, Opus 4.6, GPT-5.4) performed 
 ### 2. Flexible Agent Configurations (`package.json` & Settings API)
 - **Context**: Agent models were originally hardcoded in the adapter layer.
 - **Problem**: Adding new models or changing the preferred underlying model required manual source code changes.
-- **Decision**: Exposed an `optimusCode.agents` array in `package.json` configuration. Replaced static adapter initialization with dynamic reading from `vscode.workspace.getConfiguration('optimusCode')`.
+- **Decision**: Exposed an `megatronCode.agents` array in `package.json` configuration. Replaced static adapter initialization with dynamic reading from `vscode.workspace.getConfiguration('megatronCode')`.
 - **Why**: New models can be integrated or toggled through VS Code settings without altering extension logic.
 
 ### 3. Kanban-Style UI (Horizontal Layout)
@@ -727,14 +727,14 @@ A council of three planner agents (Gemini 3.0 Pro, Opus 4.6, GPT-5.4) performed 
 ### 6. Session History State Management
 - **Context**: Users needed to revisit past prompts and multi-agent replies.
 - **Problem**: In-memory Webview content disappeared after reload.
-- **Decision**: Stored `optimusSessions` in `context.globalState` and built a History view to restore cached outputs.
+- **Decision**: Stored `megatronSessions` in `context.globalState` and built a History view to restore cached outputs.
 - **Why**: Enables persistent multi-session workflows across IDE restarts.
 
 ### 7. Native Extension Handoff Investigation
-- **Context**: Explored whether Optimus Code session history could be injected into native agent extensions.
+- **Context**: Explored whether Megatron AI session history could be injected into native agent extensions.
 - **Problem**: Native extensions manage their own sandboxed internal state and expose no public API for direct history mutation.
 - **Decision**: Direct injection was deemed infeasible and too fragile.
-- **Proposed Workaround**: A future handoff feature could write context to a temporary markdown file such as `.optimus/handoff.md` and invoke a native command referencing that file.
+- **Proposed Workaround**: A future handoff feature could write context to a temporary markdown file such as `.megatron/handoff.md` and invoke a native command referencing that file.
 - **Why**: The filesystem is the only reliable shared protocol across isolated extensions.
 
 ### 8. Dynamic Agent Selection and Configuration UI
@@ -814,9 +814,9 @@ A council of three planner agents (Gemini 3.0 Pro, Opus 4.6, GPT-5.4) performed 
 - **Lesson**: Never emit escaped backtick template literals inside TypeScript template literals that will become inline script content.
 
 ## [2026-03-07] - Executor Agent UI Dropdown and Removing Settings-based `executorAgent`
-- **Context**: The `optimusCode.executorAgent` setting required users to know agent IDs and edit settings JSON.
+- **Context**: The `megatronCode.executorAgent` setting required users to know agent IDs and edit settings JSON.
 - **Problem**: This was not discoverable and forced users to leave the extension UI.
-- **Decision**: Removed the `optimusCode.executorAgent` configuration property from `package.json` and added an `executor-selector` dropdown in the Webview UI. The selected executor ID is sent with each `askCouncil` message and used by `_delegateToCouncil`.
+- **Decision**: Removed the `megatronCode.executorAgent` configuration property from `package.json` and added an `executor-selector` dropdown in the Webview UI. The selected executor ID is sent with each `askCouncil` message and used by `_delegateToCouncil`.
 - **Why**: Keeps executor selection inside the UI while preserving the planning and execution split.
 
 ## [2026-03-07] - Non-Interactive Execution for Plan/Ask/Auto Modes
@@ -895,7 +895,7 @@ A council of three planner agents (Gemini 3.0 Pro, Opus 4.6, GPT-5.4) performed 
 
 ## [2026-03-07] - Debug Mode Moved from UI Button to Configuration
 - **Context**: Once the Webview was interactive again, the diagnostics surface became useful, but controlling it with a transient `Debug` button made state unclear and added another clickable control into an already fragile UI.
-- **Decision**: Added a formal `optimusCode.debugMode` configuration property, removed the `Debug` button from the Webview toolbar, and changed the host to push debug state into the Webview through an `updateUiState` message. The workspace setting in `.vscode/settings.json` now enables debug mode for this repo by default.
+- **Decision**: Added a formal `megatronCode.debugMode` configuration property, removed the `Debug` button from the Webview toolbar, and changed the host to push debug state into the Webview through an `updateUiState` message. The workspace setting in `.vscode/settings.json` now enables debug mode for this repo by default.
 - **Why**: Debug visibility is now deterministic and source-controlled. The configuration becomes the single source of truth for diagnostics, and the UI no longer needs its own separate toggle state.
 
 ## [2026-03-07] - Webview Script Extracted to External Resource
@@ -905,7 +905,7 @@ A council of three planner agents (Gemini 3.0 Pro, Opus 4.6, GPT-5.4) performed 
 
 ## [2026-03-07] - OutputChannel-based Host Debugging for Agent Execution
 - **Context**: Once Webview interaction and script parsing were stabilized, the remaining unknowns shifted to the extension-host side, especially Claude CLI invocation, stdout/stderr behavior, and executor routing.
-- **Decision**: Added a dedicated `Optimus Code Debug` output channel and instrumented the extension activation path, Webview message handling, council delegation, and `PersistentAgentAdapter` process lifecycle. The host now logs mode, cwd, full command, prompt length, stdout chunks, stderr chunks, process errors, exit codes, and daemon stdin writes when `optimusCode.debugMode` is enabled.
+- **Decision**: Added a dedicated `Megatron AI Debug` output channel and instrumented the extension activation path, Webview message handling, council delegation, and `PersistentAgentAdapter` process lifecycle. The host now logs mode, cwd, full command, prompt length, stdout chunks, stderr chunks, process errors, exit codes, and daemon stdin writes when `megatronCode.debugMode` is enabled.
 - **Why**: This brings the project in line with standard VS Code extension debugging practice. The host side can now be inspected through the Output panel instead of relying only on Webview diagnostics or ad-hoc breakpoints.
 
 ## [2026-03-07] - Windows Long Prompt Execution Without `cmd /c`
@@ -916,9 +916,9 @@ A council of three planner agents (Gemini 3.0 Pro, Opus 4.6, GPT-5.4) performed 
 
 ## [2026-03-07] - Oversized Prompt Fallback via Runtime Briefing Files
 - **Context**: Bypassing `cmd /c` raises the ceiling, but synthesized executor prompts can still exceed safe process-argument sizes on Windows when task history and planner contributions grow.
-- **Decision**: Added a second-stage fallback for non-interactive invocations: if the prompt exceeds a threshold, the adapter writes the full prompt into `.optimus/runtime-prompts/*.md` inside the workspace and passes only a short wrapper prompt that instructs the agent to read that file first.
+- **Decision**: Added a second-stage fallback for non-interactive invocations: if the prompt exceeds a threshold, the adapter writes the full prompt into `.megatron/runtime-prompts/*.md` inside the workspace and passes only a short wrapper prompt that instructs the agent to read that file first.
 - **Why**: This removes prompt size from the command-line transport path while keeping the briefing inside the allowed workspace boundary and preserving current adapter APIs.
-- **Follow-up**: Exposed the threshold as `optimusCode.promptFileThresholdChars` and expanded debug snapshots so the UI and OutputChannel show whether a run used `inline` or `file` prompt transport.
+- **Follow-up**: Exposed the threshold as `megatronCode.promptFileThresholdChars` and expanded debug snapshots so the UI and OutputChannel show whether a run used `inline` or `file` prompt transport.
 
 ## [2026-03-07] - Agent Capability Matrix Simplified to `plan` and `agent`
 - **Context**: The orchestrator workflow is now fixed as council planners followed by one executor. The previous `ask` and `auto` entries inside per-agent `modes` no longer matched how the UI actually selects participants.
@@ -948,7 +948,7 @@ A council of three planner agents (Gemini 3.0 Pro, Opus 4.6, GPT-5.4) performed 
 ## [2026-03-07] - Explicit Turn Completion Marker for Persistent Agent Mode
 - **Context**: After fixing cwd resolution, Claude one-shot `plan` execution succeeded from the correct repo path, but the remaining hang risk was still concentrated in persistent `agent` mode.
 - **Problem**: The daemon path considered a turn finished only when stdout contained the adapter's prompt string such as `>`. That is brittle because CLI prompt rendering can vary by model, permissions mode, terminal environment, or future CLI updates.
-- **Decision**: Each persistent turn now appends an explicit completion instruction with a unique marker like `[[OPTIMUS_DONE_...]]`. The adapter resolves the turn when that marker appears and strips it from streamed/final output before rendering.
+- **Decision**: Each persistent turn now appends an explicit completion instruction with a unique marker like `[[MEGATRON_DONE_...]]`. The adapter resolves the turn when that marker appears and strips it from streamed/final output before rendering.
 - **Why**: Turn completion is now governed by an application-level protocol we control rather than by reverse-engineering the CLI's prompt rendering behavior.
 
 ## [2026-03-07] - Explicit stdin Close for Non-interactive CLI Invocations
@@ -966,7 +966,7 @@ A council of three planner agents (Gemini 3.0 Pro, Opus 4.6, GPT-5.4) performed 
 ## [2026-03-07] - App-level Multi-turn Shared State Plan Formalized
 - **Context**: After stabilizing planner execution and switching Claude executor away from the fragile non-TTY daemon path, the remaining design question became how to support meaningful multi-turn work and cross-agent awareness without reintroducing CLI-session brittleness.
 - **Decision**: Formally chose **app-level multi-turn** as the target architecture. Shared task memory will live in the orchestrator layer rather than inside individual CLI sessions. The project documentation now defines a future `SharedTaskStateManager`, structured planner/executor contribution records, resumable task snapshots, and bounded context compression.
-- **Why**: This model is more natural for Optimus Code's product goal. It allows all agents to see the same task facts, prior actions, blockers, and outcomes instead of each agent remembering only its own private conversation.
+- **Why**: This model is more natural for Megatron AI's product goal. It allows all agents to see the same task facts, prior actions, blockers, and outcomes instead of each agent remembering only its own private conversation.
 - **Documentation Impact**: Updated `IDEA_AND_ARCHITECTURE.md` and `README.md` so future implementation work has an explicit architectural baseline rather than relying on ad-hoc discussion history.
 
 ## [2026-03-07] - Shared Task State Phase 1 Implemented
@@ -1040,7 +1040,7 @@ A council of three planner agents (Gemini 3.0 Pro, Opus 4.6, GPT-5.4) performed 
 ### Alignment with Copilot/Claude UX
 - **Decision**: Made the \Planner\ phase automatically collapse upon success. This keeps the final \Executor\ output immediately visible at the bottom of the chat without forcing the user to scroll past large blocks of intermediate planning steps. This directly aligns with the native tool-calling mental models and UX patterns of GitHub Copilot and Claude Code.
 
-### Centralized Context: The \.optimus/\ Directory
-- **Decision**: Created the \.optimus/\ directory to hold system-wide configuration files like \.optimus/rules.md\. 
-- **Implementation**: Added an auto-sync utility (\src/utils/configSync.ts\) runs upon extension activation. It reads \.optimus/rules.md\ and overwrites \.claude/CLAUDE.md\ and \.github/copilot-instructions.md\. 
+### Centralized Context: The \.megatron/\ Directory
+- **Decision**: Created the \.megatron/\ directory to hold system-wide configuration files like \.megatron/rules.md\. 
+- **Implementation**: Added an auto-sync utility (\src/utils/configSync.ts\) runs upon extension activation. It reads \.megatron/rules.md\ and overwrites \.claude/CLAUDE.md\ and \.github/copilot-instructions.md\. 
 - **Why**: Ensures all CLI-based agents adhere strictly to the exact same system prompts. This also lays the groundwork for future extensions like \	asks.md\ and \memory.md\ without cluttering the project root.

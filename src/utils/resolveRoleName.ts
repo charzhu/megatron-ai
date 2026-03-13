@@ -17,7 +17,7 @@ let cachedMtime: number = 0;
 let cachedPath: string = "";
 
 function getRegistryPath(workspacePath: string): string {
-    return path.join(workspacePath, ".optimus", "config", "role-registry.json");
+    return path.join(workspacePath, ".megatron", "config", "role-registry.json");
 }
 
 function loadRegistry(workspacePath: string): RoleRegistry {

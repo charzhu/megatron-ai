@@ -85,7 +85,7 @@ interface T3UsageEntry {
 }
 
 function getT3UsageLogPath(workspacePath: string): string {
-    return path.join(workspacePath, '.optimus', 'state', 't3-usage-log.json');
+    return path.join(workspacePath, '.megatron', 'state', 't3-usage-log.json');
 }
 
 export function loadT3UsageLog(workspacePath: string): Record<string, T3UsageEntry> {
@@ -144,7 +144,7 @@ export interface MasterRoleInfo {
 
 /**
  * Pre-flight: Check if all required skills exist. Returns missing skill names.
- * Skills live at .optimus/skills/<name>/SKILL.md
+ * Skills live at .megatron/skills/<name>/SKILL.md
  */
 function checkRequiredSkills(workspacePath: string, skills: string[]): { found: Map<string, string>, missing: string[] } {
     // Backward compat: agent-creator was renamed to role-creator in Issue #213
@@ -153,7 +153,7 @@ function checkRequiredSkills(workspacePath: string, skills: string[]): { found: 
     const missing: string[] = [];
     for (const skill of skills) {
         const resolvedSkill = SKILL_ALIASES[skill] || skill;
-        const skillPath = path.join(workspacePath, '.optimus', 'skills', resolvedSkill, 'SKILL.md');
+        const skillPath = path.join(workspacePath, '.megatron', 'skills', resolvedSkill, 'SKILL.md');
         if (fs.existsSync(skillPath)) {
             found.set(skill, fs.readFileSync(skillPath, 'utf8'));
         } else {
@@ -166,7 +166,7 @@ function checkRequiredSkills(workspacePath: string, skills: string[]): { found: 
 // ─── Engine/Model Validation (prevents corrupted T2 templates) ───
 
 export function loadValidEnginesAndModels(workspacePath: string): { engines: string[]; models: Record<string, string[]> } {
-    const configPath = path.join(workspacePath, '.optimus', 'config', 'available-agents.json');
+    const configPath = path.join(workspacePath, '.megatron', 'config', 'available-agents.json');
     try {
         if (fs.existsSync(configPath)) {
             const config = JSON.parse(fs.readFileSync(configPath, 'utf8'));
@@ -197,7 +197,7 @@ export function isValidModel(model: string, engine: string, validModels: Record<
  */
 async function ensureT2Role(workspacePath: string, role: string, engine: string, model?: string, masterInfo?: MasterRoleInfo, delegationDepth?: number): Promise<string | null> {
     const safeRole = sanitizeRoleName(role);
-    const t2Dir = path.join(workspacePath, '.optimus', 'roles');
+    const t2Dir = path.join(workspacePath, '.megatron', 'roles');
     const t2Path = path.join(t2Dir, `${safeRole}.md`);
 
     if (!fs.existsSync(t2Dir)) fs.mkdirSync(t2Dir, { recursive: true });
@@ -255,11 +255,11 @@ async function ensureT2Role(workspacePath: string, role: string, engine: string,
     }
 
     // T2 does not exist — check for pre-installed plugin role template first
-    // Plugin roles ship in optimus-plugin/roles/ and provide rich persona definitions.
+    // Plugin roles ship in megatron-plugin/roles/ and provide rich persona definitions.
     // This avoids generating thin one-liner T2s for well-known roles like architect, pm, qa-engineer.
     const pluginRolePaths = [
         path.join(__dirname, '..', '..', 'roles', `${safeRole}.md`),         // from dist/
-        path.join(__dirname, '..', '..', '..', 'optimus-plugin', 'roles', `${safeRole}.md`), // from src/mcp/
+        path.join(__dirname, '..', '..', '..', 'megatron-plugin', 'roles', `${safeRole}.md`), // from src/mcp/
     ];
     for (const pluginPath of pluginRolePaths) {
         try {
@@ -363,7 +363,7 @@ ${desc}
         return t2Path;
     } catch (err: any) {
         // Do NOT write a thin fallback — let the role remain T3 and retry next invocation
-        console.error(`[Precipitation] role-creator failed for '${safeRole}': ${err.message}. Role will remain T3 (zero-shot). To fix: (1) check role-creator skill at .optimus/skills/role-creator/SKILL.md, (2) ensure engine CLI is authenticated, (3) retry delegation with explicit role_description.`);
+        console.error(`[Precipitation] role-creator failed for '${safeRole}': ${err.message}. Role will remain T3 (zero-shot). To fix: (1) check role-creator skill at .megatron/skills/role-creator/SKILL.md, (2) ensure engine CLI is authenticated, (3) retry delegation with explicit role_description.`);
         return null;
     }
 }
@@ -384,7 +384,7 @@ async function generateRichT2Role(
     const safeRole = sanitizeRoleName(role);
 
     // 1. Read the role-creator skill (optional — degrade gracefully if missing)
-    const skillPath = path.join(workspacePath, '.optimus', 'skills', 'role-creator', 'SKILL.md');
+    const skillPath = path.join(workspacePath, '.megatron', 'skills', 'role-creator', 'SKILL.md');
     let roleCreatorSkillContent = '';
     if (fs.existsSync(skillPath)) {
         roleCreatorSkillContent = fs.readFileSync(skillPath, 'utf8');
@@ -435,7 +435,7 @@ ${roleCreatorSkillContent ? `=== SKILL REFERENCE ===\n${roleCreatorSkillContent}
     const adapter = getAdapterForEngine(engine, undefined, model);
     const childDepth = delegationDepth + 1;
     const extraEnv: Record<string, string> = {
-        OPTIMUS_DELEGATION_DEPTH: String(childDepth)
+        MEGATRON_DELEGATION_DEPTH: String(childDepth)
     };
     const response = await adapter.invoke(prompt, 'agent', undefined, undefined, extraEnv);
 
@@ -468,7 +468,7 @@ export class AgentLockManager {
     }
 
     private get lockDir(): string {
-        return path.join(this.workspacePath, '.optimus', 'agents');
+        return path.join(this.workspacePath, '.megatron', 'agents');
     }
 
     private lockFilePath(role: string): string {
@@ -603,12 +603,12 @@ function getAdapterForEngine(engine: string, sessionId?: string, model?: string)
 }
 
 /**
- * Loads project memory entries from .optimus/memory/continuous-memory.md.
+ * Loads project memory entries from .megatron/memory/continuous-memory.md.
  * Returns newest-first entries (body only, frontmatter stripped) up to maxChars.
  * Best-effort: returns empty string on any error.
  */
 function loadProjectMemory(workspacePath: string, maxChars: number = 4000): string {
-    const memoryFile = path.join(workspacePath, '.optimus', 'memory', 'continuous-memory.md');
+    const memoryFile = path.join(workspacePath, '.megatron', 'memory', 'continuous-memory.md');
     if (!fs.existsSync(memoryFile)) return '';
 
     try {
@@ -644,21 +644,21 @@ export async function delegateTaskSingle(roleArg: string, taskPath: string, outp
     const parsedRole = parseRoleSpec(roleArg);
     const role = sanitizeRoleName(parsedRole.role);
 
-    const currentDepth = parentDepth !== undefined ? parentDepth : parseInt(process.env.OPTIMUS_DELEGATION_DEPTH || '0', 10);
+    const currentDepth = parentDepth !== undefined ? parentDepth : parseInt(process.env.MEGATRON_DELEGATION_DEPTH || '0', 10);
     const childDepth = currentDepth + 1;
     console.error(`[Orchestrator] Delegation depth: ${childDepth}/${MAX_DELEGATION_DEPTH}`);
     if (childDepth >= MAX_DELEGATION_DEPTH) {
         console.error(`[Orchestrator] Max delegation depth reached — MCP config will be stripped`);
     }
 
-    // Auto-migrate legacy folder `.optimus/personas` to `.optimus/agents`
-    const legacyT1Dir = path.join(workspacePath, '.optimus', 'personas');
-    const t1Dir = path.join(workspacePath, '.optimus', 'agents');
+    // Auto-migrate legacy folder `.megatron/personas` to `.megatron/agents`
+    const legacyT1Dir = path.join(workspacePath, '.megatron', 'personas');
+    const t1Dir = path.join(workspacePath, '.megatron', 'agents');
     if (fs.existsSync(legacyT1Dir) && !fs.existsSync(t1Dir)) {
         try { fs.renameSync(legacyT1Dir, t1Dir); } catch (e: any) { console.error(`[Orchestrator] Warning: operation failed: ${e.message}`); }
     }
     
-    const t2Dir = path.join(workspacePath, '.optimus', 'roles');
+    const t2Dir = path.join(workspacePath, '.megatron', 'roles');
     if (!fs.existsSync(t2Dir)) {
         fs.mkdirSync(t2Dir, { recursive: true });
     }
@@ -722,7 +722,7 @@ export async function delegateTaskSingle(roleArg: string, taskPath: string, outp
             throw new Error(
                 `⚠️ **Role Quarantined**: Role '${role}' is quarantined due to ${usageEntry?.consecutive_failures || '3+'} consecutive failures ` +
                 `(quarantined at: ${qfm.frontmatter.quarantined_at || 'unknown'}). ` +
-                `**Recovery**: (1) Fix the role template at '.optimus/roles/${role}.md', or (2) delete it to allow T3 re-creation, or (3) use the quarantine_role tool to unquarantine it.`
+                `**Recovery**: (1) Fix the role template at '.megatron/roles/${role}.md', or (2) delete it to allow T3 re-creation, or (3) use the quarantine_role tool to unquarantine it.`
             );
         }
     }
@@ -735,14 +735,14 @@ export async function delegateTaskSingle(roleArg: string, taskPath: string, outp
             throw new Error(
                 `⚠️ **Role Quarantined**: Role '${role}' is quarantined due to ${usageEntry2?.consecutive_failures || '3+'} consecutive failures ` +
                 `(quarantined at: ${t2Fm.frontmatter.quarantined_at || 'unknown'}). ` +
-                `**Recovery**: (1) Fix the role template at '.optimus/roles/${role}.md', or (2) delete it to allow T3 re-creation, or (3) use the quarantine_role tool to unquarantine it.`
+                `**Recovery**: (1) Fix the role template at '.megatron/roles/${role}.md', or (2) delete it to allow T3 re-creation, or (3) use the quarantine_role tool to unquarantine it.`
             );
         }
     }
 
     // Fallback: if engine/model still unset, try reading available-agents.json
     if (!activeEngine) {
-        const configPath = path.join(workspacePath, '.optimus', 'config', 'available-agents.json');
+        const configPath = path.join(workspacePath, '.megatron', 'config', 'available-agents.json');
         try {
             if (fs.existsSync(configPath)) {
                 const config = JSON.parse(fs.readFileSync(configPath, 'utf8'));
@@ -775,7 +775,7 @@ export async function delegateTaskSingle(roleArg: string, taskPath: string, outp
     // If a model was explicitly provided, validate it against available-agents.json whitelist.
     // Prevents invalid model names from silently passing through to CLI and failing late.
     if (activeModel) {
-        const modelConfigPath = path.join(workspacePath, '.optimus', 'config', 'available-agents.json');
+        const modelConfigPath = path.join(workspacePath, '.megatron', 'config', 'available-agents.json');
         try {
             if (fs.existsSync(modelConfigPath)) {
                 const config = JSON.parse(fs.readFileSync(modelConfigPath, 'utf8'));
@@ -807,7 +807,7 @@ export async function delegateTaskSingle(roleArg: string, taskPath: string, outp
                 `⚠️ **Skill Pre-Flight Failed**: Missing ${missing.length} required skill(s): ${missing.map(s => `\`${s}\``).join(', ')}.\n\n` +
                 `Master Agent must create these skills first via \`delegate_task_async\` to a skill-creator role, ` +
                 `then retry this delegation.\n\n` +
-                `Expected path(s):\n${missing.map(s => `- .optimus/skills/${s}/SKILL.md`).join('\n')}`
+                `Expected path(s):\n${missing.map(s => `- .megatron/skills/${s}/SKILL.md`).join('\n')}`
             );
         }
         // Inject found skills into agent context
@@ -837,9 +837,9 @@ export async function delegateTaskSingle(roleArg: string, taskPath: string, outp
             .map(word => word.charAt(0).toUpperCase() + word.slice(1))
             .join(' ');
             
-        personaContext = `You are a ${formattedRole} expert operating within the Optimus Spartan Swarm. Your purpose is to fulfill tasks autonomously within your specialized domain of expertise.\nAs a dynamically provisioned "T3" agent, apply industry best practices, solve complex problems, and deliver professional-grade results associated with your role.`;
+        personaContext = `You are a ${formattedRole} expert operating within the Megatron Megatron Swarm. Your purpose is to fulfill tasks autonomously within your specialized domain of expertise.\nAs a dynamically provisioned "T3" agent, apply industry best practices, solve complex problems, and deliver professional-grade results associated with your role.`;
         
-        const systemInstructionsPath = path.join(workspacePath, '.optimus', 'config', 'system-instructions.md');
+        const systemInstructionsPath = path.join(workspacePath, '.megatron', 'config', 'system-instructions.md');
         if (fs.existsSync(systemInstructionsPath)) {
             try {
                 const systemInstructions = fs.readFileSync(systemInstructionsPath, 'utf8');
@@ -877,7 +877,7 @@ let contextContent = "";
         ? `\n## Tracking Issue\nA GitHub Issue #${autoIssueNumber} has already been created to track this task.\nDO NOT create a new Issue via vcs_create_work_item. Use #${autoIssueNumber} as your Epic/tracking Issue for all sub-delegations.\nPass parent_issue_number: ${autoIssueNumber} to all delegate_task and dispatch_council calls.\n`
         : '';
 
-    const basePrompt = `You are a delegated AI Worker operating under the Spartan Swarm Protocol.
+    const basePrompt = `You are a delegated AI Worker operating under the Megatron Swarm Protocol.
 Your Role: ${role}
 Identity: ${resolvedTier}
 
@@ -908,7 +908,7 @@ Please provide your complete execution result below.`;
         // --- Pre-Flight: Create T1 instance placeholder from T2 template ---
         // session_id is unknown until after execution, so use a temp name.
         // Post-execution will rename to {role}_{session_id_prefix}.md
-        const agentsDir = path.join(workspacePath, '.optimus', 'agents');
+        const agentsDir = path.join(workspacePath, '.megatron', 'agents');
         if (!fs.existsSync(agentsDir)) fs.mkdirSync(agentsDir, { recursive: true });
 
         const tempId = Math.random().toString(36).slice(2, 10);
@@ -932,16 +932,16 @@ Please provide your complete execution result below.`;
         }
 
         const extraEnv: Record<string, string> = {
-            OPTIMUS_DELEGATION_DEPTH: String(childDepth)
+            MEGATRON_DELEGATION_DEPTH: String(childDepth)
         };
         if (parentIssueNumber !== undefined) {
-            extraEnv.OPTIMUS_PARENT_ISSUE = String(parentIssueNumber);
+            extraEnv.MEGATRON_PARENT_ISSUE = String(parentIssueNumber);
         } else {
             // Explicitly clear inherited env var to prevent stale grandparent references
-            extraEnv.OPTIMUS_PARENT_ISSUE = '';
+            extraEnv.MEGATRON_PARENT_ISSUE = '';
         }
         if (autoIssueNumber !== undefined) {
-            extraEnv.OPTIMUS_TRACKING_ISSUE = String(autoIssueNumber);
+            extraEnv.MEGATRON_TRACKING_ISSUE = String(autoIssueNumber);
         }
         const response = await adapter.invoke(basePrompt, activeMode, activeSessionId, undefined, extraEnv);
 
@@ -963,7 +963,7 @@ Please provide your complete execution result below.`;
         // Only fail if error pattern matched AND there's no meaningful non-log output
         if (matchedError && nonLogLines.length < 100) {
             // Clean up temp T1 — don't leave zombies
-            const tempFile = t1Path || path.join(workspacePath, '.optimus', 'agents', `${role}_pending_${tempId}.md`);
+            const tempFile = t1Path || path.join(workspacePath, '.megatron', 'agents', `${role}_pending_${tempId}.md`);
             if (fs.existsSync(tempFile) && tempFile.includes('pending_')) {
                 try { fs.unlinkSync(tempFile); } catch (e: any) { console.error(`[Orchestrator] Warning: operation failed: ${e.message}`); }
             }
@@ -1022,7 +1022,7 @@ Please provide your complete execution result below.`;
         const log = loadT3UsageLog(workspacePath);
         const entry = log[role];
         if (entry && entry.consecutive_failures >= 3 && entry.successes === 0) {
-            const t2RolePath = path.join(workspacePath, '.optimus', 'roles', `${sanitizeRoleName(role)}.md`);
+            const t2RolePath = path.join(workspacePath, '.megatron', 'roles', `${sanitizeRoleName(role)}.md`);
             if (fs.existsSync(t2RolePath)) {
                 const t2Content = fs.readFileSync(t2RolePath, 'utf8');
                 const quarantined = updateFrontmatter(t2Content, {

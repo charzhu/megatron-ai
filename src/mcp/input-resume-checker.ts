@@ -131,7 +131,7 @@ async function processAwaitingTask(
 
         // Create a new task record for the resume agent
         const resumeTaskId = `resume_${task.taskId}_${Date.now()}`;
-        const outputPath = task.output_path || `.optimus/results/resume_${task.taskId}.md`;
+        const outputPath = task.output_path || `.megatron/results/resume_${task.taskId}.md`;
 
         // Mark original task as completed (not running) to prevent the reaper from killing it.
         // Only the new resume task should be in running state.
@@ -161,8 +161,8 @@ async function processAwaitingTask(
             detached: true, stdio: 'ignore', windowsHide: true,
             env: {
                 ...process.env,
-                OPTIMUS_DELEGATION_DEPTH: String(task.delegation_depth || 0),
-                OPTIMUS_PARENT_ISSUE: task.github_issue_number ? String(task.github_issue_number) : undefined
+                MEGATRON_DELEGATION_DEPTH: String(task.delegation_depth || 0),
+                MEGATRON_PARENT_ISSUE: task.github_issue_number ? String(task.github_issue_number) : undefined
             }
         });
         child.unref();

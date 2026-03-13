@@ -57,7 +57,7 @@ export interface TaskRecord {
 
 export class TaskManifestManager {
     static getManifestPath(workspacePath: string): string {
-        return path.join(workspacePath, '.optimus', 'state', 'task-manifest.json');
+        return path.join(workspacePath, '.megatron', 'state', 'task-manifest.json');
     }
 
     static loadManifest(workspacePath: string): Record<string, TaskRecord> {

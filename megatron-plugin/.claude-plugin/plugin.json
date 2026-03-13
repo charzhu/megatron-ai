@@ -1,0 +1,8 @@
+{
+  "name": "megatron-swarm",
+  "version": "0.1.0",
+  "description": "Megatron Swarm Orchestrator Plugin for Claude Code",
+  "skills": "./skills/",
+  "agents": "./roles/",
+  "mcpServers": "./.mcp.json"
+}
